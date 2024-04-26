@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>第 7 章 联合模型的预测和准确性 | 纵向与事件时间数据的联合模型及其在 R 中的应用</title>
+<meta name="author" content="Wang Zhen">
+<meta name="description" content="通常，建立统计模型的动机是为感兴趣的结果提供预测。在本章中，我们将说明如何使用拟合的联合模型来提供生存和纵向结果的个性化预测。我们在这里考虑的设置的一个重要特征是，这些预测具有动态性，即随着时间的推移会为患者记录额外的信息，因此可以利用新信息更新她的预测。为了评估这些预测的质量，我们提出了基于受试者工作特征 (Receiver Operating Characteristic, ROC)...">
+<meta name="generator" content="bookdown 0.38 with bs4_book()">
+<meta property="og:title" content="第 7 章 联合模型的预测和准确性 | 纵向与事件时间数据的联合模型及其在 R 中的应用">
+<meta property="og:type" content="book">
+<meta property="og:description" content="通常，建立统计模型的动机是为感兴趣的结果提供预测。在本章中，我们将说明如何使用拟合的联合模型来提供生存和纵向结果的个性化预测。我们在这里考虑的设置的一个重要特征是，这些预测具有动态性，即随着时间的推移会为患者记录额外的信息，因此可以利用新信息更新她的预测。为了评估这些预测的质量，我们提出了基于受试者工作特征 (Receiver Operating Characteristic, ROC)...">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="第 7 章 联合模型的预测和准确性 | 纵向与事件时间数据的联合模型及其在 R 中的应用">
+<meta name="twitter:description" content="通常，建立统计模型的动机是为感兴趣的结果提供预测。在本章中，我们将说明如何使用拟合的联合模型来提供生存和纵向结果的个性化预测。我们在这里考虑的设置的一个重要特征是，这些预测具有动态性，即随着时间的推移会为患者记录额外的信息，因此可以利用新信息更新她的预测。为了评估这些预测的质量，我们提出了基于受试者工作特征 (Receiver Operating Characteristic, ROC)...">
+<!-- JS --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.4.6/fuse.js" integrity="sha512-zv6Ywkjyktsohkbp9bb45V6tEMoWhzFzXis+LrMehmJZZSys19Yxf1dopHx7WzIKxr5tK2dVcYmaCk2uqdjF4A==" crossorigin="anonymous"></script><script src="https://kit.fontawesome.com/6ecbd6c532.js" crossorigin="anonymous"></script><script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link href="libs/bootstrap-4.6.0/bootstrap.min.css" rel="stylesheet">
+<script src="libs/bootstrap-4.6.0/bootstrap.bundle.min.js"></script><script src="libs/bs3compat-0.7.0/transition.js"></script><script src="libs/bs3compat-0.7.0/tabs.js"></script><script src="libs/bs3compat-0.7.0/bs3compat.js"></script><link href="libs/bs4_book-1.0.0/bs4_book.css" rel="stylesheet">
+<script src="libs/bs4_book-1.0.0/bs4_book.js"></script><script>
+    /* ========================================================================
+     * Bootstrap: transition.js v3.3.7
+     * http://getbootstrap.com/javascript/#transitions
+     * ========================================================================
+     * Copyright 2011-2016 Twitter, Inc.
+     * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
+     * ======================================================================== */
+
+
+    +function ($) {
+      'use strict';
+
+      // CSS TRANSITION SUPPORT (Shoutout: http://www.modernizr.com/)
+      // ============================================================
+
+      function transitionEnd() {
+        var el = document.createElement('bootstrap')
+
+        var transEndEventNames = {
+          WebkitTransition : 'webkitTransitionEnd',
+          MozTransition    : 'transitionend',
+          OTransition      : 'oTransitionEnd otransitionend',
+          transition       : 'transitionend'
+        }
+
+        for (var name in transEndEventNames) {
+          if (el.style[name] !== undefined) {
+            return { end: transEndEventNames[name] }
+          }
+        }
+
+        return false // explicit for ie8 (  ._.)
+      }
+
+      // http://blog.alexmaccaw.com/css-transitions
+      $.fn.emulateTransitionEnd = function (duration) {
+        var called = false
+        var $el = this
+        $(this).one('bsTransitionEnd', function () { called = true })
+        var callback = function () { if (!called) $($el).trigger($.support.transition.end) }
+        setTimeout(callback, duration)
+        return this
+      }
+
+      $(function () {
+        $.support.transition = transitionEnd()
+
+        if (!$.support.transition) return
+
+        $.event.special.bsTransitionEnd = {
+          bindType: $.support.transition.end,
+          delegateType: $.support.transition.end,
+          handle: function (e) {
+            if ($(e.target).is(this)) return e.handleObj.handler.apply(this, arguments)
+          }
+        }
+      })
+
+    }(jQuery);
+    </script><script>
+    /* ========================================================================
+     * Bootstrap: collapse.js v3.3.7
+     * http://getbootstrap.com/javascript/#collapse
+     * ========================================================================
+     * Copyright 2011-2016 Twitter, Inc.
+     * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
+     * ======================================================================== */
+
+    /* jshint latedef: false */
+
+    +function ($) {
+      'use strict';
+
+      // COLLAPSE PUBLIC CLASS DEFINITION
+      // ================================
+
+      var Collapse = function (element, options) {
+        this.$element      = $(element)
+        this.options       = $.extend({}, Collapse.DEFAULTS, options)
+        this.$trigger      = $('[data-toggle="collapse"][href="#' + element.id + '"],' +
+                               '[data-toggle="collapse"][data-target="#' + element.id + '"]')
+        this.transitioning = null
+
+        if (this.options.parent) {
+          this.$parent = this.getParent()
+        } else {
+          this.addAriaAndCollapsedClass(this.$element, this.$trigger)
+        }
+
+        if (this.options.toggle) this.toggle()
+      }
+
+      Collapse.VERSION  = '3.3.7'
+
+      Collapse.TRANSITION_DURATION = 350
+
+      Collapse.DEFAULTS = {
+        toggle: true
+      }
+
+      Collapse.prototype.dimension = function () {
+        var hasWidth = this.$element.hasClass('width')
+        return hasWidth ? 'width' : 'height'
+      }
+
+      Collapse.prototype.show = function () {
+        if (this.transitioning || this.$element.hasClass('in')) return
+
+        var activesData
+        var actives = this.$parent && this.$parent.children('.panel').children('.in, .collapsing')
+
+        if (actives && actives.length) {
+          activesData = actives.data('bs.collapse')
+          if (activesData && activesData.transitioning) return
+        }
+
+        var startEvent = $.Event('show.bs.collapse')
+        this.$element.trigger(startEvent)
+        if (startEvent.isDefaultPrevented()) return
+
+        if (actives && actives.length) {
+          Plugin.call(actives, 'hide')
+          activesData || actives.data('bs.collapse', null)
+        }
+
+        var dimension = this.dimension()
+
+        this.$element
+          .removeClass('collapse')
+          .addClass('collapsing')[dimension](0)
+          .attr('aria-expanded', true)
+
+        this.$trigger
+          .removeClass('collapsed')
+          .attr('aria-expanded', true)
+
+        this.transitioning = 1
+
+        var complete = function () {
+          this.$element
+            .removeClass('collapsing')
+            .addClass('collapse in')[dimension]('')
+          this.transitioning = 0
+          this.$element
+            .trigger('shown.bs.collapse')
+        }
+
+        if (!$.support.transition) return complete.call(this)
+
+        var scrollSize = $.camelCase(['scroll', dimension].join('-'))
+
+        this.$element
+          .one('bsTransitionEnd', $.proxy(complete, this))
+          .emulateTransitionEnd(Collapse.TRANSITION_DURATION)[dimension](this.$element[0][scrollSize])
+      }
+
+      Collapse.prototype.hide = function () {
+        if (this.transitioning || !this.$element.hasClass('in')) return
+
+        var startEvent = $.Event('hide.bs.collapse')
+        this.$element.trigger(startEvent)
+        if (startEvent.isDefaultPrevented()) return
+
+        var dimension = this.dimension()
+
+        this.$element[dimension](this.$element[dimension]())[0].offsetHeight
+
+        this.$element
+          .addClass('collapsing')
+          .removeClass('collapse in')
+          .attr('aria-expanded', false)
+
+        this.$trigger
+          .addClass('collapsed')
+          .attr('aria-expanded', false)
+
+        this.transitioning = 1
+
+        var complete = function () {
+          this.transitioning = 0
+          this.$element
+            .removeClass('collapsing')
+            .addClass('collapse')
+            .trigger('hidden.bs.collapse')
+        }
+
+        if (!$.support.transition) return complete.call(this)
+
+        this.$element
+          [dimension](0)
+          .one('bsTransitionEnd', $.proxy(complete, this))
+          .emulateTransitionEnd(Collapse.TRANSITION_DURATION)
+      }
+
+      Collapse.prototype.toggle = function () {
+        this[this.$element.hasClass('in') ? 'hide' : 'show']()
+      }
+
+      Collapse.prototype.getParent = function () {
+        return $(this.options.parent)
+          .find('[data-toggle="collapse"][data-parent="' + this.options.parent + '"]')
+          .each($.proxy(function (i, element) {
+            var $element = $(element)
+            this.addAriaAndCollapsedClass(getTargetFromTrigger($element), $element)
+          }, this))
+          .end()
+      }
+
+      Collapse.prototype.addAriaAndCollapsedClass = function ($element, $trigger) {
+        var isOpen = $element.hasClass('in')
+
+        $element.attr('aria-expanded', isOpen)
+        $trigger
+          .toggleClass('collapsed', !isOpen)
+          .attr('aria-expanded', isOpen)
+      }
+
+      function getTargetFromTrigger($trigger) {
+        var href
+        var target = $trigger.attr('data-target')
+          || (href = $trigger.attr('href')) && href.replace(/.*(?=#[^\s]+$)/, '') // strip for ie7
+
+        return $(target)
+      }
+
+
+      // COLLAPSE PLUGIN DEFINITION
+      // ==========================
+
+      function Plugin(option) {
+        return this.each(function () {
+          var $this   = $(this)
+          var data    = $this.data('bs.collapse')
+          var options = $.extend({}, Collapse.DEFAULTS, $this.data(), typeof option == 'object' && option)
+
+          if (!data && options.toggle && /show|hide/.test(option)) options.toggle = false
+          if (!data) $this.data('bs.collapse', (data = new Collapse(this, options)))
+          if (typeof option == 'string') data[option]()
+        })
+      }
+
+      var old = $.fn.collapse
+
+      $.fn.collapse             = Plugin
+      $.fn.collapse.Constructor = Collapse
+
+
+      // COLLAPSE NO CONFLICT
+      // ====================
+
+      $.fn.collapse.noConflict = function () {
+        $.fn.collapse = old
+        return this
+      }
+
+
+      // COLLAPSE DATA-API
+      // =================
+
+      $(document).on('click.bs.collapse.data-api', '[data-toggle="collapse"]', function (e) {
+        var $this   = $(this)
+
+        if (!$this.attr('data-target')) e.preventDefault()
+
+        var $target = getTargetFromTrigger($this)
+        var data    = $target.data('bs.collapse')
+        var option  = data ? 'toggle' : $this.data()
+
+        Plugin.call($target, option)
+      })
+
+    }(jQuery);
+    </script><script>
+    window.initializeCodeFolding = function(show) {
+
+      // handlers for show-all and hide all
+      $("#rmd-show-all-code").click(function() {
+        $('div.r-code-collapse').each(function() {
+          $(this).collapse('show');
+        });
+      });
+      $("#rmd-hide-all-code").click(function() {
+        $('div.r-code-collapse').each(function() {
+          $(this).collapse('hide');
+        });
+      });
+
+      // index for unique code element ids
+      var currentIndex = 1;
+
+      // select all R code blocks
+      var rCodeBlocks = $('pre.sourceCode, pre.r, pre.python, pre.bash, pre.sql, pre.cpp, pre.stan, pre.js');
+      rCodeBlocks.each(function() {
+
+        // create a collapsable div to wrap the code in
+        var div = $('<div class="collapse r-code-collapse"></div>');
+        if (show)
+          div.addClass('in');
+        var id = 'rcode-643E0F36' + currentIndex++;
+        div.attr('id', id);
+        $(this).before(div);
+        $(this).detach().appendTo(div);
+
+        // add a show code button right above
+        var showCodeText = $('<span>' + (show ? 'Hide' : 'Code') + '</span>');
+        var showCodeButton = $('<button type="button" class="btn btn-default btn-xs code-folding-btn pull-right"></button>');
+        showCodeButton.append(showCodeText);
+        showCodeButton
+            .attr('data-toggle', 'collapse')
+            .attr('data-target', '#' + id)
+            .attr('aria-expanded', show)
+            .attr('aria-controls', id);
+
+        var buttonRow = $('<div class="row"></div>');
+        var buttonCol = $('<div class="col-md-12"></div>');
+
+        buttonCol.append(showCodeButton);
+        buttonRow.append(buttonCol);
+
+        div.before(buttonRow);
+
+        // update state of button on show/hide
+        div.on('hidden.bs.collapse', function () {
+          showCodeText.text('Code');
+        });
+        div.on('show.bs.collapse', function () {
+          showCodeText.text('Hide');
+        });
+      });
+
+    }
+    </script><script>
+    /* ========================================================================
+     * Bootstrap: dropdown.js v3.3.7
+     * http://getbootstrap.com/javascript/#dropdowns
+     * ========================================================================
+     * Copyright 2011-2016 Twitter, Inc.
+     * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
+     * ======================================================================== */
+
+
+    +function ($) {
+      'use strict';
+
+      // DROPDOWN CLASS DEFINITION
+      // =========================
+
+      var backdrop = '.dropdown-backdrop'
+      var toggle   = '[data-toggle="dropdown"]'
+      var Dropdown = function (element) {
+        $(element).on('click.bs.dropdown', this.toggle)
+      }
+
+      Dropdown.VERSION = '3.3.7'
+
+      function getParent($this) {
+        var selector = $this.attr('data-target')
+
+        if (!selector) {
+          selector = $this.attr('href')
+          selector = selector && /#[A-Za-z]/.test(selector) && selector.replace(/.*(?=#[^\s]*$)/, '') // strip for ie7
+        }
+
+        var $parent = selector && $(selector)
+
+        return $parent && $parent.length ? $parent : $this.parent()
+      }
+
+      function clearMenus(e) {
+        if (e && e.which === 3) return
+        $(backdrop).remove()
+        $(toggle).each(function () {
+          var $this         = $(this)
+          var $parent       = getParent($this)
+          var relatedTarget = { relatedTarget: this }
+
+          if (!$parent.hasClass('open')) return
+
+          if (e && e.type == 'click' && /input|textarea/i.test(e.target.tagName) && $.contains($parent[0], e.target)) return
+
+          $parent.trigger(e = $.Event('hide.bs.dropdown', relatedTarget))
+
+          if (e.isDefaultPrevented()) return
+
+          $this.attr('aria-expanded', 'false')
+          $parent.removeClass('open').trigger($.Event('hidden.bs.dropdown', relatedTarget))
+        })
+      }
+
+      Dropdown.prototype.toggle = function (e) {
+        var $this = $(this)
+
+        if ($this.is('.disabled, :disabled')) return
+
+        var $parent  = getParent($this)
+        var isActive = $parent.hasClass('open')
+
+        clearMenus()
+
+        if (!isActive) {
+          if ('ontouchstart' in document.documentElement && !$parent.closest('.navbar-nav').length) {
+            // if mobile we use a backdrop because click events don't delegate
+            $(document.createElement('div'))
+              .addClass('dropdown-backdrop')
+              .insertAfter($(this))
+              .on('click', clearMenus)
+          }
+
+          var relatedTarget = { relatedTarget: this }
+          $parent.trigger(e = $.Event('show.bs.dropdown', relatedTarget))
+
+          if (e.isDefaultPrevented()) return
+
+          $this
+            .trigger('focus')
+            .attr('aria-expanded', 'true')
+
+          $parent
+            .toggleClass('open')
+            .trigger($.Event('shown.bs.dropdown', relatedTarget))
+        }
+
+        return false
+      }
+
+      Dropdown.prototype.keydown = function (e) {
+        if (!/(38|40|27|32)/.test(e.which) || /input|textarea/i.test(e.target.tagName)) return
+
+        var $this = $(this)
+
+        e.preventDefault()
+        e.stopPropagation()
+
+        if ($this.is('.disabled, :disabled')) return
+
+        var $parent  = getParent($this)
+        var isActive = $parent.hasClass('open')
+
+        if (!isActive && e.which != 27 || isActive && e.which == 27) {
+          if (e.which == 27) $parent.find(toggle).trigger('focus')
+          return $this.trigger('click')
+        }
+
+        var desc = ' li:not(.disabled):visible a'
+        var $items = $parent.find('.dropdown-menu' + desc)
+
+        if (!$items.length) return
+
+        var index = $items.index(e.target)
+
+        if (e.which == 38 && index > 0)                 index--         // up
+        if (e.which == 40 && index < $items.length - 1) index++         // down
+        if (!~index)                                    index = 0
+
+        $items.eq(index).trigger('focus')
+      }
+
+
+      // DROPDOWN PLUGIN DEFINITION
+      // ==========================
+
+      function Plugin(option) {
+        return this.each(function () {
+          var $this = $(this)
+          var data  = $this.data('bs.dropdown')
+
+          if (!data) $this.data('bs.dropdown', (data = new Dropdown(this)))
+          if (typeof option == 'string') data[option].call($this)
+        })
+      }
+
+      var old = $.fn.dropdown
+
+      $.fn.dropdown             = Plugin
+      $.fn.dropdown.Constructor = Dropdown
+
+
+      // DROPDOWN NO CONFLICT
+      // ====================
+
+      $.fn.dropdown.noConflict = function () {
+        $.fn.dropdown = old
+        return this
+      }
+
+
+      // APPLY TO STANDARD DROPDOWN ELEMENTS
+      // ===================================
+
+      $(document)
+        .on('click.bs.dropdown.data-api', clearMenus)
+        .on('click.bs.dropdown.data-api', '.dropdown form', function (e) { e.stopPropagation() })
+        .on('click.bs.dropdown.data-api', toggle, Dropdown.prototype.toggle)
+        .on('keydown.bs.dropdown.data-api', toggle, Dropdown.prototype.keydown)
+        .on('keydown.bs.dropdown.data-api', '.dropdown-menu', Dropdown.prototype.keydown)
+
+    }(jQuery);
+    </script><style type="text/css">
+    .code-folding-btn { margin-bottom: 4px; }
+    .row { display: flex; }
+    .collapse { display: none; }
+    .in { display:block }
+    .pull-right > .dropdown-menu {
+        right: 0;
+        left: auto;
+    }
+    .open > .dropdown-menu {
+        display: block;
+    }
+    .dropdown-menu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        z-index: 1000;
+        display: none;
+        float: left;
+        min-width: 160px;
+        padding: 5px 0;
+        margin: 2px 0 0;
+        font-size: 14px;
+        text-align: left;
+        list-style: none;
+        background-color: #fff;
+        -webkit-background-clip: padding-box;
+        background-clip: padding-box;
+        border: 1px solid #ccc;
+        border: 1px solid rgba(0,0,0,.15);
+        border-radius: 4px;
+        -webkit-box-shadow: 0 6px 12px rgba(0,0,0,.175);
+        box-shadow: 0 6px 12px rgba(0,0,0,.175);
+    }
+    </style>
+<script>
+    $(document).ready(function () {
+      window.initializeCodeFolding("show" === "show");
+    });
+    </script><script>
+    document.write('<div class="btn-group pull-right" style="position: absolute; top: 20%; right: 2%; z-index: 200"><button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" data-_extension-text-contrast=""><span>Code</span> <span class="caret"></span></button><ul class="dropdown-menu" style="min-width: 50px;"><li><a id="rmd-show-all-code" href="#">Show All Code</a></li><li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li></ul></div>')
+    </script><script src="https://cdnjs.cloudflare.com/ajax/libs/autocomplete.js/0.38.0/autocomplete.jquery.min.js" integrity="sha512-GU9ayf+66Xx2TmpxqJpliWbT5PiGYxpaG8rfnBEk1LL8l1KGkRShhngwdXK1UgqhAzWpZHSiYPc09/NwDQIGyg==" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mark.js/8.11.1/mark.min.js" integrity="sha512-5CYOlHXGh6QpOFA/TeTylKLWfB3ftPsde7AnmhuitiTX4K5SqCLBeKro6sPS8ilsz1Q4NRx3v8Ko2IBiszzdww==" crossorigin="anonymous"></script><!-- CSS --><style type="text/css">
+    
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  </style>
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-spy="scroll" data-target="#toc">
+
+<div class="container-fluid">
+<div class="row">
+  <header class="col-sm-12 col-lg-3 sidebar sidebar-book"><a class="sr-only sr-only-focusable" href="#content">Skip to main content</a>
+
+    <div class="d-flex align-items-start justify-content-between">
+      <h1>
+        <a href="index.html" title="">纵向与事件时间数据的联合模型及其在 R 中的应用</a>
+      </h1>
+      <button class="btn btn-outline-primary d-lg-none ml-2 mt-1" type="button" data-toggle="collapse" data-target="#main-nav" aria-expanded="true" aria-controls="main-nav"><i class="fas fa-bars"></i><span class="sr-only">Show table of contents</span></button>
+    </div>
+
+    <div id="main-nav" class="collapse-lg">
+      <form role="search">
+        <input id="search" class="form-control" type="search" placeholder="Search" aria-label="Search">
+</form>
+
+      <nav aria-label="Table of contents"><h2>Table of contents</h2>
+        <ul class="book-toc list-unstyled">
+<li><a class="" href="index.html">前言</a></li>
+<li><a class="" href="%E7%9B%AE%E5%BD%95.html">目录</a></li>
+<li class="book-part">正文</li>
+<li><a class="" href="chap1.html"><span class="header-section-number">1</span> 介绍</a></li>
+<li><a class="" href="chap2.html"><span class="header-section-number">2</span> 纵向数据分析</a></li>
+<li><a class="" href="chap3.html"><span class="header-section-number">3</span> 事件时间数据分析</a></li>
+<li><a class="" href="chap4.html"><span class="header-section-number">4</span> 纵向与事件时间数据的联合模型</a></li>
+<li><a class="" href="chap5.html"><span class="header-section-number">5</span> 标准联合模型的扩展</a></li>
+<li><a class="" href="chap6.html"><span class="header-section-number">6</span> 联合模型诊断</a></li>
+<li><a class="active" href="chap7.html"><span class="header-section-number">7</span> 联合模型的预测和准确性</a></li>
+<li class="book-part">附录</li>
+<li><a class="" href="A.html"><span class="header-section-number">A</span> R 的简要介绍</a></li>
+<li class="book-part">—</li>
+<li><a class="" href="bib.html">参考文献</a></li>
+</ul>
+
+        <div class="book-extra">
+          
+        </div>
+      </nav>
+</div>
+  </header><main class="col-sm-12 col-md-9 col-lg-7" id="content"><div id="chap7" class="section level1" number="7">
+<h1>
+<span class="header-section-number">第 7 章</span> 联合模型的预测和准确性<a class="anchor" aria-label="anchor" href="#chap7"><i class="fas fa-link"></i></a>
+</h1>
+<p>通常，建立统计模型的动机是为感兴趣的结果提供预测。在本章中，我们将说明如何使用拟合的联合模型来提供生存和纵向结果的个性化预测。我们在这里考虑的设置的一个重要特征是，这些预测具有动态性，即随着时间的推移会为患者记录额外的信息，因此可以利用新信息更新她的预测。为了评估这些预测的质量，我们提出了基于受试者工作特征 (Receiver Operating Characteristic, ROC) 方法的判别度量。</p>
+<div id="sec7-1" class="section level2" number="7.1">
+<h2>
+<span class="header-section-number">7.1</span> 生存概率的动态预测<a class="anchor" aria-label="anchor" href="#sec7-1"><i class="fas fa-link"></i></a>
+</h2>
+<div id="sec7-1-1" class="section level3" number="7.1.1">
+<h3>
+<span class="header-section-number">7.1.1</span> 定义<a class="anchor" aria-label="anchor" href="#sec7-1-1"><i class="fas fa-link"></i></a>
+</h3>
+<p>我们首先将注意力转向生存概率的预测。具体来说，对于特定患者和随访期间的特定时间点，我们希望利用我们手头的所有可用信息（包括基线信息和累积的生物标志物水平）来预测生存概率。获得这些信息将使医生能够更好地了解疾病动态，并最终在特定时间点做出最佳决策。由于当前医疗实践有向个性化医疗发展的趋势，以及这种个性化预测在这方面可以发挥的突出作用，最近人们对这方面的联合建模框架产生了很大的兴趣 (Rizopoulos, 2011; Proust-Lima and Taylor, 2009; Yu et al., 2008; Garre et al., 2008).</p>
+<p>更正式地说，基于随机样本中拟合的联合模型 <span class="math inline">\(\mathcal{D}_n=\{T_i,\delta_i,y_i;i=1,\ldots,n\}\)</span>，我们感兴趣的是预测新受试者 <span class="math inline">\(i\)</span> 的生存概率，该受试者提供了一组纵向测量 <span class="math inline">\(\mathcal{Y}_i(t)=\{y_i(s);0\leq s&lt;t\}\)</span>，并且具有基线协变量向量 <span class="math inline">\(w_i\)</span>。正如我们 <a href="chap3.html#sec3-4">3.4</a> 节中看到的，<span class="math inline">\(y_i(t)\)</span> 的内生性的一个重要特征是它与失效机制直接相关，即提供直到 <span class="math inline">\(t\)</span> 的纵向测量，实际上意味着生存到这个时间点。因此，更重要的是关注给定生存到时间 <span class="math inline">\(t\)</span> 后生存时间 <span class="math inline">\(u &gt; t\)</span> 的条件概率，即</p>
+<p><span class="math display" id="eq:7-1">\[\begin{align}
+\pi_i(u\mid t)=\Pr(T_i^*\ge u\mid T_i^*&gt;t,\mathcal{Y}_i(t),w_i,\mathcal{D}_n;\theta^*),\quad t&gt;0
+\tag{7.1}
+\end{align}\]</span></p>
+<p>其中，<span class="math inline">\(\theta^*\)</span> 表示真参数值。从它的定义可以看出，<span class="math inline">\(\pi_i(u|t)\)</span> 具有动态性质。也就是说，当在时间 <span class="math inline">\(t' &gt; t\)</span> 为患者记录新信息时，我们可以更新这些预测并获得 <span class="math inline">\(\pi_i(u | t')\)</span>，其中 <span class="math inline">\(u &gt; t'\)</span>，因此以时间动态方式进行。</p>
+</div>
+<div id="sec7-1-2" class="section level3" number="7.1.2">
+<h3>
+<span class="header-section-number">7.1.2</span> 估计<a class="anchor" aria-label="anchor" href="#sec7-1-2"><i class="fas fa-link"></i></a>
+</h3>
+<p>特定于受试者的条件生存概率的估计充分利用了用于定义联合模型的条件独立假设。也就是说，在条件 <a href="chap4.html#eq:4-7">(4.7)</a> 下，我们观察到 <a href="chap7.html#eq:7-1">(7.1)</a> 可重写为（假设以协变量 <span class="math inline">\(w_i\)</span> 为条件，但在表达式中省略了）</p>
+<p><span class="math display" id="eq:7-2">\[\begin{align}
+\operatorname*{Pr}(T_{i}^{*}&amp;\geq u\mid T_{i}^{*}&gt;t,\mathcal{Y}_{i}(t);\theta) \\
+=&amp;\quad\int\Pr(T_i^*\geq u\mid T_i^*&gt;t,\mathcal{Y}_i(t),b_i;\theta) \\
+&amp;\times p(b_i\mid T_i^*&gt;t,\mathcal{Y}_i(t);\theta)db_i \\
+=&amp;\quad\int\Pr(T_i^*\ge u\mid T_i^*&gt;t,b_i;\theta)p(b_i\mid T_i^*&gt;t,\mathcal{Y}_i(t);\theta)db_i\\
+=&amp;\quad\int\frac{\mathcal{S}_i\big\{u\mid\mathcal{M}_i(u,b_i,\theta);\theta\big\}}{\mathcal{S}_i\big\{t\mid\mathcal{M}_i(t,b_i,\theta);\theta\big\}}p(b_i\mid T_i^*&gt;t,\mathcal{Y}_i(t);\theta)db_i
+\tag{7.2}
+\end{align}\]</span></p>
+<p>其中 <span class="math inline">\(\mathcal S_i(\cdot)\)</span> 与之前一样表示生存函数，此外我们明确指出，由线性混合效应模型近似的纵向历史 <span class="math inline">\(\mathcal M_i(\cdot)\)</span> 是随机效应和参数的函数。</p>
+<p>基于 <a href="chap7.html#eq:7-2">(7.2)</a>，我们可以使用 <span class="math inline">\(b_i\)</span> 的经验贝叶斯估计得出 <span class="math inline">\(\pi_i(u | t)\)</span> 的一阶估计，即</p>
+<p><span class="math display" id="eq:7-3">\[\begin{align}
+&amp;\tilde{\pi}_i(u\mid t)\\&amp;=\mathcal{S}_i\big\{u\mid\mathcal{M}_i(u,\hat{b}_i^{(t)},\hat{\theta});\hat{\theta}\big\}\Big/\mathcal{S}_i\big\{t\mid\mathcal{M}_i(t,\hat{b}_i^{(t)},\hat{\theta});\hat{\theta}\big\}+O\big([n_i(t)]^{-1}\big)
+\tag{7.3}
+\end{align}\]</span></p>
+<p>其中 <span class="math inline">\(\hat\theta\)</span> 表示最大似然估计，<span class="math inline">\(\hat b_i^{(t)}\)</span> 表示条件分布 <span class="math inline">\(\log p(b_i\mid T_i^*&gt;t,\mathcal{Y}_i(t);\hat{\theta})\)</span> 的众数，<span class="math inline">\(n_i(t)\)</span> 表示受试者 <span class="math inline">\(i\)</span> 在时间 <span class="math inline">\(t\)</span> 时的纵向响应数。Rizopoulos (2011) 中的模拟研究表明，该估计在实践中效果相对较好。然而，推导 <span class="math inline">\(\pi_i(u|t)\)</span> 的标准误和置信区间是一项相当困难的任务，因为我们需要考虑最大似然和经验贝叶斯估计的变异性。为了解决这个问题并产生有效的标准误差，Rizopoulos (2011), Proust-Lima and Taylor (2009) 提出使用蒙特卡洛模拟方案。事实上，这些在本质上与 <a href="chap6.html#sec6-3">6.3</a> 节中提出的多重插补残差模拟方案非常相似，并且它们可以通过联合模型的渐近贝叶斯公式来驱动。具体来说，<a href="chap7.html#eq:7-1">(7.1)</a> 的后验期望可以导出为</p>
+<p><span class="math display" id="eq:7-4">\[\begin{align}
+\Pr(T_i^*&amp;\ge u\mid T_i^*&gt;t,\mathcal{Y}_i(t),\mathcal{D}_n)\\&amp;=\quad\int\Pr(T_i^*\ge u\mid T_i^*&gt;t,\mathcal{Y}_i(t);\theta)p(\theta\mid\mathcal{D}_n)d\theta
+\tag{7.4}
+\end{align}\]</span></p>
+<p>被积函数的第一部分由 <a href="chap7.html#eq:7-2">(7.2)</a> 给出。对于第二部分，即给定观测数据的参数的后验分布，我们使用与 <a href="chap6.html#sec6-3">6.3</a> 节中类似的参数，并假设样本量 <span class="math inline">\(n\)</span> 足够大，使得 <span class="math inline">\(\{\theta|\mathcal D_n\}\)</span> 可以很好地近似为 <span class="math inline">\(\mathcal{N}\{\hat{\theta},\text{v}\hat{\mathrm{a}}\text{r}(\hat{\theta})\}\)</span>。将 <a href="chap7.html#eq:7-4">(7.4)</a> 与 <a href="chap7.html#eq:7-2">(7.2)</a> 和 <span class="math inline">\(\{\theta\mid\mathcal{D}_n\}\sim\mathcal{N}\{\hat{\theta},\text{v}\hat{\mathrm{a}}\text{r}(\hat{\theta})\}\)</span> 相结合，我们可以使用以下模拟方案导出 <span class="math inline">\(\pi_i(u|t)\)</span> 的蒙特卡罗估计</p>
+<div class="rmdnote">
+<ul>
+<li>步骤 1：抽取 <span class="math inline">\(\theta^{(l)}\sim\mathcal{N}\{\hat{\theta},\text{v}\hat{\mathrm{a}}\text{r}(\hat{\theta})\}\)</span>
+</li>
+<li>步骤 2：抽取 <span class="math inline">\(b_i^{(l)}\sim\{b_i\mid T_i^*&gt;t,\mathcal{Y}_i(t),\theta^{(l)}\}\)</span>
+</li>
+<li>步骤 3：计算 <span class="math inline">\(\pi_i^{(l)}(u\mid t)=\mathcal{S}_i\big\{u\mid\mathcal{M}_i(u,b_i^{(l)},\theta^{(l)});\theta^{(l)}\big\}\Big/\mathcal{S}_i\big\{t\mid\mathcal{M}_i(t,b_i^{(l)},\theta^{(l)});\theta^{(l)}\big\}\)</span>
+</li>
+</ul>
+</div>
+<p>重复以上步骤 <span class="math inline">\(l=1,\ldots,L\)</span> 次，其中 <span class="math inline">\(L\)</span> 表示蒙特卡罗样本量。请注意，实际上，上述模拟方案需要计算一阶估计 <a href="chap7.html#eq:7-3">(7.3)</a>，但使用 <span class="math inline">\(\theta^{(l)}\)</span> 和 <span class="math inline">\(b^{(l)}_i\)</span> 代替 <span class="math inline">\(\hat\theta\)</span> 和 <span class="math inline">\(\hat b^{(t)}_i\)</span>，以便分别传播最大似然估计和经验贝叶斯估计中的不确定性。此外，与 <a href="chap6.html#sec6-3">6.3</a> 节类似，步骤 2 基于 Metropolis-Hastings 算法，该算法具有来自具有四个自由度的多元 <span class="math inline">\(t\)</span> 分布的独立建议，以经验贝叶斯估计 <span class="math inline">\(\hat b^{(t)}_i\)</span> 为中心，并且具有尺度矩阵 <span class="math inline">\(\operatorname{var}(\hat{b}_i^{(t)})=\left\{-\partial^2\log p(T_i^*&gt;t,\mathcal{Y}_i(t),b;\hat{\theta})/\partial b^\top\partial b\Big|_{b=\hat{b}_i^{(t)}}\right\}^{-1}\)</span>。</p>
+<p>实现 <span class="math inline">\(\{\pi_i^{(l)}(u~|~t),l~=~1,\dots,L\}\)</span> 可用于导出 <span class="math inline">\(\pi_i(u|t)\)</span> 的点估计，例如</p>
+<p><span class="math display" id="eq:7-5">\[\begin{align}
+\hat{\pi}_i(u\mid t)=\text{median}\{\pi_i^{(l)}(u\mid t),l=1,\ldots,L\}
+\tag{7.5}
+\end{align}\]</span></p>
+<p>或</p>
+<p><span class="math display" id="eq:7-6">\[\begin{align}
+\hat{\pi}_i(u\mid t)=L^{-1}\sum_{l=1}^L\pi_i^{(l)}(u\mid t)
+\tag{7.6}
+\end{align}\]</span></p>
+<p>并使用蒙特卡罗样本上的样本标准差、使用蒙特卡罗样本百分位数的置信区间来计算标准误差。与 <a href="chap7.html#eq:7-3">(7.3)</a> 相比，估计 <a href="chap7.html#eq:7-5">(7.5)</a> 和 <a href="chap7.html#eq:7-6">(7.6)</a> 不仅提供了一种直接计算标准误的方法，而且由于它们恰当地逼近 <span class="math inline">\(\pi_i(u|t)\)</span> 定义中的积分，因此有望产生更准确的结果。</p>
+</div>
+<div id="sec7-1-3" class="section level3" number="7.1.3">
+<h3>
+<span class="header-section-number">7.1.3</span> 在 R 中的实现<a class="anchor" aria-label="anchor" href="#sec7-1-3"><i class="fas fa-link"></i></a>
+</h3>
+<p>动态生存概率是在 <code>JM</code> 包中使用函数 <code>survfitJM()</code> 计算的。该函数接受拟合联合模型和数据框作为主要参数，其中包含我们希望计算预测生存概率的受试者的纵向和协变量信息。为了说明其使用，我们从 PBC 数据集中计算患者 2 和 25 的生存概率。这两名患者观察到的血清胆红素对数纵向轨迹如图 7.1 所示。我们观察到，2 号患者的血清胆红素对数水平呈上升趋势，这表明她的病情正在恶化。另一方面，25 号患者表现出更稳定的较低血清胆红素水平，因此我们预计她有更高的生存概率。</p>
+<details><summary><font color="#B95953">图 7.1</font>
+</summary><img src="figure/figure%207.1.png#center" style="width:80.0%"></details><p><br>
+我们基于一个联合模型来估计这两名患者的条件生存概率 <span class="math inline">\(\pi_i(u|t)\)</span>，该模型使用 B 样条来近似特定于受试者的纵向轨迹 <span class="math inline">\(m_i(t)\)</span>。更具体地说，对于纵向对数血清胆红素测量，我们假定模型</p>
+<p><span class="math display">\[\begin{array}{rcl}y_i(t)&amp;=&amp;m_i(t)+\varepsilon_i(t)\\&amp;=&amp;(\beta_0+b_{i0})+(\beta_k+b_{ik})^\top B(t,4,4)+\varepsilon_i(t)\end{array}\]</span></p>
+<p>其中 <span class="math inline">\(B(t,df,q)\)</span> 表示 <span class="math inline">\(q−1\)</span> 次样条的 B 样条基矩阵，<span class="math inline">\(df−q+1\)</span> 个内部结位于随访时间的相应百分位数，<span class="math inline">\(\beta_k\)</span> 和 <span class="math inline">\(b_{ik}\)</span> 表示与 B 样条矩阵相对应的固定和随机效应向量。对于生存过程，我们假定复合事件（死亡或移植）的风险取决于治疗、异常凝血酶原时间和对数血清胆红素的真实水平，即</p>
+<p><span class="math display">\[h_i(t)=h_0(t)\exp\{\gamma_1\mathtt{D}\text{-}\mathtt{pnc}_i+\gamma_2\mathtt{ProtTime}_i+\alpha m_i(t)\}\]</span></p>
+<p>其中 <span class="math inline">\(\mathtt{ProtTime}\)</span> 表示当基线的凝血酶原时间在 [10秒, 13秒] 的正常范围之外时取值为 1 的虚拟变量。假定基线风险为分段常数。我们首先使用相同的语法拟合相应的联合模型：</p>
+<div class="sourceCode" id="cb115"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb115-1"><a href="chap7.html#cb115-1" tabindex="-1"></a><span class="sc">&gt;</span> pbc2.id<span class="sc">$</span>Pro <span class="ot">&lt;-</span> <span class="fu">with</span>(pbc2.id, <span class="fu">factor</span>(pro <span class="sc">&gt;=</span> <span class="dv">10</span> <span class="sc">&amp;</span> pro <span class="sc">&lt;=</span> <span class="dv">13</span>,</span>
+<span id="cb115-2"><a href="chap7.html#cb115-2" tabindex="-1"></a>                                      <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"Abnormal"</span>, <span class="st">"Normal"</span>)))</span>
+<span id="cb115-3"><a href="chap7.html#cb115-3" tabindex="-1"></a><span class="sc">&gt;</span> pbc2<span class="sc">$</span>Pro <span class="ot">&lt;-</span> <span class="fu">rep</span>(pbc2.id<span class="sc">$</span>Pro, <span class="fu">tapply</span>(pbc2<span class="sc">$</span>id, pbc2<span class="sc">$</span>id, length))</span>
+<span id="cb115-4"><a href="chap7.html#cb115-4" tabindex="-1"></a><span class="sc">&gt;</span> lmeFitBsp.pbc <span class="ot">&lt;-</span> <span class="fu">lme</span>(</span>
+<span id="cb115-5"><a href="chap7.html#cb115-5" tabindex="-1"></a>  <span class="at">fixed =</span> <span class="fu">log</span>(serBilir) <span class="sc">~</span> <span class="fu">bs</span>(year, <span class="dv">4</span>, <span class="at">Boundary.knots =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">15</span>)),</span>
+<span id="cb115-6"><a href="chap7.html#cb115-6" tabindex="-1"></a>                       <span class="at">random =</span> <span class="fu">list</span>(</span>
+<span id="cb115-7"><a href="chap7.html#cb115-7" tabindex="-1"></a>  <span class="at">id =</span> <span class="fu">pdDiag</span>(<span class="at">form =</span> <span class="sc">~</span> <span class="fu">bs</span>(year, <span class="dv">4</span>, <span class="at">Boundary.knots =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">15</span>)))),</span>
+<span id="cb115-8"><a href="chap7.html#cb115-8" tabindex="-1"></a>                       <span class="at">data =</span> pbc2)</span>
+<span id="cb115-9"><a href="chap7.html#cb115-9" tabindex="-1"></a><span class="sc">&gt;</span> coxFit.pbc <span class="ot">&lt;-</span> <span class="fu">coxph</span>(<span class="fu">Surv</span>(years, status2) <span class="sc">~</span> drug <span class="sc">+</span> Pro,</span>
+<span id="cb115-10"><a href="chap7.html#cb115-10" tabindex="-1"></a>                      <span class="at">data =</span> pbc2.id, <span class="at">x =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb115-11"><a href="chap7.html#cb115-11" tabindex="-1"></a><span class="sc">&gt;</span> jointFitBsp.pbc <span class="ot">&lt;-</span> <span class="fu">jointModel</span>(lmeFitBsp.pbc, coxFit.pbc,</span>
+<span id="cb115-12"><a href="chap7.html#cb115-12" tabindex="-1"></a>                                <span class="at">timeVar =</span> <span class="st">"year"</span>, <span class="at">method =</span> <span class="st">"piecewise-PH-aGH"</span>)</span></code></pre></div>
+<p>代码的第一部分构建了表示基线时凝血酶原时间是否在正常范围内的因子变量。来自包 <code>splines</code> 的函数 <code>bs()</code> 自动构造所需的 B 样条基矩阵。它的第二个参数对应于自由度，参数 <code>Boundary.nots</code> 用于确保 B 样条基的边界结延伸到随访时间 <span class="math inline">\(\{t_{ij},i=1,\ldots,n;j=1,\ldots,n_i\)</span> 以及到 <span class="math inline">\(\{T_i,i=1,\ldots,n\}\)</span> 的组合范围。</p>
+<p>我们将首先关注患者 2 并计算她的条件生存概率 <span class="math inline">\(\pi_i(u | t)\)</span>。具体来说，我们提供拟合联合模型作为 <code>survfitJM()</code> 的第一个参数，并在 <code>newdata</code> 参数中提供该患者的数据。该函数假定患者已存活到新数据中记录血清胆红素测量值的最后一个时间点 <span class="math inline">\(t\)</span>，并将生成一组预定义的 <span class="math inline">\(u &gt; t\)</span> 值的生存概率<a class="footnote-ref" tabindex="0" data-toggle="popover" data-content='&lt;p&gt;默认情况下，&lt;code&gt;survfitJM()&lt;/code&gt; 构造从最小到最大观测事件时间的 35 个等距点的规则序列，并计算该序列中 &lt;span class="math inline"&gt;\(u &amp;gt; t\)&lt;/span&gt; 的 &lt;span class="math inline"&gt;\(\pi_i(u \mid t)\)&lt;/span&gt;。&lt;/p&gt;'><sup>21</sup></a>。</p>
+<div class="sourceCode" id="cb116"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb116-1"><a href="chap7.html#cb116-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">set.seed</span>(<span class="dv">123</span>) <span class="co"># we set the seed for reproducibility</span></span>
+<span id="cb116-2"><a href="chap7.html#cb116-2" tabindex="-1"></a><span class="sc">&gt;</span> survPrbs <span class="ot">&lt;-</span> <span class="fu">survfitJM</span>(jointFitBsp.pbc, <span class="at">newdata =</span> pbc2[pbc2<span class="sc">$</span>id <span class="sc">==</span> <span class="dv">2</span>, ])</span>
+<span id="cb116-3"><a href="chap7.html#cb116-3" tabindex="-1"></a><span class="sc">&gt;</span> survPrbs</span>
+<span id="cb116-4"><a href="chap7.html#cb116-4" tabindex="-1"></a></span>
+<span id="cb116-5"><a href="chap7.html#cb116-5" tabindex="-1"></a>Prediction of Conditional Probabilities <span class="cf">for</span> Event</span>
+<span id="cb116-6"><a href="chap7.html#cb116-6" tabindex="-1"></a>      based on <span class="dv">200</span> Monte Carlo samples</span>
+<span id="cb116-7"><a href="chap7.html#cb116-7" tabindex="-1"></a></span>
+<span id="cb116-8"><a href="chap7.html#cb116-8" tabindex="-1"></a><span class="sc">$</span><span class="dv">2</span></span>
+<span id="cb116-9"><a href="chap7.html#cb116-9" tabindex="-1"></a>     times   Mean Median  Lower  Upper</span>
+<span id="cb116-10"><a href="chap7.html#cb116-10" tabindex="-1"></a><span class="dv">1</span>   <span class="fl">8.8325</span> <span class="fl">1.0000</span> <span class="fl">1.0000</span> <span class="fl">1.0000</span> <span class="fl">1.0000</span></span>
+<span id="cb116-11"><a href="chap7.html#cb116-11" tabindex="-1"></a><span class="dv">1</span>   <span class="fl">8.9405</span> <span class="fl">0.9835</span> <span class="fl">0.9845</span> <span class="fl">0.9666</span> <span class="fl">0.9926</span></span>
+<span id="cb116-12"><a href="chap7.html#cb116-12" tabindex="-1"></a><span class="dv">2</span>   <span class="fl">9.3609</span> <span class="fl">0.9197</span> <span class="fl">0.9252</span> <span class="fl">0.8379</span> <span class="fl">0.9655</span></span>
+<span id="cb116-13"><a href="chap7.html#cb116-13" tabindex="-1"></a><span class="dv">3</span>   <span class="fl">9.7813</span> <span class="fl">0.8567</span> <span class="fl">0.8695</span> <span class="fl">0.7022</span> <span class="fl">0.9403</span></span>
+<span id="cb116-14"><a href="chap7.html#cb116-14" tabindex="-1"></a><span class="dv">4</span>  <span class="fl">10.2017</span> <span class="fl">0.7944</span> <span class="fl">0.8140</span> <span class="fl">0.5633</span> <span class="fl">0.9138</span></span>
+<span id="cb116-15"><a href="chap7.html#cb116-15" tabindex="-1"></a><span class="dv">5</span>  <span class="fl">10.6221</span> <span class="fl">0.7524</span> <span class="fl">0.7769</span> <span class="fl">0.4848</span> <span class="fl">0.9014</span></span>
+<span id="cb116-16"><a href="chap7.html#cb116-16" tabindex="-1"></a><span class="dv">6</span>  <span class="fl">11.0425</span> <span class="fl">0.7162</span> <span class="fl">0.7462</span> <span class="fl">0.4026</span> <span class="fl">0.8933</span></span>
+<span id="cb116-17"><a href="chap7.html#cb116-17" tabindex="-1"></a><span class="dv">7</span>  <span class="fl">11.4629</span> <span class="fl">0.6791</span> <span class="fl">0.7101</span> <span class="fl">0.3405</span> <span class="fl">0.8837</span></span>
+<span id="cb116-18"><a href="chap7.html#cb116-18" tabindex="-1"></a><span class="dv">8</span>  <span class="fl">11.8833</span> <span class="fl">0.6412</span> <span class="fl">0.6773</span> <span class="fl">0.2516</span> <span class="fl">0.8718</span></span>
+<span id="cb116-19"><a href="chap7.html#cb116-19" tabindex="-1"></a><span class="dv">9</span>  <span class="fl">12.3037</span> <span class="fl">0.6027</span> <span class="fl">0.6501</span> <span class="fl">0.1561</span> <span class="fl">0.8559</span></span>
+<span id="cb116-20"><a href="chap7.html#cb116-20" tabindex="-1"></a><span class="dv">10</span> <span class="fl">12.7241</span> <span class="fl">0.5641</span> <span class="fl">0.6182</span> <span class="fl">0.0728</span> <span class="fl">0.8466</span></span>
+<span id="cb116-21"><a href="chap7.html#cb116-21" tabindex="-1"></a><span class="dv">11</span> <span class="fl">13.1445</span> <span class="fl">0.5265</span> <span class="fl">0.5847</span> <span class="fl">0.0131</span> <span class="fl">0.8405</span></span>
+<span id="cb116-22"><a href="chap7.html#cb116-22" tabindex="-1"></a><span class="dv">12</span> <span class="fl">13.5649</span> <span class="fl">0.4906</span> <span class="fl">0.5509</span> <span class="fl">0.0003</span> <span class="fl">0.8335</span></span>
+<span id="cb116-23"><a href="chap7.html#cb116-23" tabindex="-1"></a><span class="dv">13</span> <span class="fl">13.9853</span> <span class="fl">0.4566</span> <span class="fl">0.5216</span> <span class="fl">0.0000</span> <span class="fl">0.8326</span></span>
+<span id="cb116-24"><a href="chap7.html#cb116-24" tabindex="-1"></a><span class="dv">14</span> <span class="fl">14.4057</span> <span class="fl">0.4251</span> <span class="fl">0.4853</span> <span class="fl">0.0000</span> <span class="fl">0.8193</span></span></code></pre></div>
+<p>输出结果相当不言自明。具体来说，对于新数据中的每个不同受试者和一系列时间点 <span class="math inline">\(u\)</span>，我们从蒙特卡罗样本的百分位数计算出 <span class="math inline">\(\pi_i(u|t)\)</span> 的中位数 <a href="chap7.html#eq:7-5">(7.5)</a> 和均值 <a href="chap7.html#eq:7-6">(7.6)</a> 的蒙特卡罗估计，以及相应的 95% 置信区间。默认情况下，使用 200 个蒙特卡罗采样，但可以通过指定 <code>survfitJM()</code> 的 <code>M</code> 参数来适当调整该数字。输出中的第一行对应于我们知道受试者仍然未发生事件的最后一个时间点，因此相应的置信区间的估计和限被设置为 1. 或者，当只对 <span class="math inline">\(\pi_i(u|t)\)</span> 的点估计感兴趣时，我们也可以利用更快的近似一阶估计 <a href="chap7.html#eq:7-3">(7.3)</a>。这可以通过将模拟参数设置为 <code>FALSE</code> 来调用，例如</p>
+<div class="sourceCode" id="cb117"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb117-1"><a href="chap7.html#cb117-1" tabindex="-1"></a><span class="sc">&gt;</span> survPrbsEB <span class="ot">&lt;-</span> <span class="fu">survfitJM</span>(jointFitBsp.pbc,</span>
+<span id="cb117-2"><a href="chap7.html#cb117-2" tabindex="-1"></a>                          <span class="at">newdata =</span> pbc2[pbc2<span class="sc">$</span>id <span class="sc">==</span> <span class="dv">2</span>, ], <span class="at">simulate =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb117-3"><a href="chap7.html#cb117-3" tabindex="-1"></a><span class="sc">&gt;</span> survPrbsEB</span>
+<span id="cb117-4"><a href="chap7.html#cb117-4" tabindex="-1"></a></span>
+<span id="cb117-5"><a href="chap7.html#cb117-5" tabindex="-1"></a>Prediction of Conditional Probabilities <span class="cf">for</span> Events</span>
+<span id="cb117-6"><a href="chap7.html#cb117-6" tabindex="-1"></a><span class="sc">$</span><span class="dv">2</span></span>
+<span id="cb117-7"><a href="chap7.html#cb117-7" tabindex="-1"></a>     times predSurv</span>
+<span id="cb117-8"><a href="chap7.html#cb117-8" tabindex="-1"></a><span class="dv">1</span>   <span class="fl">8.8325</span>   <span class="fl">1.0000</span></span>
+<span id="cb117-9"><a href="chap7.html#cb117-9" tabindex="-1"></a><span class="dv">1</span>   <span class="fl">8.9405</span>   <span class="fl">0.9859</span></span>
+<span id="cb117-10"><a href="chap7.html#cb117-10" tabindex="-1"></a><span class="dv">2</span>   <span class="fl">9.3609</span>   <span class="fl">0.9314</span></span>
+<span id="cb117-11"><a href="chap7.html#cb117-11" tabindex="-1"></a><span class="dv">3</span>   <span class="fl">9.7813</span>   <span class="fl">0.8780</span></span>
+<span id="cb117-12"><a href="chap7.html#cb117-12" tabindex="-1"></a><span class="dv">4</span>  <span class="fl">10.2017</span>   <span class="fl">0.8255</span></span>
+<span id="cb117-13"><a href="chap7.html#cb117-13" tabindex="-1"></a><span class="dv">5</span>  <span class="fl">10.6221</span>   <span class="fl">0.7917</span></span>
+<span id="cb117-14"><a href="chap7.html#cb117-14" tabindex="-1"></a><span class="dv">6</span>  <span class="fl">11.0425</span>   <span class="fl">0.7636</span></span>
+<span id="cb117-15"><a href="chap7.html#cb117-15" tabindex="-1"></a><span class="dv">7</span>  <span class="fl">11.4629</span>   <span class="fl">0.7349</span></span>
+<span id="cb117-16"><a href="chap7.html#cb117-16" tabindex="-1"></a><span class="dv">8</span>  <span class="fl">11.8833</span>   <span class="fl">0.7053</span></span>
+<span id="cb117-17"><a href="chap7.html#cb117-17" tabindex="-1"></a><span class="dv">9</span>  <span class="fl">12.3037</span>   <span class="fl">0.6746</span></span>
+<span id="cb117-18"><a href="chap7.html#cb117-18" tabindex="-1"></a><span class="dv">10</span> <span class="fl">12.7241</span>   <span class="fl">0.6427</span></span>
+<span id="cb117-19"><a href="chap7.html#cb117-19" tabindex="-1"></a><span class="dv">11</span> <span class="fl">13.1445</span>   <span class="fl">0.6090</span></span>
+<span id="cb117-20"><a href="chap7.html#cb117-20" tabindex="-1"></a><span class="dv">12</span> <span class="fl">13.5649</span>   <span class="fl">0.5734</span></span>
+<span id="cb117-21"><a href="chap7.html#cb117-21" tabindex="-1"></a><span class="dv">13</span> <span class="fl">13.9853</span>   <span class="fl">0.5354</span></span>
+<span id="cb117-22"><a href="chap7.html#cb117-22" tabindex="-1"></a><span class="dv">14</span> <span class="fl">14.4057</span>   <span class="fl">0.4946</span></span></code></pre></div>
+<p>比较 <span class="math inline">\(\pi_i(u|t)\)</span> 的近似估计和蒙特卡罗估计，我们观察到相当微小的差异。这证实了 <a href="chap7.html#sec7-1-2">7.1.2</a> 节的说法，即在实践中，估计 <a href="chap7.html#eq:7-3">(7.3)</a> 相对于估计 <a href="chap7.html#eq:7-5">(7.5)</a> 和 <a href="chap7.html#eq:7-6">(7.6)</a> 表现得非常好，这两个估计预计会产生更准确的结果，因为它们恰当地逼近了 <span class="math inline">\(\pi_i(u|t)\)</span> 定义中的积分。</p>
+<p>此外，在某些情况下，我们还可能有关于患者在最后一次可用纵向测量后特定时间点的失效状态的额外信息。例如，根据患者 2 的数据：</p>
+<div class="sourceCode" id="cb118"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb118-1"><a href="chap7.html#cb118-1" tabindex="-1"></a><span class="sc">&gt;</span> pbc2[pbc2<span class="sc">$</span>id <span class="sc">==</span> <span class="dv">2</span>, <span class="fu">c</span>(<span class="st">"id"</span>, <span class="st">"years"</span>, <span class="st">"status"</span>, <span class="st">"serBilir"</span>, <span class="st">"year"</span>)]</span>
+<span id="cb118-2"><a href="chap7.html#cb118-2" tabindex="-1"></a>   id   years  status serBilir      year</span>
+<span id="cb118-3"><a href="chap7.html#cb118-3" tabindex="-1"></a><span class="dv">3</span>   <span class="dv">2</span> <span class="fl">14.15234</span>  alive      <span class="fl">1.1</span> <span class="fl">0.0000000</span></span>
+<span id="cb118-4"><a href="chap7.html#cb118-4" tabindex="-1"></a><span class="dv">4</span>   <span class="dv">2</span> <span class="fl">14.15234</span>  alive      <span class="fl">0.8</span> <span class="fl">0.4983025</span></span>
+<span id="cb118-5"><a href="chap7.html#cb118-5" tabindex="-1"></a><span class="dv">5</span>   <span class="dv">2</span> <span class="fl">14.15234</span>  alive      <span class="fl">1.0</span> <span class="fl">0.9993429</span></span>
+<span id="cb118-6"><a href="chap7.html#cb118-6" tabindex="-1"></a><span class="dv">6</span>   <span class="dv">2</span> <span class="fl">14.15234</span>  alive      <span class="fl">1.9</span> <span class="fl">2.1027270</span></span>
+<span id="cb118-7"><a href="chap7.html#cb118-7" tabindex="-1"></a><span class="dv">7</span>   <span class="dv">2</span> <span class="fl">14.15234</span>  alive      <span class="fl">2.6</span> <span class="fl">4.9008871</span></span>
+<span id="cb118-8"><a href="chap7.html#cb118-8" tabindex="-1"></a><span class="dv">8</span>   <span class="dv">2</span> <span class="fl">14.15234</span>  alive      <span class="fl">3.6</span> <span class="fl">5.8892783</span></span>
+<span id="cb118-9"><a href="chap7.html#cb118-9" tabindex="-1"></a><span class="dv">9</span>   <span class="dv">2</span> <span class="fl">14.15234</span>  alive      <span class="fl">4.2</span> <span class="fl">6.8858833</span></span>
+<span id="cb118-10"><a href="chap7.html#cb118-10" tabindex="-1"></a><span class="dv">10</span>  <span class="dv">2</span> <span class="fl">14.15234</span>  alive      <span class="fl">3.6</span> <span class="fl">7.8907020</span></span>
+<span id="cb118-11"><a href="chap7.html#cb118-11" tabindex="-1"></a><span class="dv">11</span>  <span class="dv">2</span> <span class="fl">14.15234</span>  alive      <span class="fl">4.6</span> <span class="fl">8.8325485</span></span></code></pre></div>
+<p>我们知道，她在研究中存活了 14.2 年，而最后一次血清胆红素测量是在 8.8 年收集的。该信息可以在 <code>survfitJM()</code> 中通过指定 <code>last.time</code> 参数来提供，该参数应该是一个字符串，其中包含保存此信息的 <code>newdata</code> 中变量的名称，或者最后一个时间点本身作为数字向量。</p>
+<div class="sourceCode" id="cb119"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb119-1"><a href="chap7.html#cb119-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb119-2"><a href="chap7.html#cb119-2" tabindex="-1"></a><span class="sc">&gt;</span> survPrbs2 <span class="ot">&lt;-</span> <span class="fu">survfitJM</span>(jointFitBsp.pbc,</span>
+<span id="cb119-3"><a href="chap7.html#cb119-3" tabindex="-1"></a>                         <span class="at">newdata =</span> pbc2[pbc2<span class="sc">$</span>id <span class="sc">==</span> <span class="dv">2</span>, ], <span class="at">last.time =</span> <span class="st">"years"</span>)</span>
+<span id="cb119-4"><a href="chap7.html#cb119-4" tabindex="-1"></a><span class="sc">&gt;</span> survPrbs2</span>
+<span id="cb119-5"><a href="chap7.html#cb119-5" tabindex="-1"></a></span>
+<span id="cb119-6"><a href="chap7.html#cb119-6" tabindex="-1"></a>Prediction of Conditional Probabilities <span class="cf">for</span> Event</span>
+<span id="cb119-7"><a href="chap7.html#cb119-7" tabindex="-1"></a>      based on <span class="dv">200</span> Monte Carlo samples</span>
+<span id="cb119-8"><a href="chap7.html#cb119-8" tabindex="-1"></a><span class="sc">$</span><span class="dv">2</span></span>
+<span id="cb119-9"><a href="chap7.html#cb119-9" tabindex="-1"></a>    times   Mean Median  Lower  Upper</span>
+<span id="cb119-10"><a href="chap7.html#cb119-10" tabindex="-1"></a><span class="dv">1</span> <span class="fl">14.1523</span> <span class="fl">1.0000</span> <span class="fl">1.0000</span> <span class="fl">1.0000</span> <span class="fl">1.0000</span></span>
+<span id="cb119-11"><a href="chap7.html#cb119-11" tabindex="-1"></a><span class="dv">1</span> <span class="fl">14.4057</span> <span class="fl">0.9414</span> <span class="fl">0.9842</span> <span class="fl">0.5686</span> <span class="fl">0.9998</span></span></code></pre></div>
+<p>请注意，由于计算时间点序列 <span class="math inline">\(u\)</span> 的默认方法，当我们指定患者 2 生存到 14.2 年时，<span class="math inline">\(\pi_i(u | t)\)</span> 是针对单个时间点进行估计的。如果我们希望为特定的 <span class="math inline">\(u\)</span> 估计 <span class="math inline">\(\pi_i(u | t)\)</span>，这可以通过参数 <code>survTimes</code> 来实现。例如，<span class="math inline">\(\pi_i(u | t)\)</span> 的 14.5 年和 15 年蒙特卡洛估计是通过调用如下命令生成的</p>
+<div class="sourceCode" id="cb120"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb120-1"><a href="chap7.html#cb120-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb120-2"><a href="chap7.html#cb120-2" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">survfitJM</span>(jointFitBsp.pbc, <span class="at">newdata =</span> pbc2[pbc2<span class="sc">$</span>id <span class="sc">==</span> <span class="dv">2</span>, ],</span>
+<span id="cb120-3"><a href="chap7.html#cb120-3" tabindex="-1"></a>            <span class="at">survTimes =</span> <span class="fu">c</span>(<span class="fl">14.5</span>, <span class="dv">15</span>), <span class="at">last.time =</span> <span class="st">"years"</span>)</span>
+<span id="cb120-4"><a href="chap7.html#cb120-4" tabindex="-1"></a></span>
+<span id="cb120-5"><a href="chap7.html#cb120-5" tabindex="-1"></a>Prediction of Conditional Probabilities <span class="cf">for</span> Event</span>
+<span id="cb120-6"><a href="chap7.html#cb120-6" tabindex="-1"></a>      based on <span class="dv">200</span> Monte Carlo samples</span>
+<span id="cb120-7"><a href="chap7.html#cb120-7" tabindex="-1"></a><span class="sc">$</span><span class="dv">2</span></span>
+<span id="cb120-8"><a href="chap7.html#cb120-8" tabindex="-1"></a>    times   Mean Median  Lower  Upper</span>
+<span id="cb120-9"><a href="chap7.html#cb120-9" tabindex="-1"></a><span class="dv">1</span> <span class="fl">14.1523</span> <span class="fl">1.0000</span> <span class="fl">1.0000</span> <span class="fl">1.0000</span> <span class="fl">1.0000</span></span>
+<span id="cb120-10"><a href="chap7.html#cb120-10" tabindex="-1"></a><span class="dv">1</span> <span class="fl">14.5000</span> <span class="fl">0.9225</span> <span class="fl">0.9783</span> <span class="fl">0.4382</span> <span class="fl">0.9997</span></span>
+<span id="cb120-11"><a href="chap7.html#cb120-11" tabindex="-1"></a><span class="dv">2</span> <span class="fl">15.0000</span> <span class="fl">0.8385</span> <span class="fl">0.9486</span> <span class="fl">0.0549</span> <span class="fl">0.9995</span></span></code></pre></div>
+<p>还可以使用 <code>survfitJM</code> 对象的 <code><a href="https://rdrr.io/r/graphics/plot.default.html">plot()</a></code> 方法以图形方式说明 <span class="math inline">\(\pi_i(u | t)\)</span> 的估计。具体地，以下对 <code><a href="https://rdrr.io/r/graphics/plot.default.html">plot()</a></code> 的简单调用会生成图 7.2.</p>
+<div class="sourceCode" id="cb121"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb121-1"><a href="chap7.html#cb121-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">plot</span>(survPrbs, <span class="at">lty =</span> <span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>,<span class="dv">3</span>,<span class="dv">3</span>), <span class="at">conf.int =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<details><summary><font color="#B95953">图 7.2</font>
+</summary><img src="figure/figure%207.2.png#center" style="width:80.0%"></details><p><br>
+虚线和实线分别表示中位数 <a href="chap7.html#eq:7-5">(7.5)</a> 和均值 <a href="chap7.html#eq:7-6">(7.6)</a> 的估计，而 <code>conf.int</code> 参数指定我们还想绘制相应的 95% 逐点置信区间，用虚线表示。该图基于第一次调用 <code>survfitJM()</code> 生成的对象 <code>survPrbs</code>，并假设患者还活着的最后一个时间点是在 8.8 年，当时她提供了最后一次血清胆红素测量值。因此，对于所有之前的时间点 <span class="math inline">\(u &lt; t\)</span>，<span class="math inline">\(\pi_i(u | t) = 1\)</span>。</p>
+<p>下面我们重点关注条件生存概率的动态预测。具体来说，在记录每个额外的纵向测量后，我们将动态更新患者 2 的 <span class="math inline">\(\pi_i(u | t)\)</span>。为了对此进行编程，我们使用标准的 for 循环</p>
+<div class="sourceCode" id="cb122"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb122-1"><a href="chap7.html#cb122-1" tabindex="-1"></a><span class="sc">&gt;</span> ND <span class="ot">&lt;-</span> pbc2[pbc2<span class="sc">$</span>id <span class="sc">==</span> <span class="dv">2</span>, ]</span>
+<span id="cb122-2"><a href="chap7.html#cb122-2" tabindex="-1"></a><span class="sc">&gt;</span> survPreds <span class="ot">&lt;-</span> <span class="fu">vector</span>(<span class="st">"list"</span>, <span class="fu">nrow</span>(ND))</span>
+<span id="cb122-3"><a href="chap7.html#cb122-3" tabindex="-1"></a><span class="sc">&gt;</span> <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(ND)) {</span>
+<span id="cb122-4"><a href="chap7.html#cb122-4" tabindex="-1"></a>  <span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb122-5"><a href="chap7.html#cb122-5" tabindex="-1"></a>  survPreds[[i]] <span class="ot">&lt;-</span> <span class="fu">survfitJM</span>(jointFitBsp.pbc, <span class="at">newdata =</span> ND[<span class="dv">1</span><span class="sc">:</span>i, ])</span>
+<span id="cb122-6"><a href="chap7.html#cb122-6" tabindex="-1"></a>}</span></code></pre></div>
+<p>循环背后的想法是在每次迭代中简单地提供更新的数据框，其中包含 <code>survfitJM()</code> 的 <code>newdata</code> 参数中的一个额外测量值。结果保存在 <code>survPreds</code> 列表中。我们使用代码分别绘制基线、第三次、第五次和第七次测量后更新的生存曲线</p>
+<div class="sourceCode" id="cb123"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb123-1"><a href="chap7.html#cb123-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">2</span>), <span class="at">oma =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">2</span>, <span class="dv">0</span>, <span class="dv">2</span>))</span>
+<span id="cb123-2"><a href="chap7.html#cb123-2" tabindex="-1"></a><span class="sc">&gt;</span> <span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">3</span>,<span class="dv">5</span>,<span class="dv">7</span>)) {</span>
+<span id="cb123-3"><a href="chap7.html#cb123-3" tabindex="-1"></a>  <span class="fu">plot</span>(survPreds[[i]], <span class="at">estimator =</span> <span class="st">"median"</span>, <span class="at">conf.int =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb123-4"><a href="chap7.html#cb123-4" tabindex="-1"></a>                              <span class="at">include.y =</span> <span class="cn">TRUE</span>, <span class="at">main =</span> <span class="fu">paste</span>(<span class="st">"Follow-up time:"</span>,</span>
+<span id="cb123-5"><a href="chap7.html#cb123-5" tabindex="-1"></a>                              <span class="fu">round</span>(survPreds[[i]]<span class="sc">$</span>last.time, <span class="dv">1</span>)))</span>
+<span id="cb123-6"><a href="chap7.html#cb123-6" tabindex="-1"></a>}</span>
+<span id="cb123-7"><a href="chap7.html#cb123-7" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">mtext</span>(<span class="st">"log serum bilirubin"</span>, <span class="at">side =</span> <span class="dv">2</span>, <span class="at">line =</span> <span class="sc">-</span><span class="dv">1</span>, <span class="at">outer =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb123-8"><a href="chap7.html#cb123-8" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">mtext</span>(<span class="st">"Survival Probability"</span>, <span class="at">side =</span> <span class="dv">4</span>, <span class="at">line =</span> <span class="sc">-</span><span class="dv">1</span>, <span class="at">outer =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<p>同样，使用 for 循环来生成曲线图。<code>include.y</code> 参数用于在曲线图中同时包含患者 2 到最后一次可用血清胆红素测量的时间点之前的拟合纵向轮廓，以及在该时间点之后的生存概率估计。此外，参数 <code>estimator</code> 的选项 <code>"medium"</code> 指定我们只希望绘制中位数估计 <a href="chap7.html#eq:7-5">(7.5)</a>。图 7.3 中包括了这四张图。我们观察到，在第三次测量后，观察到血清胆红素的真实水平明显增加，条件生存函数 <span class="math inline">\(\pi_i(u|t)\)</span> 的下降速度变得更加陡峭。</p>
+<details><summary><font color="#B95953">图 7.3</font>
+</summary><img src="figure/figure%207.3.png#center" style="width:80.0%"></details><p><br>
+我们观察到，在第三次测量后，观察到血清胆红素的真实水平明显增加，条件生存函数 <span class="math inline">\(\pi_i(u|t)\)</span> 的下降速度变得更加陡峭。</p>
+<p>为了说明血清胆红素曲线的变化如何反映在生存概率的动态更新中，我们比较了患者 2 和 25 的 <span class="math inline">\(\pi_i(u|t)\)</span> 的估计。如图 7.4 所示。在该图的每个面板中，我们对 <span class="math inline">\(t = 0,0.5,2\)</span> 和 <span class="math inline">\(5\)</span> 年以及 <span class="math inline">\(u = t + \Delta t\)</span> 的 <span class="math inline">\(\pi_i(u | t)\)</span>（以及相应的 95% 置信区间）进行了四个估计，其中每个面板具有不同的 <span class="math inline">\(\Delta t\)</span> 值。具体来说，左图对应 <span class="math inline">\(\Delta t = 1\)</span> 年，中间图对应 <span class="math inline">\(\Delta t = 2\)</span> 年，右图对应 <span class="math inline">\(\Delta t = 4\)</span> 年。一般来说，我们观察到，与患者 2 相比，表现出更稳定血清胆红素谱的患者 25 没有经历复合事件（死亡或移植）的生存机会更高。此外，如果我们仔细观察图 7.1 ，它描绘了观察到的两名患者的纵向轨迹，我们看到两名患者的血清胆红素水平从基线到第一次测量均有所下降，表明他们的病情有所改善。图 7.4 中生存概率的相应点估计中也注意到了这种改进，即 <span class="math inline">\(t = 0.5\)</span> 时的生存概率高于基线 <span class="math inline">\(t = 0\)</span> 时的相同概率，尽管两个估计的置信区间重叠。</p>
+<details><summary><font color="#B95953">图 7.4</font>
+</summary><img src="figure/figure%207.4.png#center" style="width:80.0%"></details>
+</div>
+</div>
+<div id="sec7-2" class="section level2" number="7.2">
+<h2>
+<span class="header-section-number">7.2</span> 纵向结果的动态预测<a class="anchor" aria-label="anchor" href="#sec7-2"><i class="fas fa-link"></i></a>
+</h2>
+<p>在许多情况下，人们的兴趣还可能在于对纵向结果的预测。例如，在 HIV 感染的患者中，CD4 细胞计数和病毒载量通常用于确定何时应该开始治疗。在这些情况下，治疗医生深入了解两个标志物的预计纵向轮廓将有助于尽早开始治疗。这种预测可用与生存过程类似的方式来定义和估计。具体来说，对于在随访时间 <span class="math inline">\(t\)</span> 时仍然存活的特定受试者 <span class="math inline">\(i\)</span>，我们对她在时间 <span class="math inline">\(u &gt; t\)</span> 时的纵向结果的预期值感兴趣，因为她在该时间点观测响应 <span class="math inline">\(Y_i(t) = \{ y_i(s), 0 \le s &lt; t\}\)</span>，即</p>
+<p><span class="math display" id="eq:7-7">\[\begin{align}
+\omega_i(u\mid t)=E\big\{y_i(u)\mid T_i^*&gt;t,\mathcal{Y}_i(t),\mathcal{D}_n;\theta^*\big\},\quad u&gt;t
+\tag{7.7}
+\end{align}\]</span></p>
+<p>与条件生存概率 <a href="chap7.html#eq:7-1">(7.1)</a> 类似，随着为该受试者记录额外信息，这些预测也会及时动态更新。也就是说，基于我们在时间 <span class="math inline">\(t\)</span> 之前可用的信息对 <span class="math inline">\(y_i(u)\)</span> 进行的预测 <span class="math inline">\(omega_i(u | t)\)</span> 可以在时间 <span class="math inline">\(t'\)</span> 处更新为 <span class="math inline">\(t &lt; t' &lt; u\)</span>，以产生使用到后一个时间点的额外纵向信息的新的预测 <span class="math inline">\(\omega_i(u | t')\)</span>。</p>
+<p>对于 <span class="math inline">\(\omega_i(u | t)\)</span> 的估计，我们可以使用类似于 <a href="chap7.html#sec7-1-2">7.1.2</a> 节中 <span class="math inline">\(\pi_i(u|t)\)</span> 估计的类似程序。更具体地说，为了说明我们不知道真实参数值 <span class="math inline">\(\theta^*\)</span> 的事实，我们再次在联合模型的渐近贝叶斯公式下进行，并且计算 <span class="math inline">\(\omega_i(u|t)\)</span> 关于参数 <span class="math inline">\(\{\theta|\mathcal D_n\}\)</span> 的后验分布的期望为</p>
+<p><span class="math display" id="eq:7-8">\[\begin{align}
+E\big\{y_i(u)\mid T_i^*&gt;t,\mathcal{Y}_i(t),\mathcal{D}_n\big\}\\=\quad\int E\big\{y_i(u)\mid T_i^*&gt;t,\mathcal{Y}_i(t);\theta\big\}p(\theta\mid\mathcal{D}_n)d\theta
+\tag{7.8}
+\end{align}\]</span></p>
+<p>被积函数的第一部分可通过利用条件独立假设 <a href="chap4.html#eq:4-7">(4.7)</a> 和 <a href="chap4.html#eq:4-8">(4.8)</a> 来简化，如下所示</p>
+<p><span class="math display" id="eq:7-9">\[\begin{align}
+E\big\{y_i(u)&amp;\mid T_i^*&gt;t,\mathcal{Y}_i(t);\theta\big\} \\
+&amp;=\quad\int E\big\{y_i(u)\mid T_i^*&gt;t,\mathcal{Y}_i(t),b_i;\theta\big\}p(b_i\mid T_i^*&gt;t,\mathcal{Y}_i(t);\theta)db_i \\
+&amp;=\quad\int E\big\{y_i(u)\mid b_i\big\}p(b_i\mid T_i^*&gt;t,\mathcal{Y}_i(t);\theta)db_i \\
+&amp;=\quad\int\{x_i^\top(u)\beta+z_i^\top(u)b_i\}p(b_i\mid T_i^*&gt;t,\mathcal{Y}_i(t);\theta)db_i \\
+&amp;=\quad x_i^\top(u)\beta+z_i^\top(u)\bar{b}_i^{(t)}
+\tag{7.9}
+\end{align}\]</span></p>
+<p>其中</p>
+<p><span class="math display">\[\bar{b}_i^{(t)}=\int b_ip(b_i\mid T_i^*&gt;t,\mathcal{Y}_i(t);\theta)db_i\]</span></p>
+<p>在这些推导下，通过简单地将 <span class="math inline">\(\theta\)</span> 替换为 <span class="math inline">\(\hat theta\)</span>，并计算后验分布 <span class="math inline">\(p(b_i\mid T_i^*&gt;t,\mathcal{Y}_i(t);\hat{\theta})\)</span> 的均值即可获得 <span class="math inline">\(\omega_i(u | t)\)</span> 的直接估计。本着同样的精神，当我们使用后验分布 <span class="math inline">\(\hat{b}_i^{(t)}=\arg\max_b\log p(b\mid T_i^*&gt;t,\mathcal{Y}_i(t);\hat{\theta})\)</span> 的众数 <span class="math inline">\(\bar{b}_i^{(t)}\)</span>，即</p>
+<p><span class="math display" id="eq:7-10">\[\begin{align}
+\tilde{\omega}_i(u\mid t)=x_i^\top(u)\hat{\beta}+z_i^\top(u)\hat{b}_i^{(t)}+O(n_i^{-1})
+\tag{7.10}
+\end{align}\]</span></p>
+<p>如下的标准关系式证明了这一点 (Tierney and Kadane, 1986)</p>
+<p><span class="math display">\[\bar{b}_i^{(t)}=\hat{b}_i^{(t)}+O\big([n_i(t)]^{-1}\big)\]</span></p>
+<p>在 <span class="math inline">\(\log p(b\mid T_i^*&gt;t,\mathcal{Y}_i(t);\hat{\theta})\)</span> 足够平滑的情况下成立，其中 <span class="math inline">\(n_i(t)\)</span> 表示受试者 <span class="math inline">\(i\)</span> 在时间 <span class="math inline">\(t\)</span> 时的纵向响应数。正如我们在 <a href="chap4.html#sec4-5">4.5</a> 节所指出的，随机效应的后验分布的均值和众数通常非常接近，因此我们也期望上述两个 <span class="math inline">\(\omega_i(u | t)\)</span> 估计之间的差异可以忽略不计。出于实际目的，我们更喜欢估计 <a href="chap7.html#eq:7-10">(7.10)</a>，因为众数通常是比均值更好的位置度量，特别是当后验分布偏斜时。然而，获得两个估计量任何一个的标准误都非常困难，因为 <span class="math inline">\(\hat b_i(t)\)</span> 和 <span class="math inline">\(\hat b_i(t)\)</span> 都是 <span class="math inline">\(\hat\theta\)</span> 的非线性函数，无法写成封闭形式。为了克服这个问题并获得 <span class="math inline">\(\omega_i(u | t)\)</span> 的置信区间，我们使用与 <a href="chap7.html#sec7-1-2">7.1.2</a> 节中类似的蒙特卡罗方法。具体来说，将 <a href="chap7.html#eq:7-8">(7.8)</a> 与 <a href="chap7.html#eq:7-9">(7.9)</a> 结合起来，并再次假定样本量足够大，使得 <span class="math inline">\(\{\theta |\mathcal D_n\}\)</span> 可以很好地近似为以最大似然估计 <span class="math inline">\(\hat\theta\)</span> 为中心的正态分布，并使用观测信息矩阵的逆矩阵 <span class="math inline">\(\operatorname{var}(\hat{\theta})=\{\mathcal{I}(\hat{\theta})\}^{-1}\)</span> 作为方差-协方差阵，我们得到以下模拟方案</p>
+<div class="rmdnote">
+<ul>
+<li>步骤 1：抽取 <span class="math inline">\(\theta^{(l)}\sim\mathcal{N}\{\hat{\theta},\text{v}\hat{\mathrm{a}}\text{r}(\hat{\theta})\}\)</span>
+</li>
+<li>步骤 2：抽取 <span class="math inline">\(b_i^{(l)}\sim\{b_i\mid T_i^*&gt;t,\mathcal{Y}_i(t),\theta^{(l)}\}\)</span>
+</li>
+<li>步骤 3：计算 <span class="math inline">\(\omega_i^{(l)}(u\mid t)=x_i^\top(u)\beta^{(l)}+z_i^\top(u)b_i^{(l)}\)</span>
+</li>
+</ul>
+</div>
+<p>步骤 1 和 2 与 <a href="chap7.html#sec7-1-2">7.1.2</a> 节的模拟方案完全相同，分别用于考虑 <span class="math inline">\(\hat\theta\)</span> 和 <span class="math inline">\(\hat b_i(t)\)</span> 的变异。使用模拟值的参数和随机效应，步骤 3 仅需要计算未观测纵向结果 <span class="math inline">\(y_i(u)\)</span> 的预测值。相应的 95% 逐点置信区间可以从 <span class="math inline">\(\{\ometa_i^{(l)}(u | t), l = 1,\ldots,L\}\)</span> 的 2.5% 和 97.5% 百分位数获得。上述模拟方案的一个有利特征是可以容易地对其修改以产生预测区间。更具体地说，我们不是将 <span class="math inline">\(\omega_i^{(l)}(u | t)\)</span> 设置为特定于受试者均值的实现，而是模拟相应正态分布的值，即 <span class="math inline">\(\omega_i^{(l)}(u\mid t)\sim\mathcal{N}\big\{x_i^\top(u)\beta^{(l)}+z_i^\top(u)b_i^{(l)},[\sigma^{(l)}]^2\big\}\)</span>。</p>
+<p>此外，请注意，与 <a href="chap7.html#sec7-1-2">7.1.2</a> 节类似，我们也可以使用蒙特卡罗实现来估计 <span class="math inline">\(\omega_i(u | t)\)</span>，即</p>
+<p><span class="math display" id="eq:7-11">\[\begin{align}
+\hat{\omega}_i(u\mid t)=L^{-1}\sum_{l=1}^L\omega_i^{(l)}(u\mid t)
+\tag{7.11}
+\end{align}\]</span></p>
+<p>或</p>
+<p><span class="math display" id="eq:7-12">\[\begin{align}
+\hat{\omega}_i(u\mid t)=\text{median}\{\omega_i^{(l)}(u\mid t),l=1,\ldots,L\}
+\tag{7.12}
+\end{align}\]</span></p>
+<p>然而，<a href="chap7.html#eq:7-11">(7.11)</a> 和 <a href="chap7.html#eq:7-12">(7.12)</a> 与 <a href="chap7.html#eq:7-10">(7.10)</a> 的数值比较表明，这些估计值几乎无法区分。因此，为简单起见，我们使用 <span class="math inline">\(\omega_i(u | t)\)</span> 进行点估计，并使用蒙特卡罗方法来导出置信区间或预测区间。</p>
+<p>纵向结果的特定于受试者的预测是在 R 中使用函数 <code><a href="https://rdrr.io/r/stats/predict.html">predict()</a></code> 生成的。我们已经在 <a href="chap4.html#sec4-4-2">4.4.2</a> 节中看到了该函数，它被用来生成平均纵向演变 <span class="math inline">\(\mu = X\beta\)</span> 的估计，以及它们相应的逐点置信区间。该函数的主要参数是感兴趣的拟合联合模型和数据框 <code>newdata</code>，提供预测的基础数据。对于特定于受试者的预测，该数据框应包含基线协变量和截至时间 <span class="math inline">\(t\)</span> 的纵向响应，这将用于估计 <span class="math inline">\(\omega_i(u | t),u &gt; t\)</span>。默认情况下，<code><a href="https://rdrr.io/r/stats/predict.html">predict()</a></code> 将生成平均纵向演变的预测。当需要特定于受试者时，我们设置选项 <code>type="Sbuject"</code>。下文将说明如何使用此函数为 PBC 研究中的患者 2 生成 <span class="math inline">\(\omega_i(u|t)\)</span> 的估计以及相应的置信度区间，基于模型 <code>jointFitBsp.pbc</code>。关于上面给出的 <span class="math inline">\(\omega_i(u|t)\)</span> 的估计，函数 <code><a href="https://rdrr.io/r/stats/predict.html">predict()</a></code> 返回根据 <a href="chap7.html#eq:7-10">(7.10)</a> 的估计作为预测，当调用选项 <code>interval = "confidence"</code> 时，它使用蒙特卡罗方案来计算标准误和置信区间<a class="footnote-ref" tabindex="0" data-toggle="popover" data-content='&lt;p&gt;可以使用选项 &lt;code&gt;interval = "Prediction"&lt;/code&gt; 来计算预测区间。&lt;/p&gt;'><sup>22</sup></a>。为了说明当记录额外的血清胆红素测量值时，如何更新患者 2 的预测，我们使用 for 循环，每次迭代时更新 <code>newdata</code> 参数。</p>
+<div class="sourceCode" id="cb124"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb124-1"><a href="chap7.html#cb124-1" tabindex="-1"></a><span class="sc">&gt;</span> ND <span class="ot">&lt;-</span> pbc2[pbc2<span class="sc">$</span>id <span class="sc">==</span> <span class="dv">2</span>, ]</span>
+<span id="cb124-2"><a href="chap7.html#cb124-2" tabindex="-1"></a><span class="sc">&gt;</span> longPreds <span class="ot">&lt;-</span> <span class="fu">vector</span>(<span class="st">"list"</span>, <span class="fu">nrow</span>(ND))</span>
+<span id="cb124-3"><a href="chap7.html#cb124-3" tabindex="-1"></a><span class="sc">&gt;</span> <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(ND)) {</span>
+<span id="cb124-4"><a href="chap7.html#cb124-4" tabindex="-1"></a>  <span class="fu">set.seed</span>(<span class="dv">123</span>) <span class="co"># we set the seed for reproducibility</span></span>
+<span id="cb124-5"><a href="chap7.html#cb124-5" tabindex="-1"></a>  longPreds[[i]] <span class="ot">&lt;-</span> <span class="fu">predict</span>(jointFitBsp.pbc, <span class="at">newdata =</span> ND[<span class="dv">1</span><span class="sc">:</span>i, ],</span>
+<span id="cb124-6"><a href="chap7.html#cb124-6" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">"Subject"</span>, <span class="at">interval =</span> <span class="st">"confidence"</span>, <span class="at">returnData =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb124-7"><a href="chap7.html#cb124-7" tabindex="-1"></a>  longPreds[[i]]<span class="sc">$</span>FollowUp <span class="ot">&lt;-</span> <span class="fu">round</span>(<span class="fu">max</span>(ND[<span class="dv">1</span><span class="sc">:</span>i, <span class="st">"year"</span>]), <span class="dv">1</span>)</span>
+<span id="cb124-8"><a href="chap7.html#cb124-8" tabindex="-1"></a>}</span></code></pre></div>
+<p><code><a href="https://rdrr.io/r/stats/predict.html">predict()</a></code> 的默认输出是 <code>newdata</code> 中包含的每个个体的预测值的向量。默认情况下，计算这些预测的时间点 <span class="math inline">\(u\)</span> 被选择为从 <span class="math inline">\(t\)</span>（受试者的最后一次可用测量）到 <span class="math inline">\(t_\max+\varepsilon\)</span> 的长度为 25 的规则序列，其中 <span class="math inline">\(t_\max\)</span> 表示手头样本中的最大随访时间，而 <span class="math inline">\(\varepsilon\)</span> 是一个小数字<a class="footnote-ref" tabindex="0" data-toggle="popover" data-content='&lt;p&gt;具体的，&lt;span class="math inline"&gt;\(\varepsilon\)&lt;/span&gt; 设置为 &lt;code&gt;0.1 * mad(times)&lt;/code&gt;，其中 &lt;code&gt;times&lt;/code&gt; 是随访时间 &lt;span class="math inline"&gt;\(\{t_{ij},i=1,\ldots,n;j=1,\ldots,n_{i}\}\)&lt;/span&gt; 向量，&lt;code&gt;mad()&lt;/code&gt; 计算中位绝对偏差。&lt;/p&gt;'><sup>23</sup></a>。</p>
+<p>然而，通过将参数 <code>returnData</code> 设置为 <code>TRUE</code>，<code><a href="https://rdrr.io/r/stats/predict.html">predict()</a></code> 的输出是在 <code>newdata</code> 中提供的数据框，并为每个受试者在时间点 <span class="math inline">\(u\)</span> 的预测增加了额外的行。<code>forloop</code> 的最后一行为 <code><a href="https://rdrr.io/r/stats/predict.html">predict()</a></code> 返回的数据框添加了一列额外的列，表示记录纵向响应的最后随访时间 <span class="math inline">\(t\)</span>。</p>
+<p>为了可视化结果估计，我们首先使用代码在单个数据框中收集所有结果</p>
+<div class="sourceCode" id="cb125"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb125-1"><a href="chap7.html#cb125-1" tabindex="-1"></a><span class="sc">&gt;</span> longPreds.all <span class="ot">&lt;-</span> <span class="fu">do.call</span>(rbind, longPreds)</span>
+<span id="cb125-2"><a href="chap7.html#cb125-2" tabindex="-1"></a><span class="sc">&gt;</span> longPreds.all<span class="sc">$</span>FollowUp <span class="ot">&lt;-</span> <span class="fu">with</span>(longPreds.all, <span class="fu">factor</span>(FollowUp,</span>
+<span id="cb125-3"><a href="chap7.html#cb125-3" tabindex="-1"></a>      <span class="at">labels =</span> <span class="fu">paste</span>(<span class="st">"Follow-up time:"</span>, <span class="fu">unique</span>(FollowUp))))</span></code></pre></div>
+<p>第二行将保存最后一个可用时间点的列 <code>FollowUp</code> 转换为具有适当水平的因子。使用该数据框，以下代码生成纵向结果的动态预测图</p>
+<div class="sourceCode" id="cb126"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb126-1"><a href="chap7.html#cb126-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">xyplot</span>(pred <span class="sc">+</span> low <span class="sc">+</span> upp <span class="sc">~</span> year <span class="sc">|</span> FollowUp, <span class="at">data =</span> longPreds.all,</span>
+<span id="cb126-2"><a href="chap7.html#cb126-2" tabindex="-1"></a>         <span class="at">lty =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">2</span>), <span class="at">type =</span> <span class="st">"l"</span>, <span class="at">as.table =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb126-3"><a href="chap7.html#cb126-3" tabindex="-1"></a>         <span class="at">xlab =</span> <span class="st">"Time"</span>, <span class="at">ylab =</span> <span class="st">"Predicted log serum bilirubin"</span>)</span></code></pre></div>
+<p>该图的更详细版本如图 7.5 所示<a class="footnote-ref" tabindex="0" data-toggle="popover" data-content="&lt;p&gt;复现图 7.5 的实际 R 代码可从本书的网站获得。&lt;/p&gt;"><sup>24</sup></a>。正如预期的那样，我们观察到预测区间的宽度随着时间的推移而增加，这表明我们对上次可用纵向测量后不久的预测更有信心。这些预测区间的一个重要特征是，它们不被限制为对称的，因为它们不基于 <span class="math inline">\(\hat\omega_i(u|t)\)</span> 的渐近正态性。具体来说，我们希望蒙特卡罗方法能够为 <span class="math inline">\(\omega_i(u|t)\)</span> 的真实抽样分布提供相对较好的近似值，从而获得更有可能满足所要求的覆盖范围的置信区间。</p>
+<details><summary><font color="#B95953">图 7.5</font>
+</summary><img src="figure/figure%207.5.png#center" style="width:80.0%"></details>
+</div>
+<div id="sec7-3" class="section level2" number="7.3">
+<h2>
+<span class="header-section-number">7.3</span> 参数化对预测的影响<a class="anchor" aria-label="anchor" href="#sec7-3"><i class="fas fa-link"></i></a>
+</h2>
+<p>在前面的部分中，我们已经了解了如何在拟合的联合模型下获得生存或纵向结果的动态预测。然而，在决定在实践中使用这些预测之前，我们应该首先调查它们的稳定性和质量。这些预测的质量通常取决于两个因素，首先，取决于纵向标志物本身预测未来事件的能力，其次，取决于联合模型的正确制定，以揭示该标志物的真实预测性能。显然，第一个因素主要与标志物试图描述的生物机制以及该机制与事件结果的相关程度有关。假设基于强大的生物学背景选择了标志物，则联合建模练习的目的是揭示标志物过程的哪些特征与事件风险最密切相关。由于我们处理的是时依标志物，事件的风险可能取决于纵向历史 <span class="math inline">\(\mathcal M_i(t) = \{m_i(s), 0 \le s &lt; t\}\)</span> 的复杂函数。具体地，正如我们在 <a href="chap5.html#sec5-1">5.1</a> 节中所看到的，有各种参数化可用于连接这两个结果，并且如图 5.3 所示，它们可以显著影响特定于受试者的风险函数估计的形状。</p>
+<details><summary><font color="#B95953">图 5.3</font>
+</summary><img src="figure/figure%205.3.png#center" style="width:80.0%"></details><br><details><summary><font color="#B95953">图 7.6</font>
+</summary><img src="figure/figure%207.6.png#center" style="width:80.0%"></details><p><br>
+为研究纵向和事件时间结果之间的假定关联结构如何影响导出的特定于主题的预测，我们在不同的参数化下进行了敏感性分析。为进行说明，我们将使用 PBC 研究中的 51 号患者，其血清胆红素测量对数的纵向轨迹如图 7.6 所示。我们可以观察到，该患者前三次就诊时胆红素水平稳定，但随后她的纵向曲线急剧增加，表明她的病情恶化。在我们的敏感性分析中，我们将对复合事件（死亡或移植）的相对风险子模型的六个不同指定的联合模型进行比较，即：</p>
+<div class="inline-figure"><img src="figure/figure%20188.png#center" style="width:80.0%"></div>
+<p>以及相同的纵向子模型，如 <a href="chap7.html#sec7-1-3">7.1.3</a> 节所示，该模型使用 B 样条来灵活地捕捉特定于受试者的纵向轨迹形状：</p>
+<p><span class="math display">\[\begin{array}{rcl}y_i(t)&amp;=&amp;m_i(t)+\varepsilon_i(t)\\&amp;=&amp;(\beta_0+b_{i0})+(\beta_k+b_{ik})^\top B(t,4,4)+\varepsilon_i(t)\end{array}\]</span></p>
+<p>相对风险模型（I）-（III）假设，在时间 <span class="math inline">\(t\)</span> 发生复合事件的风险分别取决于同一时间点的对数血清胆红素的真实水平、<span class="math inline">\(t\)</span> 处真实轨迹的斜率或 <span class="math inline">\(t\)</span> 处的真实水平和斜率。类似地，模型（IV）-（VI）假设了相同类型的关系，但也包括标志物的真实水平和/或轨迹斜率与基线异常凝血酶原时间的虚拟变量之间的交互作用项。</p>
+<p>在继续在 R 中拟合这些模型之前，我们首先需要在 <span class="math inline">\(m_i(t)\)</span> 的 B 样条表示下导出导数 <span class="math inline">\(m'_i (t)\)</span> 的表达式。从标准 B 样条理论可知，该导数也可以用 B 样条基函数来编写 (Dierckx, 1993, Section 1.3.2). 具体地，将 <span class="math inline">\(m_i(t)\)</span> 重写为以下形式</p>
+<p><span class="math display">\[\begin{aligned}m_i(t)=(\beta_0+b_{i0})+\sum_k(\beta_k+b_{ik})B_k(t,q)\end{aligned}\]</span></p>
+<p>其中 <span class="math inline">\(B_k(t, q)\)</span> 表示结 <span class="math inline">\(\lambda_k\)</span> 处 <span class="math inline">\(q\)</span> 阶的 B 样条基，其导数由以下表达式给出</p>
+<p><span class="math display">\[\begin{aligned}m_i'(t)=(q-1)\sum_k\frac{c_{i,k+1}-c_{i,k}}{\lambda_{k+q+1}-\lambda_k}B_k(t,q-1)\end{aligned}\]</span></p>
+<p>其中 <span class="math inline">\(c_{i;k} = \beta_k + b_{ik}\)</span>。为了使用 R 的公式接口指定真实轨迹的斜率，我们使用混合效应模型公式重写 <span class="math inline">\(m'_i (t)\)</span>，即</p>
+<p><span class="math display">\[\begin{aligned}m_{i}^{\prime}(t)&amp;=\quad[x_{i}^{sl}(t)]^{\top}\beta^{sl}+[z_{i}^{sl}(t)]^{\top}b_{i}^{sl}\\&amp;=\quad(q-1)B(t,\lambda,q-1)^\top(\beta_{k,-1}/D\lambda)-qB(t,\lambda,q-1)^\top(\beta_{k,-c}/D\lambda)\\&amp;\quad+qB(t,\lambda,q-1)^\top(b_{ik,-1}/D\lambda)-qB(t,\lambda,q-1)^\top(b_{ik,-c}/D\lambda)\end{aligned}\]</span></p>
+<p>其中 <span class="math inline">\(\lambda\)</span> 表示 <span class="math inline">\(m_i(t)\)</span> 指定中 B 样条基的结，<span class="math inline">\(D\lambda\)</span> 表示 <span class="math inline">\(\lambda\)</span> 的 <span class="math inline">\(q+1\)</span> 阶差分，<span class="math inline">\(\beta_{k,-l}\)</span> 和 <span class="math inline">\(b_{ik,-l}\)</span> 分别表示固定效应和随机效应 <span class="math inline">\(\beta_k\)</span> 和 <span class="math inline">\(b_{ik}\)</span> 的向量但不包括其中第 <span class="math inline">\(l\)</span> 个元素，而 <span class="math inline">\(c\)</span> 表示最后一个元素。对于我们的例子，由于我们只有一个内部结，在 <span class="math inline">\(m'_i(t)\)</span> 的分母中，项 <span class="math inline">\(D\lambda k=\lambda k+q+1-\lambda k\)</span> 总是等于边界结的极差，我们手动将其设置为随访时间 <span class="math inline">\(t_{ij}\)</span> 和观测事件时间 <span class="math inline">\(T_i\)</span> 的组合范围。</p>
+<p>拟合纵向和生存子模型的代码 <a href="chap7.html#sec7-1-3">7.1.3</a> 节相同，即</p>
+<div class="sourceCode" id="cb127"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb127-1"><a href="chap7.html#cb127-1" tabindex="-1"></a><span class="sc">&gt;</span> lmeFitBsp.pbc <span class="ot">&lt;-</span> <span class="fu">lme</span>(</span>
+<span id="cb127-2"><a href="chap7.html#cb127-2" tabindex="-1"></a>  <span class="at">fixed =</span> <span class="fu">log</span>(serBilir) <span class="sc">~</span> <span class="fu">bs</span>(year, <span class="dv">4</span>, <span class="at">Boundary.knots =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">15</span>)),</span>
+<span id="cb127-3"><a href="chap7.html#cb127-3" tabindex="-1"></a>  <span class="at">random =</span> <span class="fu">list</span>(</span>
+<span id="cb127-4"><a href="chap7.html#cb127-4" tabindex="-1"></a>  <span class="at">id =</span> <span class="fu">pdDiag</span>(<span class="at">form =</span> <span class="sc">~</span> <span class="fu">bs</span>(year, <span class="dv">4</span>, <span class="at">Boundary.knots =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">15</span>)))),</span>
+<span id="cb127-5"><a href="chap7.html#cb127-5" tabindex="-1"></a>  <span class="at">data =</span> pbc2)</span>
+<span id="cb127-6"><a href="chap7.html#cb127-6" tabindex="-1"></a><span class="sc">&gt;</span> coxFit.pbc <span class="ot">&lt;-</span> <span class="fu">coxph</span>(<span class="fu">Surv</span>(years, status2) <span class="sc">~</span> drug <span class="sc">+</span> Pro,</span>
+<span id="cb127-7"><a href="chap7.html#cb127-7" tabindex="-1"></a>                      <span class="at">data =</span> pbc2.id, <span class="at">x =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<p>为了拟合包含斜率项 <span class="math inline">\(m'_i (t)\)</span> 的联合模型，我们首先需要适当地指定在 <a href="chap5.html#sec5-1-3">5.1.3</a> 节中介绍的 <code>jointModel()</code> 的 <code>derivForm</code> 参数，使用适当的 R 公式来构造该项的固定和随机效应设计矩阵。这些采用以下形式</p>
+<div class="sourceCode" id="cb128"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb128-1"><a href="chap7.html#cb128-1" tabindex="-1"></a><span class="sc">&gt;</span> dform <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb128-2"><a href="chap7.html#cb128-2" tabindex="-1"></a>  <span class="at">fixed =</span> <span class="sc">~</span> <span class="sc">-</span><span class="dv">1</span></span>
+<span id="cb128-3"><a href="chap7.html#cb128-3" tabindex="-1"></a>  <span class="sc">+</span> <span class="fu">I</span>(<span class="dv">3</span> <span class="sc">*</span> <span class="fu">bs</span>(year, <span class="at">knots =</span> <span class="fl">2.0534443</span>,</span>
+<span id="cb128-4"><a href="chap7.html#cb128-4" tabindex="-1"></a>    <span class="at">Boundary.knots =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">15</span>), <span class="at">degree =</span> <span class="dv">2</span>) <span class="sc">/</span> <span class="dv">15</span>)</span>
+<span id="cb128-5"><a href="chap7.html#cb128-5" tabindex="-1"></a>  <span class="sc">+</span> <span class="fu">I</span>(<span class="sc">-</span><span class="dv">3</span> <span class="sc">*</span> <span class="fu">bs</span>(year, <span class="at">knots =</span> <span class="fl">2.0534443</span>,</span>
+<span id="cb128-6"><a href="chap7.html#cb128-6" tabindex="-1"></a>    <span class="at">Boundary.knots =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">15</span>), <span class="at">degree =</span> <span class="dv">2</span>) <span class="sc">/</span> <span class="dv">15</span>),</span>
+<span id="cb128-7"><a href="chap7.html#cb128-7" tabindex="-1"></a>  <span class="at">indFixed =</span> <span class="fu">c</span>(<span class="dv">3</span>,<span class="dv">4</span>,<span class="dv">5</span>,<span class="dv">2</span>,<span class="dv">3</span>,<span class="dv">4</span>),</span>
+<span id="cb128-8"><a href="chap7.html#cb128-8" tabindex="-1"></a>  <span class="at">random =</span> <span class="sc">~</span> <span class="sc">-</span><span class="dv">1</span></span>
+<span id="cb128-9"><a href="chap7.html#cb128-9" tabindex="-1"></a>  <span class="sc">+</span> <span class="fu">I</span>(<span class="dv">3</span> <span class="sc">*</span> <span class="fu">bs</span>(year, <span class="at">knots =</span> <span class="fl">2.0534443</span>,</span>
+<span id="cb128-10"><a href="chap7.html#cb128-10" tabindex="-1"></a>    <span class="at">Boundary.knots =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">15</span>), <span class="at">degree =</span> <span class="dv">2</span>) <span class="sc">/</span> <span class="dv">15</span>)</span>
+<span id="cb128-11"><a href="chap7.html#cb128-11" tabindex="-1"></a>  <span class="sc">+</span> <span class="fu">I</span>(<span class="sc">-</span><span class="dv">3</span> <span class="sc">*</span> <span class="fu">bs</span>(year, <span class="at">knots =</span> <span class="fl">2.0534443</span>,</span>
+<span id="cb128-12"><a href="chap7.html#cb128-12" tabindex="-1"></a>    <span class="at">Boundary.knots =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">15</span>), <span class="at">degree =</span> <span class="dv">2</span>) <span class="sc">/</span> <span class="dv">15</span>),</span>
+<span id="cb128-13"><a href="chap7.html#cb128-13" tabindex="-1"></a>  <span class="at">indRandom =</span> <span class="fu">c</span>(<span class="dv">3</span>,<span class="dv">4</span>,<span class="dv">5</span>,<span class="dv">2</span>,<span class="dv">3</span>,<span class="dv">4</span>))</span></code></pre></div>
+<p><span class="math inline">\(m'_i(t)\)</span> 指定中的 B 样条基应在与 <span class="math inline">\(m_i(t)\)</span> 的 B 样条基完全相同的结处计算。为此，我们首先使用代码提取内部结的值</p>
+<div class="sourceCode" id="cb129"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb129-1"><a href="chap7.html#cb129-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">attr</span>(lmeFitBsp.pbc<span class="sc">$</span>terms, <span class="st">"predvars"</span>)</span>
+<span id="cb129-2"><a href="chap7.html#cb129-2" tabindex="-1"></a><span class="fu">list</span>(<span class="fu">log</span>(serBilir), <span class="fu">bs</span>(year, <span class="at">degree =</span> 3L, <span class="at">knots =</span> <span class="fl">2.0534443105903</span>,</span>
+<span id="cb129-3"><a href="chap7.html#cb129-3" tabindex="-1"></a>                       <span class="at">Boundary.knots =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">15</span>), <span class="at">intercept =</span> <span class="cn">FALSE</span>))</span></code></pre></div>
+<p>然后，我们分别使用 <code>knots</code> 和 <code>boundary.nots</code> 参数在 <code>bs()</code> 调用中手动设置内部结和边界结。此外，<code>Degree</code> 参数指定 B 样条线的次数，默认设置为 3，这意味着 B 样条的次数 <code>q</code> 为 4。因此，在上述公式中，为了构造项 <span class="math inline">\((q − 1)B(t, \lambda, q − 1)\)</span>，我们将 B 样条基乘以 3，并将其次数设置为 2. <code>dform</code> 列表的 <code>indFixed</code> 分量对应于构造向量 $<sup>{sl}=(<em>{k,-1}^,</em>{k,-c}</sup>)^$ 的索引，并且 <code>indRandom</code> 的定义类似。上面（I）-（VI）给出的六个联合模型及其相应的相关子模型在 R 中用代码进行拟合</p>
+<div class="sourceCode" id="cb130"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb130-1"><a href="chap7.html#cb130-1" tabindex="-1"></a><span class="sc">&gt;</span> jointFitBsp.pbc <span class="ot">&lt;-</span> <span class="fu">jointModel</span>(lmeFitBsp.pbc, coxFit.pbc,</span>
+<span id="cb130-2"><a href="chap7.html#cb130-2" tabindex="-1"></a>                                <span class="at">timeVar =</span> <span class="st">"year"</span>, <span class="at">method =</span> <span class="st">"piecewise-PH-aGH"</span>)</span>
+<span id="cb130-3"><a href="chap7.html#cb130-3" tabindex="-1"></a><span class="sc">&gt;</span> jointFitBsp2.pbc <span class="ot">&lt;-</span> <span class="fu">update</span>(jointFitBsp.pbc,</span>
+<span id="cb130-4"><a href="chap7.html#cb130-4" tabindex="-1"></a>                             <span class="at">parameterization =</span> <span class="st">"slope"</span>, <span class="at">derivForm =</span> dform)</span>
+<span id="cb130-5"><a href="chap7.html#cb130-5" tabindex="-1"></a><span class="sc">&gt;</span> jointFitBsp3.pbc <span class="ot">&lt;-</span> <span class="fu">update</span>(jointFitBsp.pbc,</span>
+<span id="cb130-6"><a href="chap7.html#cb130-6" tabindex="-1"></a>                             <span class="at">parameterization =</span> <span class="st">"both"</span>, <span class="at">derivForm =</span> dform)</span>
+<span id="cb130-7"><a href="chap7.html#cb130-7" tabindex="-1"></a><span class="sc">&gt;</span> jointFitBsp4.pbc <span class="ot">&lt;-</span> <span class="fu">update</span>(jointFitBsp.pbc,</span>
+<span id="cb130-8"><a href="chap7.html#cb130-8" tabindex="-1"></a>                             <span class="at">interFact =</span> <span class="fu">list</span>(<span class="at">value =</span> <span class="sc">~</span> Pro, <span class="at">data =</span> pbc2.id))</span>
+<span id="cb130-9"><a href="chap7.html#cb130-9" tabindex="-1"></a><span class="sc">&gt;</span> jointFitBsp5.pbc <span class="ot">&lt;-</span> <span class="fu">update</span>(jointFitBsp2.pbc,</span>
+<span id="cb130-10"><a href="chap7.html#cb130-10" tabindex="-1"></a>                             <span class="at">interFact =</span> <span class="fu">list</span>(<span class="at">slope =</span> <span class="sc">~</span> Pro, <span class="at">data =</span> pbc2.id))</span>
+<span id="cb130-11"><a href="chap7.html#cb130-11" tabindex="-1"></a><span class="sc">&gt;</span> jointFitBsp6.pbc <span class="ot">&lt;-</span> <span class="fu">update</span>(jointFitBsp3.pbc,</span>
+<span id="cb130-12"><a href="chap7.html#cb130-12" tabindex="-1"></a>                             <span class="at">interFact =</span> <span class="fu">list</span>(<span class="at">value =</span> <span class="sc">~</span> Pro, <span class="at">slope =</span> <span class="sc">~</span> Pro, <span class="at">data =</span> pbc2.id))</span></code></pre></div>
+<p>六个相对风险子模型的回归系数估计（以及相关的标准误和 <span class="math inline">\(p\)</span> 值）如表 7.1 所示。为了说明预测在不同参数化下是如何受到影响的，我们在图 7.7 和 7.8 中显示了 PBC 研究中患者 51 的纵向结果动态更新预测 <span class="math inline">\(\omega_i(u|t)\)</span> 和事件结果动态更新条件生存概率 <span class="math inline">\(\pi_i(u| t)\)</span> 的估计。在这些图的每个面板中，<span class="math inline">\(t\)</span> 被设为最后可用纵向响应的时间点，并且 <span class="math inline">\(u=t+1\)</span>。从图 7.7 中我们清楚地观察到，纵向结果的预测及其相应的标准误受所选关联结构的影响最小。相反，从图 7.8 中可以看出，对于某些时间点 <span class="math inline">\(u\)</span>，条件生存概率估计 <span class="math inline">\(\pi_i(u|t)\)</span> 在六种不同的参数化之间表现出相当大的变异性。例如，我们观察到，基于仅考虑斜率项 <span class="math inline">\(m'_i(t)\)</span> 影响的联合模型（II）和（V），前三次就诊中的每一次就诊后的预测显示出比同样以当前值 <span class="math inline">\(m_i(t)\)</span> 为条件的其他模型更大的标准误。然而，对于后一个时间点，特别是在第六次就诊（即 <span class="math inline">\(u＝5.5\)</span>）之后，出现了相反的行为，模型（II）和（V）显示出比其他模型更高的生存概率和更小的标准误。这可以通过患者 51 的纵向曲线的形状来解释（见图 7.6），在前五次就诊期间，纵向曲线更加非线性，但在之后趋于稳定。</p>
+<details><summary><font color="#B95953">图 7.7</font>
+</summary><img src="figure/figure%207.7.png#center" style="width:80.0%"></details><br><details><summary><font color="#B95953">图 7.8</font>
+</summary><img src="figure/figure%207.8.png#center" style="width:80.0%"></details><p><br>
+我们的预测应该基于六个模型中的哪一个，这可以基于标准的似然信息方法。表 7.2 列出了所有六个模型的 AIC 和 BIC 值，以及将完整模型（VI）与其他五个缩减模型进行比较的五个似然比检验的结果。AIC 选择完整模型作为最合适的模型，而 BIC 模型（IV）假设只有标记物的当前值与复合事件的风险相关，但这种关联的强度在凝血酶原时间正常和异常的患者之间不同。似然比检验建议模型（IV），因为对于其他模型，存在比完整模型（VI）中更差的拟合的证据。</p>
+</div>
+<div id="sec7-4" class="section level2" number="7.4">
+<h2>
+<span class="header-section-number">7.4</span> 联合模型的前瞻准确性<a class="anchor" aria-label="anchor" href="#sec7-4"><i class="fas fa-link"></i></a>
+</h2>
+<p>上一节表明，标志物过程的不同特征可能比其他特征与事件风险的相关性更强。当对包含纵向和生存部分的联合模型的整体预测能力感兴趣时，信息准则（例如 AIC 和 BIC）可能很有用。然而，通常重点可能主要在于生存结果，特别是确定纵向标记在预测该结果方面的效果如何。这个问题的答案在文献中受到了广泛关注，其中出现了两条研究主线。第一个侧重于校准措施以及模型预测观测数据的效果（Graf et al, 1999; Schemper and Henderson, 2000; Henderson et al., 2002; Gerds and Schumacher, 2006)，第二个侧重于判别度量以及该模型如何区分将在短时间内经历该事件的患者与将在以后经历该事件的患者 (Harrell et al., 1982; Heagerty et al., 2000; Heagerty and Cheng, 2005; Antonolini et al, 2005; Pencina et al., 2008). 在本节中，我们重点关注后一类指标，并依靠受试者工作特征 (ROC) 方法来评估纵向标记区分事件低风险和高风险的患者的能力。</p>
+<div id="sec7-4-1" class="section level3" number="7.4.1">
+<h3>
+<span class="header-section-number">7.4.1</span> 二项结果的判别度量<a class="anchor" aria-label="anchor" href="#sec7-4-1"><i class="fas fa-link"></i></a>
+</h3>
+<p>为了介绍判别度量背后的基本概念，我们将首先考虑简单的二元响应设定。具体地，令 <span class="math inline">\(d_i\)</span> 表示受试者 <span class="math inline">\(i\)</span> 的疾病状态指示符，其取值 1 或 0，具体取决于受试者是否经历过感兴趣的事件。还令 <span class="math inline">\(y_i\)</span> 表示在基线处测量的标量标志物，其被认为与疾病概率密切相关。我们的目的是利用观测标志物值来识别“患病”几率更大的受试者。为实现这一点，我们构建了一个适当的预测规则，当受试者 <span class="math inline">\(i\)</span> 的观测标记物水平超过特定阈值时，即 <span class="math inline">\(y_i&gt;c\)</span>，将其分类为患病。基于该规则，我们现在可以使用基于疾病状态的正确分类概率来量化标志物的性能。具体地，标志物将受试者正确分类为患病的概率称为灵敏度 (sensitivity)（也称为真阳性率）</p>
+<p><span class="math display">\[\begin{aligned}\text{TP}(c)=\text{Pr}(y_i&gt;c\mid d_i=1)\end{aligned}\]</span></p>
+<p>而标志物正确地将受试者分类为未患病的概率称为特异度 (specificity)</p>
+<p><span class="math display">\[\begin{aligned}1-\operatorname{FP}(c)=\operatorname{Pr}(y_i\leq c\mid d_i=0)\end{aligned}\]</span></p>
+<p>其中 <span class="math inline">\(\operatorname{FP}(c)=\operatorname{Pr}(y_i&gt;c\mid d_i=0)\)</span> 表示假阳性率。请注意，这些概率度量特定规则 <span class="math inline">\(\{y_i &gt; c\}\)</span> 的预测准确性。为了描述标志物的整体区分能力，我们计算所有可能的预测规则 <span class="math inline">\(\{y_i &gt; c, c \in \mathbb R_y\}\)</span> 的灵敏度和特异度，其中 <span class="math inline">\(\mathbb{R}_y\subseteq\mathbb{R}\)</span> 表示标志物的样本空间，<span class="math inline">\(\mathbb R\)</span> 是实数集。这就得到了 ROC 曲线，它是针对不同 c 的真阳性率（灵敏度）与假阳性率（1 − 特异性）的关系图，正式定义为</p>
+<p><span class="math display">\[\begin{aligned}\operatorname{ROC}(p)=\operatorname{TP}\{\operatorname{FP}^{-1}(p)\}\end{aligned}\]</span></p>
+<p>其中 <span class="math inline">\(p\)</span> 在 <span class="math inline">\([0, 1]\)</span> 中，且 <span class="math inline">\(\text{FP}^{-1}(p)=\inf_c\{c:\text{FP}(c)\leq p\}\)</span>。图 7.9 给出了 ROC 曲线的一般示例。左图显示患病组和非患病组中标志物水平的箱线图，右图显示相应的 ROC 曲线。左图中的虚线对应于规则 <span class="math inline">\(y_i &gt; 35\)</span>，右图中的虚线注释了该规则在灵敏度和 1 – 特异性方面的表现。ROC 曲线在单位象限内越高，预测规则越准确。ROC 曲线下面积 (AUC) 给出了所有可能阈值 c 的标记物预测准确性指数的总结，定义为：</p>
+<p><span class="math display">\[\begin{aligned}\text{AUC}&amp;=\int_0^1\text{ROC}(p)dp\end{aligned}\]</span>
+等价公式提供了对 AUC 更直观的解释 (Hanley and McNeil, 1982)</p>
+<p><span class="math display" id="eq:7-13">\[\begin{align}
+\text{AUC}=\Pr(y_i&gt;y_j\mid d_i=1,d_j=0)
+\tag{7.13}
+\end{align}\]</span></p>
+<p>这假设，对于任何随机的“可比”受试者对子 <span class="math inline">\(\{i,j\}\)</span>（即其状态可以进行排序的受试者，例如一个患病和另一个未患病），AUC 表示两个受试者的标志物水平排序与其疾病状态排序一致的概率。AUC 等于 1 表示最大的判别力，而 AUC=0.5 表示随机判别力（即，该标标志物在判别患者方面并不比扔硬币更好）。ROC 方法的一个关键优势是可以用于比较不同的候选标志物。例如，对于 HIV 感染的患者，人们可能想要将 CD4 细胞计数与病毒载量进行比较，或者在感染前后观察到的 CD4 的即时变化是否比 CD4 的基线水平提供更好的准确性。有关连续标志物的 ROC 曲线的更多背景信息，请参阅 Krzanowski and Hand (2009).</p>
+</div>
+<div id="sec7-4-2" class="section level3" number="7.4.2">
+<h3>
+<span class="header-section-number">7.4.2</span> 生存结果的判别度量<a class="anchor" aria-label="anchor" href="#sec7-4-2"><i class="fas fa-link"></i></a>
+</h3>
+<p>为了将灵敏度和特异度的定义从上一节中介绍的二元设定扩展到生存数据，我们将事件时间视为与时间相关的二元结果，事件前所有时间点的值为 0，事件后的值为 1. 事实上，这种生存时间的表示等同于 <a href="chap3.html#sec3-5">3.5</a> 节中引入的事件时间结果 <span class="math inline">\(N_i(t)=I(t\geq T_i^*)\)</span> 的计数过程表示。二元结果 <span class="math inline">\(N_i(t)\)</span> 的时依性考虑根据受试者在任何特定时间点 <span class="math inline">\(t\)</span> 被分类为“病例”或“对照”的方式，对灵敏度和特异度进行几种潜在的定义。Heagerty and Zheng (2005) 提出了我们在这种情况下不同的分类法。仍然集中在用作事件预测因子的标量标志物 <span class="math inline">\(y_i\)</span> 上，三个主要的准确性度量族是</p>
+<ol style="list-style-type: decimal">
+<li>累积灵敏度/动态特异度：</li>
+</ol>
+<p><span class="math display">\[\begin{aligned}\operatorname{TP}_t^\mathbb{C}(c):\quad&amp;\Pr(y_i&gt;c\mid T_i^*\le t)\\1-\operatorname{FP}_t^\mathbb{D}(c):\quad&amp;\Pr(y_i\le c\mid T_i^*&gt;t)\end{aligned}\]</span>
+根据这些定义，在任何固定时间 <span class="math inline">\(t\)</span>，整个总体根据其在时间 <span class="math inline">\(t\)</span> 时的事件状态被分类为病例或对照。此外，每个受试者在时间 <span class="math inline">\(t &lt; T^*_i\)</span> 中为控制，但当 <span class="math inline">\(t \ge T^*_i\)</span> 时成为病例。</p>
+<ol start="2" style="list-style-type: decimal">
+<li>事件灵敏度/静态特异度：</li>
+</ol>
+<p><span class="math display">\[\begin{aligned}\mathrm{TP}_t^\mathbb{I}(c):\quad&amp;\Pr(y_i&gt;c\mid T_i^*=t)\\1-\mathrm{FP}_{\tilde{t}}^\mathbb{S}(c):\quad&amp;\Pr(y_i\le c\mid T_i^*&gt;\tilde{t})\end{aligned}\]</span>
+这些定义已被 Etzioni et al. (1999) 以及 Slate and Turnbull (2000) 采用，并假定每个受试者不会改变状态，并且被分类为病例或对照。病例根据事件发生的时间进行分层，对照被定义为在固定的随访期 <span class="math inline">\((0,\tilde t)\)</span> 内没有发生事件的受试者。</p>
+<ol start="3" style="list-style-type: decimal">
+<li>事件灵敏度/动态特异度：</li>
+</ol>
+<p><span class="math display">\[\begin{aligned}\mathrm{TP}_t^\mathbb{I}(c):\quad&amp;\Pr(y_i&gt;c\mid T_i^*=t)\\1-\mathrm{FP}_t^\mathbb{D}(c):\quad&amp;\Pr(y_i\leq c\mid T_i^*&gt;t)\end{aligned}\]</span>
+在这种方法下，受试者可以在所有 <span class="math inline">\(t &lt; T^*_i\)</span> 中扮演控制的角色，但当 <span class="math inline">\(t = T^*_i\)</span> 时则扮演病例的角色。这里，灵敏度度量在 <span class="math inline">\(t\)</span> 发生事件的个体亚组中标志物水平超过阈值 <span class="math inline">\(c\)</span> 的受试者的预期比例，而特异度衡度量在时间 <span class="math inline">\(t\)</span> 之后存活的受试者中标志物水平低于或等于 <span class="math inline">\(c\)</span> 的受试者的比例。</p>
+<p>所有上述定义的一个重要特征是它们是时依的，这意味着标志物区分病例和控制的能力随着时间的推移而变化。在选择时依灵敏度和特异度的定义之后，ROC 曲线和这些曲线下的面积可以以与在二元设定中相同的方式来计算和解释。这些度量也将是时变的，并反映了标志物的准确性在随访中是如何演变的。</p>
+</div>
+<div id="sec7-4-3" class="section level3" number="7.4.3">
+<h3>
+<span class="header-section-number">7.4.3</span> 纵向标志物的预测规则<a class="anchor" aria-label="anchor" href="#sec7-4-3"><i class="fas fa-link"></i></a>
+</h3>
+<p>继 Rizopoulos (2011) 以及 Cheng and Heagerty (2007) 之后，我们现在将上一节的时依准确性度量框架扩展到纵向标志物的情况。正如前面所指出的，需要联合建模方法来回答感兴趣的科学问题的研究的固有特征是它们的动态性质。也就是说，当收集受试者的纵向信息时，我们可以不断更新对其生存概率的预测。考虑到这一特征，区分将在上次测量后的一段时间内经历该事件的患者与将在没有事件的情况下超过该时间段的患者通常具有医学相关性。在这种情况下，纵向标志物的一个有用特性是成功地区分这些患者。具体地，和以前一样，对于受试者 <span class="math inline">\(i\)</span> 直到时间 <span class="math inline">\(t\)</span>，我们假定我们已经收集了一组纵向测量值 <span class="math inline">\(\mathcal{Y}_i(t)=\{y_i(s);0\leq s&lt;t\}\)</span>。我们感兴趣的是在医学相关时间范围 <span class="math inline">\((t,t+\Delta t]\)</span> 内发生的事件，在该时间范围内医生可以采取行动（例如，开始或改变治疗）以提高该患者的生存机会。使用标志物历史 <span class="math inline">\(\mathcal Y_i(t)\)</span> 的适当函数，我们可以定义预测规则来区分事件高风险和低风险的患者。例如，对于 PBC 患者，我们可以将血清胆红素对数值大于特定阈值视为死亡的预测。由于我们处于纵向环境中，因此我们可以灵活地确定患者的纵向历史 <span class="math inline">\(\mathcal Y_i(t)\)</span> 的哪些值将有助于预测规则的规范。为了实现完全通用性，我们考虑阈值 <span class="math inline">\(c\)</span> 的向量，基于该向量我们定义</p>
+<p><span class="math display">\[\mathcal{P}_i^s(t,k,c)=\{y_i(s)\geq c_s;k\leq s\leq t\}\]</span></p>
+<p>作为“成功”，即，标志物指示事件将发生，并且</p>
+<p><span class="math display">\[\begin{aligned}\mathcal{P}_i^f(t,k,c)=\mathbb{R}^{r(k,t)}\setminus\{y_i(s)\geq c_s;k\leq s\leq t\}\end{aligned}\]</span></p>
+<p>为“失败”，其中 <span class="math inline">\(\mathcal R_n\)</span> 表示 <span class="math inline">\(n\)</span> 维欧几里得空间，<span class="math inline">\(r(k, t)\)</span> 表示在区间 <span class="math inline">\([k, t]\)</span> 内进行的纵向测量的次数。<span class="math inline">\(k \ge 0\)</span> 的值指定纵向历史的哪些过去标志物值对规则有贡献，<span class="math inline">\(c_s\)</span> 表示时间点 <span class="math inline">\(s\)</span> 的阈值。这些预测规则的惯例是，标志物值越大，死亡风险越高。当情况相反时，例如我们使用 CD4 细胞计数作为 HIV 感染患者的标志物，这些定义应相应调整。</p>
+<p>为了证明 <span class="math inline">\(\mathcal{P}_i^s(t,k,c)\)</span> 的完全通用性以及我们在定义预测规则时不同的范围，我们给出了三个示例：</p>
+<div class="rmdnote">
+<ul>
+<li>示例 1：最简单且最常用的预测规则仅利用最后可用的纵向测量来驱动决策，即</li>
+</ul>
+<p><span class="math display">\[\mathcal{P}_i^s(t,k,c)=\{y_i(t)\geq c\}\]</span></p>
+<p>该规则代表了我们在 <a href="chap7.html#sec7-4-1">7.4.1</a> 和 <a href="chap7.html#sec7-4-2">7.4.2</a> 节中看到的基线标志物预测规则的时依的类似物。具体地，对于任何时间点 <span class="math inline">\(t\)</span>，如果患者在同一时间点观察到的标志物水平超过特定阈值 <span class="math inline">\(c\)</span>，我们会将患者归类为经历该事件的高风险组。</p>
+<ul>
+<li><p>示例 2：尽管前面的规则在实践中简单易用，但它的缺点是使用单一标志物测量，因此它丢弃了有用的信息。一个小的扩展是在两个时间点使用标志物值，例如：
+<span class="math display">\[\begin{aligned}\mathcal{P}_i^s(t,k,c)=\{y_i(t-1)\geq c\}\cap\{y_i(t)\geq c\}\end{aligned}\]</span>
+如果患者的标志物水平在时间点 <span class="math inline">\(t\)</span> 和 <span class="math inline">\(t−1\)</span> 都超过了相同的阈值 <span class="math inline">\(c\)</span>，则该规则将在时间 <span class="math inline">\(t\)</span> 将患者归类为高风险组。</p></li>
+<li><p>示例 3：对示例 2 的进一步增强是考虑预测规则捕获患者病情的恶化。这可以通过绝对增加预测规则来实现，例如，
+<span class="math display">\[\mathcal{P}_i^s(t,k,c)=\{y_i(t-1)\geq c\}\cap\{y_i(t)\geq c+\nu\},\quad\nu&gt;0\]</span>
+它正式化了这样一种想法，如果患者表现出 <span class="math inline">\(ν\)</span> 个单位标志物水平的绝对增加，或相对增加预测规则，则患者经历该事件的机会更高，例如
+<span class="math display">\[\begin{aligned}\mathcal{P}_i^s(t,k,c)=\{y_i(t-1)\geq c\}\cap\{y_i(t)\geq(1+\nu)c\},\quad\nu&gt;0\end{aligned}\]</span>
+类似地，如果患者的标记物水平增加了 <span class="math inline">\((100 × ν)%\)</span>，那么她经历该事件的机会就更高。</p></li>
+</ul>
+</div>
+<p>我们将基于单一标志物评估的规则（如示例 1）称为<strong>简单预测规则</strong>，将涉及多个标志物评估的规则（如示例 2 和 3）称为<strong>复合预测规则</strong>。由于我们的兴趣在于利用截至时间 <span class="math inline">\(t\)</span> 的观测标记物水平 <span class="math inline">\(\mathcal Y_i(t)\)</span> 来预测医学相关区间 <span class="math inline">\((t, t + \Delta t]\)</span> 中的事件，因此灵敏度和特异度分别定义为</p>
+<p><span class="math display" id="eq:7-14">\[\begin{align}
+\mathrm{TP}_t^{\Delta t}(c)=\mathrm{Pr}\big\{\mathcal{P}_i^s(t,k,c)\mid T_i^*&gt;t,T_i^*\in(t,t+\Delta t];\theta^*\big\}
+\tag{7.14}
+\end{align}\]</span></p>
+<p>以及</p>
+<p><span class="math display" id="eq:7-15">\[\begin{align}
+1-\operatorname{FP}_t^{\Delta t}(c)=\operatorname{Pr}\big\{\mathcal{P}_i^f(t,k,c)\mid T_i^*&gt;t,T_i^*&gt;t+\Delta t;\theta^*\big\}
+\tag{7.15}
+\end{align}\]</span></p>
+<p>根据 <a href="chap7.html#sec7-4-2">7.4.2</a> 节中 Heagerty and Zheng (2005) 的分类，上述规范分别对应于累积灵敏度和动态特异度。此外，请注意，这些准确性度量不仅取决于时间，还取决于医学相关时间区间 <span class="math inline">\(\Delta t\)</span> 的长度。这意味着对于相同的 <span class="math inline">\(t\)</span>，不同的模型可能对不同的 <span class="math inline">\(\Delta t\)</span> 表现出不同的判别能力。与之前一样，可以使用相应的 ROC 曲线来评估纵向标志物对所有可能阈值 <span class="math inline">\(c\in\mathbb{R}_y\)</span> 的整体判别能力</p>
+<p><span class="math display">\[\begin{aligned}\operatorname{ROC}_t^{\Delta t}(p)=\operatorname{TP}_t^{\Delta t}\{[\operatorname{FP}_t^{\Delta t}]^{-1}(p)\}\end{aligned}\]</span></p>
+<p>其中 <span class="math inline">\(p\)</span> 位于 <span class="math inline">\([0, 1]\)</span> 和 <span class="math inline">\([\mathrm{FP}_t^{\Delta t}]^{-1}(p)=\inf_c\{c:\mathrm{FP}_t^{\Delta t}(c)\leq p\}\)</span> 中，以及 ROC 曲线下面积</p>
+<p><span class="math display">\[\begin{aligned}\mathrm{AUC}_t^{\Delta t}&amp;=\int_0^1\mathrm{ROC}_t^{\Delta t}(p)dp\end{aligned}\]</span></p>
+</div>
+<div id="sec7-4-4" class="section level3" number="7.4.4">
+<h3>
+<span class="header-section-number">7.4.4</span> 判别指数<a class="anchor" aria-label="anchor" href="#sec7-4-4"><i class="fas fa-link"></i></a>
+</h3>
+<p>到目前为止，我们提出的所有生存数据准确性度量的一个重要特征是，它们描述了标志物（基线或时依的）在特定随访时间 <span class="math inline">\(t\)</span> 时区分患者的能力。因此，在不同的时间点，标志物可能表现出不同程度的区分能力，因此一个相关的问题是我们如何总结标记在整个随访期间的区分能力。为了评估基线标志物的整体性能，Harrell et al. (1982) 提出了基于 Kendall-Goodman-Kruskal-Somers 型等级相关系数 (Goodman and Kruskal, 1979) 修改的一致性指数. 这可以看作是 AUC <a href="chap7.html#eq:7-13">(7.13)</a> 定义在具有时依疾病状态的二元背景下的扩展。也就是说，对于一对随机的受试者 <span class="math inline">\(\{i, j\}\)</span>，其真实事件时间可以排序，使得受试者 <span class="math inline">\(i\)</span> 在受试者 <span class="math inline">\(j\)</span> 之前经历该事件，那么我们感兴趣的是他们的标志物水平与其事件时间一致的概率，即</p>
+<p><span class="math display" id="eq:7-16">\[\begin{align}
+\mathrm{C}_h=\Pr(y_i&gt;y_j\mid T_i^*&lt;T_j^*)
+\tag{7.16}
+\end{align}\]</span></p>
+<p>事实上，这个全局准确性总结指数与 <a href="chap7.html#sec7-4-2">7.4.2</a> 节中介绍的时依 ROC 曲线相关。具体地，在这种情况下，Heagerty and Cheng (2005) 已经表明，<span class="math inline">\(\mathrm{C}_h\)</span> 指数 <a href="chap7.html#eq:7-16">(7.16)</a> 可以等价地导出为分别从灵敏度和特异度的发生率/动态定义获得的 AUC 的加权平均值。更具体地说，他们表明</p>
+<p><span class="math display" id="eq:7-17">\[\begin{align}
+\mathrm{C}_h&amp;=\int_0^\infty\mathrm{AUC}_tu(t)dt
+\tag{7.17}
+\end{align}\]</span></p>
+<p>其中 <span class="math inline">\(\mathrm{AUC}_t=\mathrm{Pr}(y_i&gt;y_j|T_i^*=t,T_j^*&gt;t)\)</span> 以及 <span class="math inline">\(u(t)=2\cdotp(t)\cdot\mathcal{S}(t)\)</span>。<span class="math inline">\(\mathrm{C}_h\)</span> 指数的这种等价定义为一系列全局一致性总结度量提供了可能性，这些度量基于 AUC 和权重函数 <span class="math inline">\(u(t)\)</span> 的其他指定。例如，可以使用 AUC 的适当定义来构建时依标志物的一致性判别指数 (Antolini et al., 2005). 根据这种方法，Rizopoulos (2011) 提出了一种基于 <a href="chap7.html#eq:7-14">(7.14)</a> 和 <a href="chap7.html#eq:7-15">(7.15)</a> 推导出的 AUC 的动态区分指数，即</p>
+<p><span class="math display">\[\mathrm{C}_{dyn}^{\Delta t}=\int_0^\infty\mathrm{AUC}_t^{\Delta t}u(t)dt\]</span></p>
+<p>其中</p>
+<p><span class="math display">\[u(t)=\operatorname*{Pr}(T_{i}^{*}&gt;t)\Big/\int\operatorname*{Pr}(T_{i}^{*}&gt;t)dt\]</span></p>
+<p>其中 <span class="math inline">\(\Pr(T_i^*&gt;t)\)</span> 为边际生存概率。选择此权重函数是因为考虑到并非所有时间点对比较的贡献均等，因为在晚期时间点，我们预计只有较少的受试者。也可以利用其他权重函数 <span class="math inline">\(u(t)\)</span> 来定义动态判别指数 <span class="math inline">\(\mathrm{C}_{dyn}^{\Delta t}\)</span> 的替代版本，并且在这方面的最佳选择仍然是一个悬而未决的问题。</p>
+<p>在实践中，我们通常会将注意力限制在固定的随访时间段 <span class="math inline">\((0,\tau)\)</span>。在这种情况下，可以修改 <span class="math inline">\(\mathrm{C}_{dyn}^{\Delta t}\)</span> 指数以考虑有限的随访：</p>
+<p><span class="math display">\[[\mathrm{C}_{dyn}^{\Delta t}]^\tau=\int_0^\tau\mathrm{AUC}_t^{\Delta t}u^\tau(t)dt\]</span></p>
+<p>式中 <span class="math inline">\(u^\tau(t)=u(t)/\int_0^\tau u(t)dt.[\mathrm{C}_{dyn}^{\Delta t}]^\tau\)</span> 仍将与随机一对受试者的预测与其结果一致的概率相关，但考虑到较小的事件时间发生在区间 <span class="math inline">\((0, \tau)\)</span> 内。</p>
+</div>
+<div id="sec7-4-5" class="section level3" number="7.4.5">
+<h3>
+<span class="header-section-number">7.4.5</span> 联合建模框架下的估计<a class="anchor" aria-label="anchor" href="#sec7-4-5"><i class="fas fa-link"></i></a>
+</h3>
+<p><a href="chap7.html#sec7-4-1">7.4.1</a> 节中描述的二元设定中的灵敏度、特异度和 AUC 的估计可以简单地基于观察样本中各自频率的计算。例如，灵敏度可以估计为样本中 <span class="math inline">\(y_i &gt; c\)</span> 的受试者与患病受试者的比例。然而，在生存背景下，预期准确性测量的估计因删失而变得复杂。特别要注意的是，这些度量是根据真实事件时间变量 <span class="math inline">\(T^*_i\)</span> 定义的。然而，当我们有兴趣估计比如特定时间点 <span class="math inline">\(t\)</span> 的灵敏度，并且受试者在 <span class="math inline">\(t'&lt; t\)</span> 时删失，那么我们不知道她在 <span class="math inline">\(t\)</span> 时的事件状态，因此她不能被分类为病例或对照。这意味着我们不能像在二元设定中那样简单地计算不同预测规则的样本中的病例数和对照数，而是需要估计真实事件时间和纵向测量值 <span class="math inline">\(T^*_i,y_i\)</span>。在这方面，联合建模框架非常有利，因为它为该分发提供了完整的指定。也就是说，使用联合模型，我们可以同时考虑删失和纵向结果的内生性，此外，我们还可以通过在生存子模型的设计矩阵 <span class="math inline">\(W\)</span> 中引入其他影响事件风险的基线协变量来很容易地进行调整。</p>
+<p>为了便于阐述，我们将只关注灵敏度的估计，因为特异度的估计以类似的方式进行。我们将遵循 <a href="chap7.html#sec7-1">7.1</a>和 <a href="chap7.html#sec7-2">7.2</a> 节中的类似方法，并推导出适当的模拟方案来产生灵敏度及其标准误的蒙特卡罗估计。更具体地说，我们观察到 <a href="chap7.html#eq:7-14">(7.14)</a> 可写为（假定以协变量为条件，但在符号中省略）：</p>
+<p><span class="math display" id="eq:7-18">\[\begin{align}
+&amp;\Pr\Big\{\mathcal{P}_i^s(t,k,c)\mid T_i^*&gt;t,T_i^*\in(t,t+\Delta t];\theta^*\Big\}\\[2ex]=&amp;\quad\frac{\Pr\{\mathcal{P}_i^s(t,k,c),T_i^*\in(t,t+\Delta t]\mid T_i^*&gt;t;\theta^*\}}{1-\Pr(T_i^*&gt;t+\Delta t\mid T_i^*&gt;t;\theta^*)}
+\tag{7.18}
+\end{align}\]</span></p>
+<p>其中，与前面一样，<span class="math inline">\(\theta^*\)</span> 表示真实的参数值。在假定 <a href="chap4.html#eq:4-7">(4.7)</a> 和 <a href="chap4.html#eq:4-8">(4.8)</a> 以及联合模型的定义下，我们可以得到分子和分母的进一步简化。具体地说，分子的形式为</p>
+<p><span class="math display" id="eq:7-19">\[\begin{align}
+\Pr\{\mathcal{P}_i^s&amp;(t,k,c),T_i^*\in(t,t+\Delta t]\mid T_i^*&gt;t;\theta^*\} \\
+&amp;=\quad\int\Pr\{\mathcal{P}_i^s(t,k,c),T_i^*\in(t,t+\Delta t]\mid T_i^*&gt;t,b_i;\theta^*\}p(b_i\mid T_i^*&gt;t;\theta^*)db_i \\
+&amp;=\quad\int\Pr\{\mathcal{P}_i^s(t,k,c)\mid b_i;\theta^*\}\times\Pr\{T_i^*\in(t,t+\Delta t]\mid T_i^*&gt;t,b_i;\theta^*\} \\
+&amp;\times p(b_{i}\mid T_{i}^{*}&gt;t;\theta^{*})db_{i},
+\tag{7.19}
+\end{align}\]</span></p>
+<p>其中</p>
+<p><span class="math display">\[\begin{aligned}\Pr\{\mathcal{P}_i^s(t,k,c)\mid b_i;\theta^*\}=\prod_{s=k}^t\Phi\Big\{\frac{c_s-m_i(s,b_i,\beta^*)}{\sigma^*}\Big\}\end{aligned}\]</span></p>
+<p>其中 <span class="math inline">\(\Phi(\cdot)\)</span> 表示标准正态累积分布函数，以及</p>
+<p><span class="math display">\[\Pr\{T_i^*\in(t,t+\Delta t]\mid T_i^*&gt;t,b_i;\theta^*\}=1-\frac{\mathcal{S}_i\big\{t+\Delta t\mid\mathcal{M}_i(t+\Delta t,b_i);\theta^*\big\}}{\mathcal{S}_i\big\{t\mid\mathcal{M}_i(t,b_i);\theta^*\big\}}\]</span></p>
+<p>同样地，对于分母，我们得到</p>
+<p><span class="math display" id="eq:7-20">\[\begin{align}
+\Pr(T_i^*&gt;t+&amp;\Delta t\mid T_i^*&gt;t;\theta^*)\\
+&amp; =\quad\int\Pr(T_i^*&gt;t+\Delta t\mid T_i^*&gt;t,b_i;\theta^*)p(b_i\mid T_i^*&gt;t;\theta^*)db_i  \\
+&amp;=\quad\int\frac{\mathcal{S}_i\big\{t+\Delta t\mid\mathcal{M}_i(t+\Delta t,b_i);\theta^*\big\}}{\mathcal{S}_i\big\{t\mid\mathcal{M}_i(t,b_i);\theta^*\big\}}p(b_i\mid T_i^*&gt;t;\theta^*)db_i
+\tag{7.20}
+\end{align}\]</span></p>
+<p>因此，我们观察到灵敏度被重写为如下关于边际后验分布 <span class="math inline">\(p(b_i|T_i^*&gt;t;\theta^*)\)</span> 的期望值之比</p>
+<p><span class="math display">\[\mathcal{E}_1(b_i,\theta)=\left[\prod_{s=k}^t\Phi\Big\{\frac{c_s-m_i(s,b_i,\beta^*)}{\sigma^*}\Big\}\right]\left[1-\frac{\mathcal{S}_i\big\{t+\Delta t\mid\mathcal{M}_i(t+\Delta t,b_i);\theta^*\big\}}{\mathcal{S}_i\big\{t\mid\mathcal{M}_i(t,b_i,\theta);\theta^*\big\}}\right]\]</span></p>
+<p>以及</p>
+<p><span class="math display">\[\mathcal{E}_2(b_i,\theta)=\mathcal{S}_i\big\{t+\Delta t\mid\mathcal{M}_i(t+\Delta t,b_i);\theta^*\big\}\bigg/\mathcal{S}_i\big\{t\mid\mathcal{M}_i(t,b_i);\theta^*\big\}\]</span></p>
+<p>我们应注意到，这种后验分布与条件生存概率 <a href="chap7.html#eq:7-2">(7.2)</a> 的推导或纵向结果 <a href="chap7.html#eq:7-9">(7.9)</a> 的预测中使用的后验分布不同。具体地，在 <a href="chap7.html#eq:7-2">(7.2)</a> 和 <a href="chap7.html#eq:7-9">(7.9)</a> 中，随机效应的后验取条件于 <span class="math inline">\(T^*_i &gt; t\)</span> 和观察到的纵向历史 <span class="math inline">\(\mathcal Y_i(t)\)</span>，而在上述时依灵敏度的推导中，它仅以 <span class="math inline">\(T^*_i&gt;t\)</span> 为条件。这意味着，为了应用与 <a href="chap7.html#sec7-1-2">7.1.2</a> 节中类似的模拟方案，我们首先需要用 <span class="math inline">\(p(b_i\mid T_i^*&gt;t,\mathcal{Y}_i(t);\theta^*)\)</span> 来表示 <span class="math inline">\(p(b_i\mid T_i^*&gt;t;\theta^*)\)</span>。观察到</p>
+<p><span class="math display" id="eq:7-21">\[\begin{align}
+p(b_i&amp;\mid T_i^*&gt;t;\theta^*)\propto p(T_i^*&gt;t\mid b_i;\theta^*)p(b_i;\theta^*)\\
+=&amp;\quad\int p(T_i^*&gt;t,\mathcal{Y}_i(t)\mid b_i;\theta^*)p(b_i;\theta^*)d\mathcal{Y}_i(t) \\
+=&amp;\quad\int p(\mathcal{Y}_i(t)\mid b_i;\theta^*)\mathcal{S}_i\big\{t\mid\mathcal{M}_i(t,b_i);\theta^*\big\}p(b_i;\theta^*)d\mathcal{Y}_i(t)
+\tag{7.21}
+\end{align}\]</span></p>
+<p>因此，结合式 <a href="chap7.html#eq:7-19">(7.19)</a>、<a href="chap7.html#eq:7-20">(7.20)</a> 和 <a href="chap7.html#eq:7-21">(7.21)</a>，并计算它们关于参数 <span class="math inline">\(\{\theta\}\)</span> 的渐近后验分布 <span class="math inline">\(\{\theta|\mathcal{D}_n\}\sim\mathcal{N}\{\hat{\theta},\mathrm{vâr}(\hat{\theta})\}\)</span> 的期望，我们得到以下模拟方案</p>
+<div class="rmdnote">
+<ul>
+<li>步骤 1：抽取 <span class="math inline">\(\theta^{(l)}\sim\mathcal{N}\{\hat{\theta},\text{vâr}(\hat{\theta})\}\)</span>
+</li>
+<li>步骤 2：抽取 <span class="math inline">\(\mathcal{Y}_i^{(l)}(t)\sim\mathcal{N}\{X_i\beta^{(l)}+Z_ib_i^{(l-1)},[\sigma^{(l)}]^2\}\)</span>
+</li>
+<li>步骤 3：抽取 <span class="math inline">\(b_i^{(l)}\sim\{b_i\mid T_i^*&gt;t,\mathcal{Y}_i^{(l)}(t),\theta^{(l)}\}\)</span>
+</li>
+<li>步骤 4：计算 <span class="math inline">\(\mathcal{E}_1(b_i^{(l)},\theta^{(l)})\)</span> 以及 <span class="math inline">\(\mathcal{E}_2(b_i^{(l)},\theta^{(l)})\)</span>
+</li>
+</ul>
+</div>
+<p>以上步骤重复 <span class="math inline">\(l = 1,\ldots,L\)</span> 次，其中 <span class="math inline">\(L\)</span> 表示蒙特卡罗样本数。如前所述，步骤 1 用于解释最大似然估计的变异性，在步骤 2 中，我们在联合模型下模拟直到时间 <span class="math inline">\(t\)</span> 的合理纵向历史，在步骤 3 中，我们模拟以 <span class="math inline">\(Y^{(l)}_i(t)\)</span> 和 <span class="math inline">\(T^*_i &gt;t\)</span> 的纵向历史为条件的随机效应实现。最后一步只需要计算实现 <span class="math inline">\(\mathcal{E}_1(b_i^{(l)},\theta^{(l)})\)</span> 以及 <span class="math inline">\(\mathcal{E}_2(b_i^{(l)},\theta^{(l)})\)</span>，其比值给出灵敏度。同样，与我们在本章中看到的之前的模拟方案类似，步骤 3 使用 Metropolis-Hastings 算法实现，该算法具有来自以经验贝叶斯估计值 <span class="math inline">\(\hat{b}_i^{(t)}\)</span> 为中心的多元 <span class="math inline">\(t\)</span> 分布的独立建议，并且具有尺度矩阵：这些估计的协方差阵 <span class="math inline">\(\operatorname{vâr}(\widehat{b}_i^{(l)})\)</span>。在实现这种模拟方案时，一个小的实际问题与 <span class="math inline">\(b_i\)</span> 的初始值有关。更具体地说，在 <a href="chap7.html#sec7-1-2">7.1.2</a> 节和 <a href="chap7.html#sec7-2">7.2</a> 节介绍的模拟方案中，我们将我们想要模拟的目标分布的众数 <span class="math inline">\(\hat b_i(t)\)</span> 作为 <span class="math inline">\(b_i\)</span> 的初始值，因此无需热身 (burn-in). 然而，在上面的方案中采用相同的初始值，其中我们的目标是从 <span class="math inline">\(\{b_i\mid T_i^*&gt;t\}\)</span> 中模拟，它需要一些热身，因为该初始值可能会远离目标分布的支持。</p>
+<p>灵敏度的蒙特卡罗估计采用以下形式：</p>
+<p><span class="math display">\[\widehat{\Pr}\big\{\mathcal{P}_{i}^{s}(t,k,c)\mid T_{i}^{*}&gt;t,T_{i}^{*}\in(t,t+\Delta t]\big\}=\frac{\sum_{l}\mathcal{E}_{1}(b_{i}^{(l)},\theta^{(l)})}{L-\sum_{l}\mathcal{E}_{2}(b_{i}^{(l)},\theta^{(l)})}\]</span></p>
+<p>使用 <span class="math inline">\(\mathcal{E}_1(b_i^{(l)},\theta^{(l)})\)</span> 和 <span class="math inline">\(\mathcal{E}_2(b_i^{(l)},\theta^{(l)})\)</span> 的蒙特卡罗标准误和 Delta 法估计相应的标准误。具体地，我们有</p>
+<p><span class="math display">\[s.e.\Big(\widehat{\Pr}\Big\{\mathcal{P}_i^s(t,k,c)\mid T_i^*&gt;t,T_i^*\in(t,t+\Delta t]\Big\}\Big)=\{gVg^\top\}^{1/2}\]</span></p>
+<p>其中</p>
+<p><span class="math display">\[\begin{aligned}g\quad=\quad L\Big[1\Big/&amp;\Big\{L-\sum_l\mathcal{E}_2(b_i^{(l)},\theta^{(l)})\Big\}\\&amp;\sum_l\mathcal{E}_1(b_i^{(l)},\theta^{(l)})\Big/\Big\{L-\sum_l\mathcal{E}_2(b_i^{(l)},\theta^{(l)})\Big\}^2\Big]\end{aligned}\]</span></p>
+<p>以及</p>
+<p><span class="math display">\[\begin{aligned}\operatorname{vech}(V)&amp;=L^{-1}\bigg[\operatorname{var}\big\{\mathcal{E}_1(b_i^{(l)},\theta^{(l)})\big\}\\&amp;\operatorname{cov}\big\{\mathcal{E}_1(b_i^{(l)},\theta^{(l)}),\mathcal{E}_2(b_i^{(l)},\theta^{(l)})\big\},\operatorname{var}\big\{\mathcal{E}_2(b_i^{(l)},\theta^{(l)})\big\}\bigg]\end{aligned}\]</span></p>
+<p>在估计了灵敏度和特异度之后，可以直接构建相应的 ROC 曲线并额外计算 AUC. 最后，为了估计动态指数 <span class="math inline">\(\mathbb{C}_{dyn}^{\Delta t}\)</span>，我们还需要估计边际生存函数 <span class="math inline">\(\mathcal{S}(t)=\Pr(T_{i}^{*}&gt;t)\)</span>。正如我们在 <a href="chap6.html#sec6-1">6.1</a> 节中看到的，这可通过使用近似表达式从拟合的联合模型获得</p>
+<p><span class="math display">\[\begin{aligned}\mathcal{S}(t)=\int\mathcal{S}_i(t\mid b_i;\hat{\theta})p(b_i;\hat{\theta})db_i\approx n^{-1}\sum_i\mathcal{S}_i(t\mid\hat{b}_i;\hat{\theta})\end{aligned}\]</span></p>
+<p>或者使用 Kaplan-Meier 乘积限估计 <a href="chap3.html#eq:3-2">(3.2)</a>。此外，的 <span class="math inline">\(\mathbb{C}_{dyn}^{\Delta t}\)</span> 分子中的积分没有封闭形式解，可以使用梯形法则、辛普森法则或高斯求积方法进行数值近似 (Press et al., 2007).</p>
+</div>
+<div id="sec7-4-6" class="section level3" number="7.4.6">
+<h3>
+<span class="header-section-number">7.4.6</span> 在 R 中的实现<a class="anchor" aria-label="anchor" href="#sec7-4-6"><i class="fas fa-link"></i></a>
+</h3>
+<p>我们说明了肝硬化数据集中时依判别度量的计算。具体地，我们有兴趣调查凝血酶原指数是否是一个潜在有用的标志物，可以区分上次评估后短时间内死亡的受试者和寿命更长的受试者。我们首先将一个简单的联合模型拟合到数据。对于纵向部分，我们假定每个受试者随时间的线性演变，并且我们还允许两个治疗组之间的平均演变存在差异。此外，为了捕捉每个治疗组随访早期阶段凝血酶原指数的突然变化，我们还包括一个单独的基线测量指示变量。该模型采用以下形式</p>
+<p><span class="math display">\[\begin{array}{rcl}y_i(t)&amp;=&amp;m_i(t)+\varepsilon_i(t)\\&amp;=&amp;\beta_0+\beta_1\mathtt{Predns}_i+\beta_2t+\beta_3\mathtt{T0}_i+\beta_4\{\mathtt{Predns}_i\times t\}\\&amp;&amp;+\beta_5\{\mathtt{Predns}_i\times\mathtt{T0}_i\}+b_{i0}+b_{i1}t+\varepsilon_i(t),\end{array}\]</span></p>
+<p>其中 <span class="math inline">\(\mathtt{Predns}\)</span> 表示泼尼松治疗组的虚拟变量，<span class="math inline">\(\mathtt{T0}\)</span> 表示基线测量的虚拟变量。拟合模型的 R 代码是</p>
+<div class="sourceCode" id="cb131"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb131-1"><a href="chap7.html#cb131-1" tabindex="-1"></a><span class="sc">&gt;</span> prothro<span class="sc">$</span>t0 <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(prothro<span class="sc">$</span>time <span class="sc">==</span> <span class="dv">0</span>)</span>
+<span id="cb131-2"><a href="chap7.html#cb131-2" tabindex="-1"></a><span class="sc">&gt;</span> lmeFitBsp.pro <span class="ot">&lt;-</span> <span class="fu">lme</span>(pro <span class="sc">~</span> treat <span class="sc">*</span> (time <span class="sc">+</span> t0), <span class="at">random =</span> <span class="sc">~</span> time <span class="sc">|</span> id,</span>
+<span id="cb131-3"><a href="chap7.html#cb131-3" tabindex="-1"></a>                       <span class="at">data =</span> prothro)</span></code></pre></div>
+<p>对于生存子模型，我们将治疗作为与时间无关的协变量，将根据纵向模型估计的凝血酶原指数的真实潜在曲线作为时依协变量，即</p>
+<p><span class="math display">\[\begin{array}{rcl}h_i(t)&amp;=&amp;h_0(t)\exp\{\gamma\mathtt{Predns}_i+\alpha m_i(t)\}\end{array}\]</span></p>
+<p>这在 R 中通过如下代码拟合：</p>
+<div class="sourceCode" id="cb132"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb132-1"><a href="chap7.html#cb132-1" tabindex="-1"></a><span class="sc">&gt;</span> coxFit.pro <span class="ot">&lt;-</span> <span class="fu">coxph</span>(<span class="fu">Surv</span>(Time, death) <span class="sc">~</span> treat, <span class="at">data =</span> prothros,</span>
+<span id="cb132-2"><a href="chap7.html#cb132-2" tabindex="-1"></a>                      <span class="at">x =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<p>我们假设一个分段常数基线风险函数 <span class="math inline">\(h_0(t)\)</span>，在观测事件时间的等距百分位数处放置六个结，我们对相应的联合模型进行拟合</p>
+<div class="sourceCode" id="cb133"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb133-1"><a href="chap7.html#cb133-1" tabindex="-1"></a><span class="sc">&gt;</span> jointFitBsp.pro <span class="ot">&lt;-</span> <span class="fu">jointModel</span>(lmeFitBsp.pro, coxFit.pro,</span>
+<span id="cb133-2"><a href="chap7.html#cb133-2" tabindex="-1"></a>                                <span class="at">timeVar =</span> <span class="st">"time"</span>, <span class="at">method =</span> <span class="st">"piecewise-PH-aGH"</span>)</span>
+<span id="cb133-3"><a href="chap7.html#cb133-3" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">summary</span>(jointFitBsp.pro)</span>
+<span id="cb133-4"><a href="chap7.html#cb133-4" tabindex="-1"></a></span>
+<span id="cb133-5"><a href="chap7.html#cb133-5" tabindex="-1"></a>. . .</span>
+<span id="cb133-6"><a href="chap7.html#cb133-6" tabindex="-1"></a>Event Process</span>
+<span id="cb133-7"><a href="chap7.html#cb133-7" tabindex="-1"></a>              Value Std.Err  z<span class="sc">-</span>value p<span class="sc">-</span>value</span>
+<span id="cb133-8"><a href="chap7.html#cb133-8" tabindex="-1"></a>treatpredns  <span class="fl">0.2211</span>  <span class="fl">0.1402</span>   <span class="fl">1.5772</span>  <span class="fl">0.1147</span></span>
+<span id="cb133-9"><a href="chap7.html#cb133-9" tabindex="-1"></a>Assoct      <span class="sc">-</span><span class="fl">0.0406</span>  <span class="fl">0.0036</span> <span class="sc">-</span><span class="fl">11.2040</span> <span class="sc">&lt;</span><span class="fl">0.0001</span></span>
+<span id="cb133-10"><a href="chap7.html#cb133-10" tabindex="-1"></a><span class="fu">log</span>(xi<span class="fl">.1</span>)    <span class="fl">1.2221</span>  <span class="fl">0.2612</span>   <span class="fl">4.6793</span></span>
+<span id="cb133-11"><a href="chap7.html#cb133-11" tabindex="-1"></a><span class="fu">log</span>(xi<span class="fl">.2</span>)    <span class="fl">1.1222</span>  <span class="fl">0.2650</span>   <span class="fl">4.2347</span></span>
+<span id="cb133-12"><a href="chap7.html#cb133-12" tabindex="-1"></a><span class="fu">log</span>(xi<span class="fl">.3</span>)    <span class="fl">0.6148</span>  <span class="fl">0.2756</span>   <span class="fl">2.2306</span></span>
+<span id="cb133-13"><a href="chap7.html#cb133-13" tabindex="-1"></a><span class="fu">log</span>(xi<span class="fl">.4</span>)    <span class="fl">0.6764</span>  <span class="fl">0.2710</span>   <span class="fl">2.4961</span></span>
+<span id="cb133-14"><a href="chap7.html#cb133-14" tabindex="-1"></a><span class="fu">log</span>(xi<span class="fl">.5</span>)    <span class="fl">0.5626</span>  <span class="fl">0.2786</span>   <span class="fl">2.0196</span></span>
+<span id="cb133-15"><a href="chap7.html#cb133-15" tabindex="-1"></a><span class="fu">log</span>(xi<span class="fl">.6</span>)    <span class="fl">1.2004</span>  <span class="fl">0.3202</span>   <span class="fl">3.7486</span></span>
+<span id="cb133-16"><a href="chap7.html#cb133-16" tabindex="-1"></a><span class="fu">log</span>(xi<span class="fl">.7</span>)    <span class="fl">1.7162</span>  <span class="fl">0.3703</span>   <span class="fl">4.6346</span></span>
+<span id="cb133-17"><a href="chap7.html#cb133-17" tabindex="-1"></a>. . .</span></code></pre></div>
+<p>我们观察到凝血酶原指数与事件结局密切相关，标志物的单位减少对应于死亡风险增加为原来的 1.04 倍（95% CI：1.03, 1.05). 该标志物的时依灵敏度 <a href="chap7.html#eq:7-12">(7.12)</a> 和特异度 <a href="chap7.html#eq:7-15">(7.15)</a> 以及相应的 ROC 曲线和 AUC 可以使用在包 <code>JM</code> 中的函数 <code>rocJM()</code> 计算。此函数的语法与我们在 <a href="chap7.html#sec7-1-3">7.1.3</a> 节中使用的 <code>survfitJM()</code> 函数非常相似，并接受拟合联合模型和数据框作为主要参数，该数据框包含基线协变量信息以及应该进行纵向测量的时间点。为了说明这一函数的使用，我们将重点放在安慰剂组的一名代表性受试者身上，他提供了基线、三个月、一年、三年和四年的五次凝血酶原指数测量。我们首先构建包含此信息的数据框</p>
+<div class="sourceCode" id="cb134"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb134-1"><a href="chap7.html#cb134-1" tabindex="-1"></a><span class="sc">&gt;</span> plcbData <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb134-2"><a href="chap7.html#cb134-2" tabindex="-1"></a>  <span class="at">id =</span> <span class="dv">1</span>,</span>
+<span id="cb134-3"><a href="chap7.html#cb134-3" tabindex="-1"></a>                         <span class="at">treat =</span> <span class="fu">factor</span>(<span class="st">"placebo"</span>, <span class="at">levels =</span> <span class="fu">levels</span>(prothro<span class="sc">$</span>treat)),</span>
+<span id="cb134-4"><a href="chap7.html#cb134-4" tabindex="-1"></a>                         <span class="at">time =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.25</span>, <span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">4</span>)</span>
+<span id="cb134-5"><a href="chap7.html#cb134-5" tabindex="-1"></a>)</span>
+<span id="cb134-6"><a href="chap7.html#cb134-6" tabindex="-1"></a><span class="sc">&gt;</span> plcbData<span class="sc">$</span>t0 <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(plcbData<span class="sc">$</span>time <span class="sc">==</span> <span class="dv">0</span>)</span>
+<span id="cb134-7"><a href="chap7.html#cb134-7" tabindex="-1"></a><span class="sc">&gt;</span> plcbData</span>
+<span id="cb134-8"><a href="chap7.html#cb134-8" tabindex="-1"></a></span>
+<span id="cb134-9"><a href="chap7.html#cb134-9" tabindex="-1"></a>  id   treat time t0</span>
+<span id="cb134-10"><a href="chap7.html#cb134-10" tabindex="-1"></a><span class="dv">1</span>  <span class="dv">1</span> placebo <span class="fl">0.00</span>  <span class="dv">1</span></span>
+<span id="cb134-11"><a href="chap7.html#cb134-11" tabindex="-1"></a><span class="dv">2</span>  <span class="dv">1</span> placebo <span class="fl">0.25</span>  <span class="dv">0</span></span>
+<span id="cb134-12"><a href="chap7.html#cb134-12" tabindex="-1"></a><span class="dv">3</span>  <span class="dv">1</span> placebo <span class="fl">1.00</span>  <span class="dv">0</span></span>
+<span id="cb134-13"><a href="chap7.html#cb134-13" tabindex="-1"></a><span class="dv">4</span>  <span class="dv">1</span> placebo <span class="fl">3.00</span>  <span class="dv">0</span></span>
+<span id="cb134-14"><a href="chap7.html#cb134-14" tabindex="-1"></a><span class="dv">5</span>  <span class="dv">1</span> placebo <span class="fl">4.00</span>  <span class="dv">0</span></span></code></pre></div>
+<p>函数 <code>rocJm()</code> 的最后一个必需参数是参数 <code>dt</code>，它指定医学相关的时间间隔的长度 <span class="math inline">\(\Delta t\)</span>。对于 <span class="math inline">\(\Delta t\)</span> 分别等于一年、两年和四年的情况，利用下面的调用，我们在最后可用时间点，即 <span class="math inline">\(t=4\)</span>，产生判别度量的估计</p>
+<div class="sourceCode" id="cb135"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb135-1"><a href="chap7.html#cb135-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb135-2"><a href="chap7.html#cb135-2" tabindex="-1"></a><span class="sc">&gt;</span> ROCplcb <span class="ot">&lt;-</span> <span class="fu">rocJM</span>(jointFitBsp.pro, <span class="at">dt =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">4</span>), <span class="at">data =</span> plcbData,</span>
+<span id="cb135-3"><a href="chap7.html#cb135-3" tabindex="-1"></a>                   <span class="at">M =</span> <span class="dv">1000</span>, <span class="at">burn.in =</span> <span class="dv">500</span>)</span>
+<span id="cb135-4"><a href="chap7.html#cb135-4" tabindex="-1"></a><span class="sc">&gt;</span> ROCplcb</span>
+<span id="cb135-5"><a href="chap7.html#cb135-5" tabindex="-1"></a></span>
+<span id="cb135-6"><a href="chap7.html#cb135-6" tabindex="-1"></a>Areas under the time<span class="sc">-</span>dependent ROC curves</span>
+<span id="cb135-7"><a href="chap7.html#cb135-7" tabindex="-1"></a></span>
+<span id="cb135-8"><a href="chap7.html#cb135-8" tabindex="-1"></a>Estimation<span class="sc">:</span> Monte <span class="fu">Carlo</span> (<span class="dv">500</span> samples)</span>
+<span id="cb135-9"><a href="chap7.html#cb135-9" tabindex="-1"></a>Difference<span class="sc">:</span> absolute, lag <span class="ot">=</span> <span class="dv">1</span> (<span class="dv">0</span>)</span>
+<span id="cb135-10"><a href="chap7.html#cb135-10" tabindex="-1"></a>Thresholds range<span class="sc">:</span> (<span class="sc">-</span><span class="dv">28</span>, <span class="dv">306</span>)</span>
+<span id="cb135-11"><a href="chap7.html#cb135-11" tabindex="-1"></a></span>
+<span id="cb135-12"><a href="chap7.html#cb135-12" tabindex="-1"></a>Case<span class="sc">:</span> <span class="dv">1</span></span>
+<span id="cb135-13"><a href="chap7.html#cb135-13" tabindex="-1"></a>Recorded <span class="fu">time</span>(s)<span class="sc">:</span> <span class="dv">0</span>, <span class="fl">0.25</span>, <span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">4</span></span>
+<span id="cb135-14"><a href="chap7.html#cb135-14" tabindex="-1"></a> dt t <span class="sc">+</span> dt    AUC    Cut</span>
+<span id="cb135-15"><a href="chap7.html#cb135-15" tabindex="-1"></a>  <span class="dv">1</span>      <span class="dv">5</span> <span class="fl">0.6799</span> <span class="fl">80.216</span></span>
+<span id="cb135-16"><a href="chap7.html#cb135-16" tabindex="-1"></a>  <span class="dv">2</span>      <span class="dv">6</span> <span class="fl">0.6944</span> <span class="fl">81.552</span></span>
+<span id="cb135-17"><a href="chap7.html#cb135-17" tabindex="-1"></a>  <span class="dv">4</span>      <span class="dv">8</span> <span class="fl">0.7321</span> <span class="fl">85.560</span></span></code></pre></div>
+<p>默认情况下，<code>rocJM()</code> 在基于最后可用的标志物测量的简单预测规则下运行，以区分病例和对照。输出提供 <code>DT</code> 的不同选项下的时依 AUC. 对于这种特定情况，我们观察到，在时间 <span class="math inline">\(t=4\)</span> 时，选项 <span class="math inline">\(\Delta t=4\)</span> 提供了比其他两个稍好的区分度。列 <code>Cut</code> 包含标志物的阈值，可在不同 <code>dt</code> 选项下最大化灵敏度和特异度的乘积。尽管最佳阈值的选择直观上有吸引力并且易于计算，但我们应注意它并不总是最佳的，因此它只是作为指示提供。另一种可用于捕获特定预测规则性能的统计量是 Youden 指数，其定义为灵敏度 + 特异度 − 1 (Youden, 1950; Kraemer, 2004). 要根据 Youden 公式在 <code>rocJM()</code> 的输出中报告最佳阈值，用户应设置选项 <code>optThr = "youden"</code>。参数 <code>M</code> 指定 <a href="chap7.html#sec7-4-5">7.4.5</a> 节中描述的模拟方案中的蒙特卡罗样本数，参数 <code>burn.in</code> 指定要从计算中排除的样本数。通过简单调用 <code><a href="https://rdrr.io/r/graphics/plot.default.html">plot()</a></code> 函数即可生成相应的 ROC 曲线，如图 7.10 所示。</p>
+<div class="sourceCode" id="cb136"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb136-1"><a href="chap7.html#cb136-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">plot</span>(ROCplcb, <span class="at">legend =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<details><summary><font color="#B95953">图 7.10</font>
+</summary><img src="figure/figure%207.10.png#center" style="width:80.0%"></details><p><br>
+正如 AUC 也表明的那样，我们观察到 <span class="math inline">\(\Delta t = 4\)</span> 的 ROC 曲线高于 <span class="math inline">\(\Delta t = 1\)</span> 和 <span class="math inline">\(\Delta t = 2\)</span> 的 ROC 曲线，这表明在第四年，该标志物物可以更好地区分将在 8 年前死亡的患者以及将生存超过 8 年的患者。为了检验标志物在随访期间的预测性能如何演变，我们可以绘制不同时间点的 ROC 曲线。这可以通过使用 for 循环适当地更新 <code>rocJM()</code> 的数据参数来实现。以下代码基于 <code>plcbData</code> 数据框说明了这一点</p>
+<div class="sourceCode" id="cb137"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb137-1"><a href="chap7.html#cb137-1" tabindex="-1"></a><span class="sc">&gt;</span> ROCs <span class="ot">&lt;-</span> <span class="fu">vector</span>(<span class="st">"list"</span>, <span class="dv">5</span>)</span>
+<span id="cb137-2"><a href="chap7.html#cb137-2" tabindex="-1"></a><span class="sc">&gt;</span> <span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">seq_along</span>(ROCs)) {</span>
+<span id="cb137-3"><a href="chap7.html#cb137-3" tabindex="-1"></a>  <span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb137-4"><a href="chap7.html#cb137-4" tabindex="-1"></a>  ROCs[[i]] <span class="ot">&lt;-</span> <span class="fu">rocJM</span>(jointFitBsp.pro, <span class="at">dt =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">4</span>),</span>
+<span id="cb137-5"><a href="chap7.html#cb137-5" tabindex="-1"></a>                     <span class="at">data =</span> plcbData[<span class="fu">seq_len</span>(i), ], <span class="at">M =</span> <span class="dv">1000</span>, <span class="at">burn.in =</span> <span class="dv">500</span>)</span>
+<span id="cb137-6"><a href="chap7.html#cb137-6" tabindex="-1"></a>}</span></code></pre></div>
+<p>在每次迭代中，都会考虑一行额外的 <code>plcbData</code>，因此我们获得了 <span class="math inline">\(t = 0,0.25,1,3\)</span> 和 <span class="math inline">\(4\)</span> 年时的灵敏度和特异度的估计。从 <span class="math inline">\(t = 0.25\)</span> 年开始，对于 <span class="math inline">\(\Delta t\)</span> 的三个不同选项，相应的时变 ROC 曲线如图 7.11 所示。生成此图的 R 代码使用类似的 for 循环：</p>
+<div class="sourceCode" id="cb138"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb138-1"><a href="chap7.html#cb138-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">2</span>), <span class="at">oma =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">2</span>, <span class="dv">0</span>))</span>
+<span id="cb138-2"><a href="chap7.html#cb138-2" tabindex="-1"></a><span class="sc">&gt;</span> <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span><span class="dv">5</span>) {</span>
+<span id="cb138-3"><a href="chap7.html#cb138-3" tabindex="-1"></a>  <span class="fu">plot</span>(ROCs[[i]], <span class="at">legend =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb138-4"><a href="chap7.html#cb138-4" tabindex="-1"></a>}</span>
+<span id="cb138-5"><a href="chap7.html#cb138-5" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">mtext</span>(<span class="st">"Prediction rule: Simple"</span>, <span class="at">side =</span> <span class="dv">3</span>, <span class="at">line =</span> <span class="sc">-</span><span class="dv">1</span>, <span class="at">outer =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<details><summary><font color="#B95953">图 7.11</font>
+</summary><img src="figure/figure%207.11.png#center" style="width:80.0%"></details><p><br>
+水平实线表示当特异度设为 80% 时，三种 <span class="math inline">\(\Delta t\)</span> 选择下的灵敏度水平。随着时间的推移，我们看到三个 <span class="math inline">\(\Delta t\)</span> 选项之间的区别更加清晰，其中 <span class="math inline">\(\Delta t = 4\)</span> 比 <span class="math inline">\(\Delta t = 1\)</span> 和 <span class="math inline">\(2\)</span> 提供了稍微更好的区分度。但是，一般来说，在简单的预测规则下，凝血酶原指数不能很好地将在 <span class="math inline">\(t + \Delta t\)</span> 之前死亡的患者与不会死亡的患者分开。</p>
+<p>我们继续我们的 ROC 分析，调查我们是否可以通过考虑复合预测规则来改善区分力。按照 <a href="chap7.html#sec7-4-3">7.4.3</a> 节给出的示例 3，我们使用规则</p>
+<p><span class="math display">\[\begin{aligned}\mathcal{P}_i^s(t,k,c)=\{y_i(t-k)\leq c\}\cap\{y_i(t)\leq0.8c\}\end{aligned}\]</span></p>
+<p>假定患者在两次后续就诊之间凝血酶原水平下降 20% 时，在时间区间 <span class="math inline">\((t, t+\Delta t]\)</span> 内经历该事件的机会更高，其中 <span class="math inline">\(t−k\)</span> 表示时间点表示倒数第二次就诊的时间点。为了在此预测规则下生成 ROC 和 AUC，我们使用 <code>rocJM()</code> 的参数 <code>DiffType</code> 和 <code>rel.diff</code>。在前者中，我们指定选项 <code>"relative"</code> 来表示我们对相对预测规则感兴趣，在后者中我们指定一个数字向量来表示不同时间点的阈值之间的关系，相应的语法是</p>
+<div class="sourceCode" id="cb139"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb139-1"><a href="chap7.html#cb139-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb139-2"><a href="chap7.html#cb139-2" tabindex="-1"></a><span class="sc">&gt;</span> ROCplcb.Rel <span class="ot">&lt;-</span> <span class="fu">rocJM</span>(jointFitBsp.pro, <span class="at">dt =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">4</span>), <span class="at">data =</span> plcbData,</span>
+<span id="cb139-3"><a href="chap7.html#cb139-3" tabindex="-1"></a>                       <span class="at">diffType =</span> <span class="st">"relative"</span>, <span class="at">rel.diff =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fl">0.8</span>), <span class="at">M =</span> <span class="dv">1000</span>, <span class="at">burn.in =</span> <span class="dv">500</span>)</span>
+<span id="cb139-4"><a href="chap7.html#cb139-4" tabindex="-1"></a><span class="sc">&gt;</span> ROCplcb.Rel</span>
+<span id="cb139-5"><a href="chap7.html#cb139-5" tabindex="-1"></a></span>
+<span id="cb139-6"><a href="chap7.html#cb139-6" tabindex="-1"></a>Areas under the time<span class="sc">-</span>dependent ROC curves</span>
+<span id="cb139-7"><a href="chap7.html#cb139-7" tabindex="-1"></a></span>
+<span id="cb139-8"><a href="chap7.html#cb139-8" tabindex="-1"></a>Estimation<span class="sc">:</span> Monte <span class="fu">Carlo</span> (<span class="dv">500</span> samples)</span>
+<span id="cb139-9"><a href="chap7.html#cb139-9" tabindex="-1"></a>Difference<span class="sc">:</span> relative, lag <span class="ot">=</span> <span class="dv">2</span> (<span class="dv">1</span>, <span class="fl">0.8</span>)</span>
+<span id="cb139-10"><a href="chap7.html#cb139-10" tabindex="-1"></a>Thresholds range<span class="sc">:</span> (<span class="sc">-</span><span class="dv">28</span>, <span class="dv">306</span>)</span>
+<span id="cb139-11"><a href="chap7.html#cb139-11" tabindex="-1"></a></span>
+<span id="cb139-12"><a href="chap7.html#cb139-12" tabindex="-1"></a>Case<span class="sc">:</span> <span class="dv">1</span></span>
+<span id="cb139-13"><a href="chap7.html#cb139-13" tabindex="-1"></a>Recorded <span class="fu">time</span>(s)<span class="sc">:</span> <span class="dv">0</span>, <span class="fl">0.25</span>, <span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">4</span></span>
+<span id="cb139-14"><a href="chap7.html#cb139-14" tabindex="-1"></a> dt t <span class="sc">+</span> dt    AUC   Cut<span class="fl">.1</span>   Cut<span class="fl">.2</span></span>
+<span id="cb139-15"><a href="chap7.html#cb139-15" tabindex="-1"></a>  <span class="dv">1</span>      <span class="dv">5</span> <span class="fl">0.6725</span> <span class="fl">102.928</span> <span class="fl">82.3424</span></span>
+<span id="cb139-16"><a href="chap7.html#cb139-16" tabindex="-1"></a>  <span class="dv">2</span>      <span class="dv">6</span> <span class="fl">0.6878</span> <span class="fl">104.264</span> <span class="fl">83.4112</span></span>
+<span id="cb139-17"><a href="chap7.html#cb139-17" tabindex="-1"></a>  <span class="dv">4</span>      <span class="dv">8</span> <span class="fl">0.7290</span> <span class="fl">108.272</span> <span class="fl">86.6176</span></span></code></pre></div>
+<p>在上面的调用中，我们再次使用了完整的数据框 <code>plcbData</code>，这意味着报告的 AUC 和“最佳”分割点是针对最后一个可用时间点 <span class="math inline">\(t = 4\)</span>。<span class="math inline">\(\Delta t\)</span> 的三个选项的 ROC 曲线显示在图 7.12，这是再次通过简单地调用 <code><a href="https://rdrr.io/r/graphics/plot.default.html">plot()</a></code> 方法获得的</p>
+<div class="sourceCode" id="cb140"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb140-1"><a href="chap7.html#cb140-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">plot</span>(ROCplcb.Rel, <span class="at">legend =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<details><summary><font color="#B95953">图 7.12</font>
+</summary><img src="figure/figure%207.12.png#center" style="width:80.0%"></details><p><br></p>
+<div class="sourceCode" id="cb141"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb141-1"><a href="chap7.html#cb141-1" tabindex="-1"></a><span class="sc">&gt;</span> ROCs.r <span class="ot">&lt;-</span> <span class="fu">vector</span>(<span class="st">"list"</span>, <span class="dv">5</span>)</span>
+<span id="cb141-2"><a href="chap7.html#cb141-2" tabindex="-1"></a><span class="sc">&gt;</span> <span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">seq_along</span>(ROCs)) {</span>
+<span id="cb141-3"><a href="chap7.html#cb141-3" tabindex="-1"></a>  <span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb141-4"><a href="chap7.html#cb141-4" tabindex="-1"></a>  ROCs.r[[i]] <span class="ot">&lt;-</span> <span class="fu">rocJM</span>(jointFitBsp.pro, <span class="at">dt =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">4</span>),</span>
+<span id="cb141-5"><a href="chap7.html#cb141-5" tabindex="-1"></a>                       <span class="at">data =</span> plcbData[<span class="fu">seq_len</span>(i), ], <span class="at">diffType =</span> <span class="st">"relative"</span>,</span>
+<span id="cb141-6"><a href="chap7.html#cb141-6" tabindex="-1"></a>                       <span class="at">rel.diff =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fl">0.8</span>), <span class="at">M =</span> <span class="dv">1000</span>, <span class="at">burn.in =</span> <span class="dv">500</span>)</span>
+<span id="cb141-7"><a href="chap7.html#cb141-7" tabindex="-1"></a>}</span>
+<span id="cb141-8"><a href="chap7.html#cb141-8" tabindex="-1"></a></span>
+<span id="cb141-9"><a href="chap7.html#cb141-9" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">2</span>), <span class="at">oma =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">2</span>, <span class="dv">0</span>))</span>
+<span id="cb141-10"><a href="chap7.html#cb141-10" tabindex="-1"></a><span class="sc">&gt;</span> <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span><span class="dv">5</span>) {</span>
+<span id="cb141-11"><a href="chap7.html#cb141-11" tabindex="-1"></a>  <span class="fu">plot</span>(ROCs.r[[i]], <span class="at">legend =</span> <span class="cn">TRUE</span>, <span class="at">main =</span> <span class="st">"Prediction rule: Simple"</span>)</span>
+<span id="cb141-12"><a href="chap7.html#cb141-12" tabindex="-1"></a>}</span>
+<span id="cb141-13"><a href="chap7.html#cb141-13" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">mtext</span>(<span class="st">"Prediction rule: Composite"</span>, <span class="at">side =</span> <span class="dv">3</span>, <span class="at">line =</span> <span class="sc">-</span><span class="dv">1</span>, <span class="at">outer =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<p>图 7.11 和图 7.13 之间的比较显示，这两个规则下的时变 ROC 曲线几乎相同，这表明在这个特定的例子中，我们通过考虑复合预测规则并没有获得太多好处。</p>
+<p>作为 ROC 分析的最后一步，基于 <a href="chap7.html#sec7-3">7.3</a> 节中关于参数选择对生存结果预测的影响的观察，我们探索了纵向结果和事件时间结果之间假定的关联结构如何影响区分。具体地，假设相同的线性混合模型来描述凝血酶原指数在时间上的潜在纵向演变，我们将考虑三个联合模型，以及相应的生存子模型</p>
+<p><span class="math display">\[\begin{array}{rcl}(\mathrm{I})&amp;h_i(t)&amp;=&amp;h_0(t)\exp\{\gamma\mathtt{Predns}_i+\alpha_1m_i(t)\}\\(\mathrm{II})&amp;h_i(t)&amp;=&amp;h_0(t)\exp\{\gamma\mathtt{Predns}_i+\alpha_2m_i'(t)\}\\(\mathrm{III})&amp;h_i(t)&amp;=&amp;h_0(t)\exp\{\gamma\mathtt{Predns}_i+\alpha_1m_i(t)+\alpha_2m_i'(t)\}\end{array}\]</span></p>
+<p>模型 (I) 是我们到目前为止在我们的分析中使用的模型，并假设在时间 <span class="math inline">\(t\)</span> 的死亡风险与同一时间点的凝血酶原指数的真实值有关。模型 (II) 假设 <span class="math inline">\(t\)</span> 处的风险与该时间点的真实纵向轨迹的斜率有关，而模型 <span class="math inline">\((III)\)</span> 假设风险既取决于标志物的当前值，也取决于标志物轨迹的当前斜率。如前所述，为了拟合模型 (II)和(III)，我们首先需要定义包含定义 <span class="math inline">\(m'_i(t)\)</span> 的固定和随机效应部分的 R 公式的列表。在我们的特定示例中，我们有</p>
+<p><span class="math display">\[\begin{array}{rcl}m_i(t)&amp;=&amp;\beta_0+\beta_1\mathtt{Predns}_i+\beta_2t+\beta_3\mathtt{T0}_i+\beta_4\{\mathtt{Predns}_i\times t\}\\&amp;&amp;+\beta_5\{\mathtt{Predns}_i\times\mathtt{T0}_i\}+b_{i0}+b_{i1}t,\end{array}\]</span></p>
+<p>因此</p>
+<p><span class="math display">\[m_i'(t)=\beta_2+\beta_4\mathtt{Predns}_i+b_{i1}\]</span></p>
+<p>对于下面列表中的固定部分和随机部分，我们将 <span class="math inline">\(m'_i(t)\)</span> 转换为一对 R 公式</p>
+<div class="sourceCode" id="cb142"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb142-1"><a href="chap7.html#cb142-1" tabindex="-1"></a><span class="sc">&gt;</span> dform2 <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">fixed =</span> <span class="sc">~</span> treat, <span class="at">indFixed =</span> <span class="fu">c</span>(<span class="dv">3</span>, <span class="dv">5</span>),</span>
+<span id="cb142-2"><a href="chap7.html#cb142-2" tabindex="-1"></a>                 <span class="at">random =</span> <span class="sc">~</span> <span class="dv">1</span>, <span class="at">indRandom =</span> <span class="dv">2</span>)</span></code></pre></div>
+<p>上面列表中的组件 <code>indFix</code> 和 <code>indRandom</code> 分别给出了在 <span class="math inline">\(m'_i(t)\)</span> 的指定中使用的原始 <span class="math inline">\(m_i(t)\)</span> 的固定和随机效应系数向量 <span class="math inline">\(\beta\)</span> 和 <span class="math inline">\(b_i\)</span> 的位置索引。也就是说，从 <span class="math inline">\(m_i(t)\)</span> 的固定效应系数向量 <span class="math inline">\(\beta\)</span> 中，我们需要用于 <span class="math inline">\(m'_i(t)\)</span> 指定中固定效应部分的第三个和第五个元素，类似地，随机效应的第二个元素系数向量 <span class="math inline">\(b_i\)</span>。相应的联合模型符拟合语法为</p>
+<div class="sourceCode" id="cb143"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb143-1"><a href="chap7.html#cb143-1" tabindex="-1"></a><span class="sc">&gt;</span> jointFitBsp2.pro <span class="ot">&lt;-</span> <span class="fu">update</span>(jointFitBsp.pro,</span>
+<span id="cb143-2"><a href="chap7.html#cb143-2" tabindex="-1"></a>                             <span class="at">parameterization =</span> <span class="st">"slope"</span>, <span class="at">derivForm =</span> dform2)</span>
+<span id="cb143-3"><a href="chap7.html#cb143-3" tabindex="-1"></a><span class="sc">&gt;</span> jointFitBsp3.pro <span class="ot">&lt;-</span> <span class="fu">update</span>(jointFitBsp.pro,</span>
+<span id="cb143-4"><a href="chap7.html#cb143-4" tabindex="-1"></a>                             <span class="at">parameterization =</span> <span class="st">"both"</span>, <span class="at">derivForm =</span> dform2)</span></code></pre></div>
+<p>使用与之前类似的 <code>rocJM()</code> 调用，我们估计安慰剂患者在时间 <span class="math inline">\(t = 4\)</span>（<span class="math inline">\(\Delta t = 1,2\)</span> 和 <span class="math inline">\(4\)</span>）时这两个联合模型下的 ROC 和 AUC，并使用对患者进行分类的复合预测规则当他们在最后两次就诊期间凝血酶原水平相对下降 20% 时，即视为“病例”。即，对于模型 (II)，调用为</p>
+<div class="sourceCode" id="cb144"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb144-1"><a href="chap7.html#cb144-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb144-2"><a href="chap7.html#cb144-2" tabindex="-1"></a><span class="sc">&gt;</span> ROCplcb.Rel2 <span class="ot">&lt;-</span> <span class="fu">rocJM</span>(jointFitBsp2.pro, <span class="at">dt =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">4</span>),</span>
+<span id="cb144-3"><a href="chap7.html#cb144-3" tabindex="-1"></a>                        <span class="at">data =</span> plcbData, <span class="at">directionSmaller =</span> <span class="cn">TRUE</span>, <span class="at">diffType =</span> <span class="st">"relative"</span>,</span>
+<span id="cb144-4"><a href="chap7.html#cb144-4" tabindex="-1"></a>                        <span class="at">rel.diff =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fl">0.8</span>), <span class="at">M =</span> <span class="dv">1000</span>, <span class="at">burn.in =</span> <span class="dv">500</span>)</span>
+<span id="cb144-5"><a href="chap7.html#cb144-5" tabindex="-1"></a><span class="sc">&gt;</span> ROCplcb.Rel2</span>
+<span id="cb144-6"><a href="chap7.html#cb144-6" tabindex="-1"></a></span>
+<span id="cb144-7"><a href="chap7.html#cb144-7" tabindex="-1"></a>Areas under the time<span class="sc">-</span>dependent ROC curves</span>
+<span id="cb144-8"><a href="chap7.html#cb144-8" tabindex="-1"></a></span>
+<span id="cb144-9"><a href="chap7.html#cb144-9" tabindex="-1"></a>Estimation<span class="sc">:</span> Monte <span class="fu">Carlo</span> (<span class="dv">500</span> samples)</span>
+<span id="cb144-10"><a href="chap7.html#cb144-10" tabindex="-1"></a>Difference<span class="sc">:</span> relative, lag <span class="ot">=</span> <span class="dv">2</span> (<span class="dv">1</span>, <span class="fl">0.8</span>)</span>
+<span id="cb144-11"><a href="chap7.html#cb144-11" tabindex="-1"></a>Thresholds range<span class="sc">:</span> (<span class="sc">-</span><span class="dv">28</span>, <span class="dv">306</span>)</span>
+<span id="cb144-12"><a href="chap7.html#cb144-12" tabindex="-1"></a></span>
+<span id="cb144-13"><a href="chap7.html#cb144-13" tabindex="-1"></a>Case<span class="sc">:</span> <span class="dv">1</span></span>
+<span id="cb144-14"><a href="chap7.html#cb144-14" tabindex="-1"></a>Recorded <span class="fu">time</span>(s)<span class="sc">:</span> <span class="dv">0</span>, <span class="fl">0.25</span>, <span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">4</span></span>
+<span id="cb144-15"><a href="chap7.html#cb144-15" tabindex="-1"></a> dt t <span class="sc">+</span> dt    AUC   Cut<span class="fl">.1</span>   Cut<span class="fl">.2</span></span>
+<span id="cb144-16"><a href="chap7.html#cb144-16" tabindex="-1"></a>  <span class="dv">1</span>      <span class="dv">5</span> <span class="fl">0.6543</span> <span class="fl">105.600</span> <span class="fl">84.4800</span></span>
+<span id="cb144-17"><a href="chap7.html#cb144-17" tabindex="-1"></a>  <span class="dv">2</span>      <span class="dv">6</span> <span class="fl">0.6599</span> <span class="fl">105.600</span> <span class="fl">84.4800</span></span>
+<span id="cb144-18"><a href="chap7.html#cb144-18" tabindex="-1"></a>  <span class="dv">4</span>      <span class="dv">8</span> <span class="fl">0.6766</span> <span class="fl">109.608</span> <span class="fl">87.6864</span></span></code></pre></div>
+<p>对于模型 (III)，相应的调用是</p>
+<div class="sourceCode" id="cb145"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb145-1"><a href="chap7.html#cb145-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb145-2"><a href="chap7.html#cb145-2" tabindex="-1"></a><span class="sc">&gt;</span> ROCplcb.Rel3 <span class="ot">&lt;-</span> <span class="fu">rocJM</span>(jointFitBsp3.pro, <span class="at">dt =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">4</span>),</span>
+<span id="cb145-3"><a href="chap7.html#cb145-3" tabindex="-1"></a>                        <span class="at">data =</span> plcbData, <span class="at">diffType =</span> <span class="st">"relative"</span>, <span class="at">rel.diff =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fl">0.8</span>),</span>
+<span id="cb145-4"><a href="chap7.html#cb145-4" tabindex="-1"></a>                        <span class="at">M =</span> <span class="dv">1000</span>, <span class="at">burn.in =</span> <span class="dv">500</span>)</span>
+<span id="cb145-5"><a href="chap7.html#cb145-5" tabindex="-1"></a><span class="sc">&gt;</span> ROCplcb.Rel3</span>
+<span id="cb145-6"><a href="chap7.html#cb145-6" tabindex="-1"></a></span>
+<span id="cb145-7"><a href="chap7.html#cb145-7" tabindex="-1"></a>Areas under the time<span class="sc">-</span>dependent ROC curves</span>
+<span id="cb145-8"><a href="chap7.html#cb145-8" tabindex="-1"></a></span>
+<span id="cb145-9"><a href="chap7.html#cb145-9" tabindex="-1"></a>Estimation<span class="sc">:</span> Monte <span class="fu">Carlo</span> (<span class="dv">500</span> samples)</span>
+<span id="cb145-10"><a href="chap7.html#cb145-10" tabindex="-1"></a>Difference<span class="sc">:</span> relative, lag <span class="ot">=</span> <span class="dv">2</span> (<span class="dv">1</span>, <span class="fl">0.8</span>)</span>
+<span id="cb145-11"><a href="chap7.html#cb145-11" tabindex="-1"></a>Thresholds range<span class="sc">:</span> (<span class="sc">-</span><span class="dv">28</span>, <span class="dv">306</span>)</span>
+<span id="cb145-12"><a href="chap7.html#cb145-12" tabindex="-1"></a></span>
+<span id="cb145-13"><a href="chap7.html#cb145-13" tabindex="-1"></a>Case<span class="sc">:</span> <span class="dv">1</span></span>
+<span id="cb145-14"><a href="chap7.html#cb145-14" tabindex="-1"></a>Recorded <span class="fu">time</span>(s)<span class="sc">:</span> <span class="dv">0</span>, <span class="fl">0.25</span>, <span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">4</span></span>
+<span id="cb145-15"><a href="chap7.html#cb145-15" tabindex="-1"></a> dt t <span class="sc">+</span> dt    AUC  Cut<span class="fl">.1</span>    Cut<span class="fl">.2</span></span>
+<span id="cb145-16"><a href="chap7.html#cb145-16" tabindex="-1"></a>  <span class="dv">1</span>      <span class="dv">5</span> <span class="fl">0.7105</span>  <span class="fl">90.904</span> <span class="fl">72.7232</span></span>
+<span id="cb145-17"><a href="chap7.html#cb145-17" tabindex="-1"></a>  <span class="dv">2</span>      <span class="dv">6</span> <span class="fl">0.7244</span>  <span class="fl">93.576</span> <span class="fl">74.8608</span></span>
+<span id="cb145-18"><a href="chap7.html#cb145-18" tabindex="-1"></a>  <span class="dv">4</span>      <span class="dv">8</span> <span class="fl">0.7566</span> <span class="fl">100.256</span> <span class="fl">80.2048</span></span></code></pre></div>
+<details><summary><font color="#B95953">图 7.14</font>
+</summary><img src="figure/figure%207.14.png#center" style="width:80.0%"></details><p><br>
+模型 (II) 调用中包含的额外参数 <code>DirectionSmaller</code> 用于定义预测规则中不等式的方向，此处凝血酶原指数的较低值表示事件。这在以前不需要设置，在模型 (III) 中也不需要，因为 <code>rocJM()</code> 通过当前值项 <span class="math inline">\(m_i(t)\)</span> 的关联系数的符号来确定它。比较三个模型下不同 <span class="math inline">\(\Delta t\)</span> 选项的 AUC，我们观察到结合了当前值项 <span class="math inline">\(m_i(t)\)</span> 和斜率项 <span class="math inline">\(m'_i(t)\)</span> 的参数化似乎在某种程度上比分别具有这些项中每一项的参数化提供了更好的区分度。三个模型相应的 ROC 曲线也得出了相同的结论，如图 7.14 所示，从中可以看出，对于 80% 的特异度，模型 (III) 比其他两个模型具有更高的敏感度，特别是对于 <span class="math inline">\(\Delta t = 4\)</span>。然而，即使有了这种改进，凝血酶原指数也没有被证明是能够成功区分“病例”和“对照”的标志物。为了调查模型 (III) 是否在 10 年的主要关注期内（并且不仅在 <span class="math inline">\(t = 4\)</span>）提供比其他两个模型更好的区分度，我们计算了 <a href="chap7.html#sec7-4-4">7.4.4</a> 节中介绍的动态区分指数，即</p>
+<p><span class="math display">\[\begin{aligned}[\mathrm C_{dyn}^{\Delta t}]^\tau&amp;=\frac{\int_0^\tau\mathrm A\mathrm U\mathrm C_t^{\Delta t}\mathcal S(t)dt}{\int_0^\tau\mathcal S(t)dt}\end{aligned}\]</span></p>
+<p>其中 <span class="math inline">\(\tau=10\)</span>。作为说明，我们计算了安慰剂患者的 <span class="math inline">\([\text{C}_{dyn}^{\Delta t}]^{10}\)</span> 和 <span class="math inline">\(\Delta t=4\)</span>。实现这一目标的第一步是计算十年期间不同时间点的时变 AUC. 我们已经选择了基线、三个月、半年、一年以及此后的每年，直到第十年；所需的信息包含在以下数据框中</p>
+<div class="sourceCode" id="cb146"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb146-1"><a href="chap7.html#cb146-1" tabindex="-1"></a><span class="sc">&gt;</span> plcbData2 <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb146-2"><a href="chap7.html#cb146-2" tabindex="-1"></a>  <span class="at">id =</span> <span class="dv">1</span>,</span>
+<span id="cb146-3"><a href="chap7.html#cb146-3" tabindex="-1"></a>                          <span class="at">treat =</span> <span class="fu">factor</span>(<span class="st">"placebo"</span>, <span class="at">levels =</span> <span class="fu">levels</span>(prothro<span class="sc">$</span>treat)),</span>
+<span id="cb146-4"><a href="chap7.html#cb146-4" tabindex="-1"></a>                          <span class="at">time =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.25</span>, <span class="fl">0.5</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>)</span>
+<span id="cb146-5"><a href="chap7.html#cb146-5" tabindex="-1"></a>)</span>
+<span id="cb146-6"><a href="chap7.html#cb146-6" tabindex="-1"></a><span class="sc">&gt;</span> plcbData2<span class="sc">$</span>t0 <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(plcbData2<span class="sc">$</span>time <span class="sc">==</span> <span class="dv">0</span>)</span></code></pre></div>
+<p>如前所述，时依 AUC 在 R 中使用 for 循环进行计算，该循环在每次迭代时都会考虑数据框 <code>plcbData2</code> 的额外一行</p>
+<div class="sourceCode" id="cb147"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb147-1"><a href="chap7.html#cb147-1" tabindex="-1"></a><span class="sc">&gt;</span> ROCs.MI <span class="ot">&lt;-</span> ROCs.MII <span class="ot">&lt;-</span> ROCs.MIII <span class="ot">&lt;-</span> <span class="fu">vector</span>(<span class="st">"list"</span>, <span class="fu">nrow</span>(plcbData2))</span>
+<span id="cb147-2"><a href="chap7.html#cb147-2" tabindex="-1"></a><span class="sc">&gt;</span> <span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">seq_along</span>(ROCs.MI)) {</span>
+<span id="cb147-3"><a href="chap7.html#cb147-3" tabindex="-1"></a>  <span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb147-4"><a href="chap7.html#cb147-4" tabindex="-1"></a>  ROCs.MI[[i]] <span class="ot">&lt;-</span> <span class="fu">rocJM</span>(jointFitBsp.pro, <span class="at">dt =</span> <span class="dv">4</span>,</span>
+<span id="cb147-5"><a href="chap7.html#cb147-5" tabindex="-1"></a>                        <span class="at">data =</span> plcbData2[<span class="fu">seq_len</span>(i), ], <span class="at">diffType =</span> <span class="st">"relative"</span>,</span>
+<span id="cb147-6"><a href="chap7.html#cb147-6" tabindex="-1"></a>                        <span class="at">rel.diff =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fl">0.8</span>), <span class="at">M =</span> <span class="dv">1000</span>, <span class="at">burn.in =</span> <span class="dv">500</span>)</span>
+<span id="cb147-7"><a href="chap7.html#cb147-7" tabindex="-1"></a>  ROCs.MII[[i]] <span class="ot">&lt;-</span> <span class="fu">rocJM</span>(jointFitBsp2.pro, <span class="at">dt =</span> <span class="dv">4</span>,</span>
+<span id="cb147-8"><a href="chap7.html#cb147-8" tabindex="-1"></a>                         <span class="at">data =</span> plcbData2[<span class="fu">seq_len</span>(i), ], <span class="at">directionSmaller =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb147-9"><a href="chap7.html#cb147-9" tabindex="-1"></a>                         <span class="at">diffType =</span> <span class="st">"relative"</span>, <span class="at">rel.diff =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fl">0.8</span>),</span>
+<span id="cb147-10"><a href="chap7.html#cb147-10" tabindex="-1"></a>                         <span class="at">M =</span> <span class="dv">1000</span>, <span class="at">burn.in =</span> <span class="dv">500</span>)</span>
+<span id="cb147-11"><a href="chap7.html#cb147-11" tabindex="-1"></a>  ROCs.MIII[[i]] <span class="ot">&lt;-</span> <span class="fu">rocJM</span>(jointFitBsp3.pro, <span class="at">dt =</span> <span class="dv">4</span>,</span>
+<span id="cb147-12"><a href="chap7.html#cb147-12" tabindex="-1"></a>                          <span class="at">data =</span> plcbData2[<span class="fu">seq_len</span>(i), ], <span class="at">diffType =</span> <span class="st">"relative"</span>,</span>
+<span id="cb147-13"><a href="chap7.html#cb147-13" tabindex="-1"></a>                          <span class="at">rel.diff =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fl">0.8</span>), <span class="at">M =</span> <span class="dv">1000</span>, <span class="at">burn.in =</span> <span class="dv">500</span>)</span>
+<span id="cb147-14"><a href="chap7.html#cb147-14" tabindex="-1"></a>}</span></code></pre></div>
+<p>三个模型每次迭代的结果分别保存在列表 <code>ROCs.MI</code>、<code>ROCs.MII</code> 和 <code>ROCs.MIII</code> 中。在接下来的步骤中，我们从这些列表中提取 <span class="math inline">\(\mathrm{AUC}_t^{\Delta t}\)</span> 并计算边际函数 <span class="math inline">\(\mathcal S(t)\)</span>：</p>
+<div class="sourceCode" id="cb148"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb148-1"><a href="chap7.html#cb148-1" tabindex="-1"></a><span class="sc">&gt;</span> AUCs.MI <span class="ot">&lt;-</span> <span class="fu">sapply</span>(ROCs.MI, <span class="st">"[["</span>, <span class="st">"AUCs"</span>)</span>
+<span id="cb148-2"><a href="chap7.html#cb148-2" tabindex="-1"></a><span class="sc">&gt;</span> AUCs.MII <span class="ot">&lt;-</span> <span class="fu">sapply</span>(ROCs.MII, <span class="st">"[["</span>, <span class="st">"AUCs"</span>)</span>
+<span id="cb148-3"><a href="chap7.html#cb148-3" tabindex="-1"></a><span class="sc">&gt;</span> AUCs.MIII <span class="ot">&lt;-</span> <span class="fu">sapply</span>(ROCs.MIII, <span class="st">"[["</span>, <span class="st">"AUCs"</span>)</span>
+<span id="cb148-4"><a href="chap7.html#cb148-4" tabindex="-1"></a><span class="sc">&gt;</span> sf <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(Time, death) <span class="sc">~</span> treat, <span class="at">data =</span> prothros,</span>
+<span id="cb148-5"><a href="chap7.html#cb148-5" tabindex="-1"></a>                <span class="at">subset =</span> treat <span class="sc">==</span> <span class="st">"placebo"</span>)</span>
+<span id="cb148-6"><a href="chap7.html#cb148-6" tabindex="-1"></a><span class="sc">&gt;</span> Surv.Plcb <span class="ot">&lt;-</span> <span class="fu">summary</span>(sf, <span class="at">times =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.25</span>, <span class="fl">0.5</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>))<span class="sc">$</span>surv</span></code></pre></div>
+<p>具体地，<code><a href="https://rdrr.io/r/base/lapply.html">sapply()</a></code> 语句提取三个列表中每个列表的所有元素的 <code>AUC</code> 组件，并且 <code>survival</code> 包中的函数 <code>survfit()</code> 计算肝硬化数据集的 Kaplan-Meier 估计。在 <code>survfit()</code> 中，我们使用子集参数来估计安慰剂患者的 <span class="math inline">\(\mathcal S(t)\)</span>，然后使用 <code><a href="https://rdrr.io/r/base/summary.html">summary()</a></code> 方法在感兴趣的特定时间点返回 <span class="math inline">\(\hat \mathcal S_{KM} (t)\)</span>。我们使用梯形规则来近似 <span class="math inline">\([\mathrm{C}_{dyn}^{\Delta t}]^{10}\)</span> 的分子和分母中的积分，一般定义为</p>
+<p><span class="math display">\[\begin{aligned}\int_a^bf(x)dx\approx(b-a)\frac{f(a)+f(b)}{2}\end{aligned}\]</span></p>
+<p>为了获得更好的精度，我们对 <code>plcbData2</code> 中 13 个时间点定义的 12 个子区间中的每一个子区间进行积分近似，即将 <span class="math inline">\([\mathrm{C}_{dyn}^{\Delta t}]^{10}\)</span> 重写为</p>
+<p><span class="math display">\[\begin{aligned}[\mathrm C_{dyn}^{\Delta t}]^{10}&amp;=\frac{\int_0^{0.25}\mathrm A\mathrm U\mathrm C_t^{\Delta t}\mathcal S(t)dt+\int_{0.25}^{0.5}\mathrm A\mathrm U\mathrm C_t^{\Delta t}\mathcal S(t)dt+\dots+\int_9^{10}\mathrm A\mathrm U\mathrm C_t^{\Delta t}\mathcal S(t)dt}{\int_0^{0.25}\mathcal S(t)dt+\int_{0.25}^{0.5}\mathcal S(t)dt+\dots+\int_9^{10}\mathcal S(t)dt}\end{aligned}\]</span></p>
+<p>然后我们用梯形法则近似上述每一个积分。我们可以使用 <code><a href="https://rdrr.io/r/utils/head.html">head()</a></code> 和 <code><a href="https://rdrr.io/r/utils/head.html">tail()</a></code> 函数灵活地定义 R 中每个积分的限 <span class="math inline">\(a\)</span> 和 <span class="math inline">\(b\)</span>，即</p>
+<div class="sourceCode" id="cb149"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb149-1"><a href="chap7.html#cb149-1" tabindex="-1"></a><span class="sc">&gt;</span> times <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.25</span>, <span class="fl">0.5</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>)</span>
+<span id="cb149-2"><a href="chap7.html#cb149-2" tabindex="-1"></a><span class="sc">&gt;</span> a <span class="ot">&lt;-</span> <span class="fu">head</span>(times, <span class="sc">-</span><span class="dv">1</span>)</span>
+<span id="cb149-3"><a href="chap7.html#cb149-3" tabindex="-1"></a><span class="sc">&gt;</span> b <span class="ot">&lt;-</span> <span class="fu">tail</span>(times, <span class="sc">-</span><span class="dv">1</span>)</span>
+<span id="cb149-4"><a href="chap7.html#cb149-4" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">rbind</span>(a, b)</span>
+<span id="cb149-5"><a href="chap7.html#cb149-5" tabindex="-1"></a>  [,<span class="dv">1</span>] [,<span class="dv">2</span>] [,<span class="dv">3</span>] [,<span class="dv">4</span>] [,<span class="dv">5</span>] [,<span class="dv">6</span>] [,<span class="dv">7</span>] [,<span class="dv">8</span>] [,<span class="dv">9</span>] [,<span class="dv">10</span>] [,<span class="dv">11</span>] [,<span class="dv">12</span>]</span>
+<span id="cb149-6"><a href="chap7.html#cb149-6" tabindex="-1"></a>a <span class="fl">0.00</span> <span class="fl">0.25</span>  <span class="fl">0.5</span>    <span class="dv">1</span>    <span class="dv">2</span>    <span class="dv">3</span>    <span class="dv">4</span>    <span class="dv">5</span>    <span class="dv">6</span>     <span class="dv">7</span>     <span class="dv">8</span>     <span class="dv">9</span></span>
+<span id="cb149-7"><a href="chap7.html#cb149-7" tabindex="-1"></a>b <span class="fl">0.25</span> <span class="fl">0.50</span>  <span class="fl">1.0</span>    <span class="dv">2</span>    <span class="dv">3</span>    <span class="dv">4</span>    <span class="dv">5</span>    <span class="dv">6</span>    <span class="dv">7</span>     <span class="dv">8</span>     <span class="dv">9</span>    <span class="dv">10</span></span></code></pre></div>
+<p>以类似的方式并使用梯形规则的定义，<span class="math inline">\([\mathrm{C}_{dyn}^{\Delta t}]^{10}\)</span> 分母中的 12 个积分之和可得出：</p>
+<div class="sourceCode" id="cb150"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb150-1"><a href="chap7.html#cb150-1" tabindex="-1"></a><span class="sc">&gt;</span> Denom <span class="ot">&lt;-</span> <span class="fu">sum</span>((b <span class="sc">-</span> a) <span class="sc">*</span> (<span class="fu">head</span>(Surv.Plcb, <span class="sc">-</span><span class="dv">1</span>) <span class="sc">+</span> <span class="fu">tail</span>(Surv.Plcb, <span class="sc">-</span><span class="dv">1</span>)) <span class="sc">/</span> <span class="dv">2</span>)</span></code></pre></div>
+<p>类似地，我们还根据三个联合模型中每个模型的时变 AUC 推导 <span class="math inline">\([\mathrm{C}_{dyn}^{\Delta t}]^{10}\)</span> 分子中的 12 个积分之和</p>
+<div class="sourceCode" id="cb151"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb151-1"><a href="chap7.html#cb151-1" tabindex="-1"></a><span class="sc">&gt;</span> Numer.MI <span class="ot">&lt;-</span> <span class="fu">sum</span>((b <span class="sc">-</span> a) <span class="sc">*</span> (<span class="fu">head</span>(AUCs.MI <span class="sc">*</span> Surv.Plcb, <span class="sc">-</span><span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb151-2"><a href="chap7.html#cb151-2" tabindex="-1"></a>                               <span class="fu">tail</span>(AUCs.MI <span class="sc">*</span> Surv.Plcb, <span class="sc">-</span><span class="dv">1</span>)) <span class="sc">/</span> <span class="dv">2</span>)</span>
+<span id="cb151-3"><a href="chap7.html#cb151-3" tabindex="-1"></a><span class="sc">&gt;</span> Numer.MII <span class="ot">&lt;-</span> <span class="fu">sum</span>((b <span class="sc">-</span> a) <span class="sc">*</span> (<span class="fu">head</span>(AUCs.MII <span class="sc">*</span> Surv.Plcb, <span class="sc">-</span><span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb151-4"><a href="chap7.html#cb151-4" tabindex="-1"></a>                                <span class="fu">tail</span>(AUCs.MII <span class="sc">*</span> Surv.Plcb, <span class="sc">-</span><span class="dv">1</span>)) <span class="sc">/</span> <span class="dv">2</span>)</span>
+<span id="cb151-5"><a href="chap7.html#cb151-5" tabindex="-1"></a><span class="sc">&gt;</span> Numer.MIII <span class="ot">&lt;-</span> <span class="fu">sum</span>((b <span class="sc">-</span> a) <span class="sc">*</span> (<span class="fu">head</span>(AUCs.MIII <span class="sc">*</span> Surv.Plcb, <span class="sc">-</span><span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb151-6"><a href="chap7.html#cb151-6" tabindex="-1"></a>                                 <span class="fu">tail</span>(AUCs.MIII <span class="sc">*</span> Surv.Plcb, <span class="sc">-</span><span class="dv">1</span>)) <span class="sc">/</span> <span class="dv">2</span>)</span></code></pre></div>
+<p>最后，通过计算相应的比就可以简单地获得动态区分指数</p>
+<div class="sourceCode" id="cb152"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb152-1"><a href="chap7.html#cb152-1" tabindex="-1"></a><span class="sc">&gt;</span> Numer.MI <span class="sc">/</span> Denom <span class="co"># Cdyn Model (I)</span></span>
+<span id="cb152-2"><a href="chap7.html#cb152-2" tabindex="-1"></a>[<span class="dv">1</span>] <span class="fl">0.7209312</span></span>
+<span id="cb152-3"><a href="chap7.html#cb152-3" tabindex="-1"></a><span class="sc">&gt;</span> Numer.MII <span class="sc">/</span> Denom <span class="co"># Cdyn Model (II)</span></span>
+<span id="cb152-4"><a href="chap7.html#cb152-4" tabindex="-1"></a>[<span class="dv">1</span>] <span class="fl">0.6824211</span></span>
+<span id="cb152-5"><a href="chap7.html#cb152-5" tabindex="-1"></a><span class="sc">&gt;</span> Numer.MIII <span class="sc">/</span> Denom <span class="co"># Cdyn Model (III)</span></span>
+<span id="cb152-6"><a href="chap7.html#cb152-6" tabindex="-1"></a>[<span class="dv">1</span>] <span class="fl">0.7293451</span></span></code></pre></div>
+<p>比较总结整个十年随访期间辨别能力的三个指数的值，我们观察到模型 (III) 在 <span class="math inline">\(t = 4\)</span> 时显示的准确性相对于其他两个模型有所减弱。特别是，模型 (I) 和 (III) 提供了几乎相同的区分能力，比模型 (II) 提供的要好一些。这意味着，对于所研究的患者来说，凝血酶原指数的当前值 <span class="math inline">\(m_i(t)\)</span> 似乎比真实轨迹的斜率 <span class="math inline">\(m'_i (t)\)</span> 在区分方面发挥更重要的作用。</p>
+
+</div>
+</div>
+</div>
+
+
+
+
+  <div class="chapter-nav">
+<div class="prev"><a href="chap6.html"><span class="header-section-number">6</span> 联合模型诊断</a></div>
+<div class="next"><a href="A.html"><span class="header-section-number">A</span> R 的简要介绍</a></div>
+</div></main><div class="col-md-3 col-lg-2 d-none d-md-block sidebar sidebar-chapter">
+    <nav id="toc" data-toggle="toc" aria-label="On this page"><h2>On this page</h2>
+      <ul class="nav navbar-nav">
+<li><a class="nav-link" href="#chap7"><span class="header-section-number">7</span> 联合模型的预测和准确性</a></li>
+<li>
+<a class="nav-link" href="#sec7-1"><span class="header-section-number">7.1</span> 生存概率的动态预测</a><ul class="nav navbar-nav">
+<li><a class="nav-link" href="#sec7-1-1"><span class="header-section-number">7.1.1</span> 定义</a></li>
+<li><a class="nav-link" href="#sec7-1-2"><span class="header-section-number">7.1.2</span> 估计</a></li>
+<li><a class="nav-link" href="#sec7-1-3"><span class="header-section-number">7.1.3</span> 在 R 中的实现</a></li>
+</ul>
+</li>
+<li><a class="nav-link" href="#sec7-2"><span class="header-section-number">7.2</span> 纵向结果的动态预测</a></li>
+<li><a class="nav-link" href="#sec7-3"><span class="header-section-number">7.3</span> 参数化对预测的影响</a></li>
+<li>
+<a class="nav-link" href="#sec7-4"><span class="header-section-number">7.4</span> 联合模型的前瞻准确性</a><ul class="nav navbar-nav">
+<li><a class="nav-link" href="#sec7-4-1"><span class="header-section-number">7.4.1</span> 二项结果的判别度量</a></li>
+<li><a class="nav-link" href="#sec7-4-2"><span class="header-section-number">7.4.2</span> 生存结果的判别度量</a></li>
+<li><a class="nav-link" href="#sec7-4-3"><span class="header-section-number">7.4.3</span> 纵向标志物的预测规则</a></li>
+<li><a class="nav-link" href="#sec7-4-4"><span class="header-section-number">7.4.4</span> 判别指数</a></li>
+<li><a class="nav-link" href="#sec7-4-5"><span class="header-section-number">7.4.5</span> 联合建模框架下的估计</a></li>
+<li><a class="nav-link" href="#sec7-4-6"><span class="header-section-number">7.4.6</span> 在 R 中的实现</a></li>
+</ul>
+</li>
+</ul>
+
+      <div class="book-extra">
+        <ul class="list-unstyled">
+          
+        </ul>
+</div>
+    </nav>
+</div>
+
+</div>
+</div> <!-- .container -->
+
+<footer class="bg-primary text-light mt-5"><div class="container"><div class="row">
+
+  <div class="col-12 col-md-6 mt-3">
+    <p>"<strong>纵向与事件时间数据的联合模型及其在 R 中的应用</strong>" was written by Wang Zhen. It was last built on 2024-04-19.</p>
+  </div>
+
+  <div class="col-12 col-md-6 mt-3">
+    <p>This book was built by the <a class="text-light" href="https://bookdown.org">bookdown</a> R package.</p>
+  </div>
+
+</div></div>
+</footer><!-- dynamically load mathjax for compatibility with self-contained --><script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    var src = "true";
+    if (src === "" || src === "true") src = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/latest.js?config=TeX-MML-AM_CHTML";
+    if (location.protocol !== "file:")
+      if (/^https?:/.test(src))
+        src = src.replace(/^https?:/, '');
+    script.src = src;
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script><script type="text/x-mathjax-config">const popovers = document.querySelectorAll('a.footnote-ref[data-toggle="popover"]');
+for (let popover of popovers) {
+  const div = document.createElement('div');
+  div.setAttribute('style', 'position: absolute; top: 0, left:0; width:0, height:0, overflow: hidden; visibility: hidden;');
+  div.innerHTML = popover.getAttribute('data-content');
+
+  var has_math = div.querySelector("span.math");
+  if (has_math) {
+    document.body.appendChild(div);
+    MathJax.Hub.Queue(["Typeset", MathJax.Hub, div]);
+    MathJax.Hub.Queue(function() {
+      popover.setAttribute('data-content', div.innerHTML);
+      document.body.removeChild(div);
+    })
+  }
+}
+</script>
+</body>
+</html>

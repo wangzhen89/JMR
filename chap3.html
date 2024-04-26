@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>第 3 章 事件时间数据分析 | 纵向与事件时间数据的联合模型及其在 R 中的应用</title>
+<meta name="author" content="Wang Zhen">
+<meta name="description" content="本章介绍了生存数据分析的基本概念，以及相对风险模型类别，这是构成纵向与事件时间数据的联合模型的第二个组成部分。尤其关注时依协变量的处理。我们特别介绍了两种类型的时变协变量（即内生性和外源性），并解释了何时需要对协变量过程和事件发生风险进行联合建模，以得出有效的推论。  3.1 事件时间数据的特征...">
+<meta name="generator" content="bookdown 0.38 with bs4_book()">
+<meta property="og:title" content="第 3 章 事件时间数据分析 | 纵向与事件时间数据的联合模型及其在 R 中的应用">
+<meta property="og:type" content="book">
+<meta property="og:description" content="本章介绍了生存数据分析的基本概念，以及相对风险模型类别，这是构成纵向与事件时间数据的联合模型的第二个组成部分。尤其关注时依协变量的处理。我们特别介绍了两种类型的时变协变量（即内生性和外源性），并解释了何时需要对协变量过程和事件发生风险进行联合建模，以得出有效的推论。  3.1 事件时间数据的特征...">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="第 3 章 事件时间数据分析 | 纵向与事件时间数据的联合模型及其在 R 中的应用">
+<meta name="twitter:description" content="本章介绍了生存数据分析的基本概念，以及相对风险模型类别，这是构成纵向与事件时间数据的联合模型的第二个组成部分。尤其关注时依协变量的处理。我们特别介绍了两种类型的时变协变量（即内生性和外源性），并解释了何时需要对协变量过程和事件发生风险进行联合建模，以得出有效的推论。  3.1 事件时间数据的特征...">
+<!-- JS --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.4.6/fuse.js" integrity="sha512-zv6Ywkjyktsohkbp9bb45V6tEMoWhzFzXis+LrMehmJZZSys19Yxf1dopHx7WzIKxr5tK2dVcYmaCk2uqdjF4A==" crossorigin="anonymous"></script><script src="https://kit.fontawesome.com/6ecbd6c532.js" crossorigin="anonymous"></script><script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link href="libs/bootstrap-4.6.0/bootstrap.min.css" rel="stylesheet">
+<script src="libs/bootstrap-4.6.0/bootstrap.bundle.min.js"></script><script src="libs/bs3compat-0.7.0/transition.js"></script><script src="libs/bs3compat-0.7.0/tabs.js"></script><script src="libs/bs3compat-0.7.0/bs3compat.js"></script><link href="libs/bs4_book-1.0.0/bs4_book.css" rel="stylesheet">
+<script src="libs/bs4_book-1.0.0/bs4_book.js"></script><script>
+    /* ========================================================================
+     * Bootstrap: transition.js v3.3.7
+     * http://getbootstrap.com/javascript/#transitions
+     * ========================================================================
+     * Copyright 2011-2016 Twitter, Inc.
+     * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
+     * ======================================================================== */
+
+
+    +function ($) {
+      'use strict';
+
+      // CSS TRANSITION SUPPORT (Shoutout: http://www.modernizr.com/)
+      // ============================================================
+
+      function transitionEnd() {
+        var el = document.createElement('bootstrap')
+
+        var transEndEventNames = {
+          WebkitTransition : 'webkitTransitionEnd',
+          MozTransition    : 'transitionend',
+          OTransition      : 'oTransitionEnd otransitionend',
+          transition       : 'transitionend'
+        }
+
+        for (var name in transEndEventNames) {
+          if (el.style[name] !== undefined) {
+            return { end: transEndEventNames[name] }
+          }
+        }
+
+        return false // explicit for ie8 (  ._.)
+      }
+
+      // http://blog.alexmaccaw.com/css-transitions
+      $.fn.emulateTransitionEnd = function (duration) {
+        var called = false
+        var $el = this
+        $(this).one('bsTransitionEnd', function () { called = true })
+        var callback = function () { if (!called) $($el).trigger($.support.transition.end) }
+        setTimeout(callback, duration)
+        return this
+      }
+
+      $(function () {
+        $.support.transition = transitionEnd()
+
+        if (!$.support.transition) return
+
+        $.event.special.bsTransitionEnd = {
+          bindType: $.support.transition.end,
+          delegateType: $.support.transition.end,
+          handle: function (e) {
+            if ($(e.target).is(this)) return e.handleObj.handler.apply(this, arguments)
+          }
+        }
+      })
+
+    }(jQuery);
+    </script><script>
+    /* ========================================================================
+     * Bootstrap: collapse.js v3.3.7
+     * http://getbootstrap.com/javascript/#collapse
+     * ========================================================================
+     * Copyright 2011-2016 Twitter, Inc.
+     * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
+     * ======================================================================== */
+
+    /* jshint latedef: false */
+
+    +function ($) {
+      'use strict';
+
+      // COLLAPSE PUBLIC CLASS DEFINITION
+      // ================================
+
+      var Collapse = function (element, options) {
+        this.$element      = $(element)
+        this.options       = $.extend({}, Collapse.DEFAULTS, options)
+        this.$trigger      = $('[data-toggle="collapse"][href="#' + element.id + '"],' +
+                               '[data-toggle="collapse"][data-target="#' + element.id + '"]')
+        this.transitioning = null
+
+        if (this.options.parent) {
+          this.$parent = this.getParent()
+        } else {
+          this.addAriaAndCollapsedClass(this.$element, this.$trigger)
+        }
+
+        if (this.options.toggle) this.toggle()
+      }
+
+      Collapse.VERSION  = '3.3.7'
+
+      Collapse.TRANSITION_DURATION = 350
+
+      Collapse.DEFAULTS = {
+        toggle: true
+      }
+
+      Collapse.prototype.dimension = function () {
+        var hasWidth = this.$element.hasClass('width')
+        return hasWidth ? 'width' : 'height'
+      }
+
+      Collapse.prototype.show = function () {
+        if (this.transitioning || this.$element.hasClass('in')) return
+
+        var activesData
+        var actives = this.$parent && this.$parent.children('.panel').children('.in, .collapsing')
+
+        if (actives && actives.length) {
+          activesData = actives.data('bs.collapse')
+          if (activesData && activesData.transitioning) return
+        }
+
+        var startEvent = $.Event('show.bs.collapse')
+        this.$element.trigger(startEvent)
+        if (startEvent.isDefaultPrevented()) return
+
+        if (actives && actives.length) {
+          Plugin.call(actives, 'hide')
+          activesData || actives.data('bs.collapse', null)
+        }
+
+        var dimension = this.dimension()
+
+        this.$element
+          .removeClass('collapse')
+          .addClass('collapsing')[dimension](0)
+          .attr('aria-expanded', true)
+
+        this.$trigger
+          .removeClass('collapsed')
+          .attr('aria-expanded', true)
+
+        this.transitioning = 1
+
+        var complete = function () {
+          this.$element
+            .removeClass('collapsing')
+            .addClass('collapse in')[dimension]('')
+          this.transitioning = 0
+          this.$element
+            .trigger('shown.bs.collapse')
+        }
+
+        if (!$.support.transition) return complete.call(this)
+
+        var scrollSize = $.camelCase(['scroll', dimension].join('-'))
+
+        this.$element
+          .one('bsTransitionEnd', $.proxy(complete, this))
+          .emulateTransitionEnd(Collapse.TRANSITION_DURATION)[dimension](this.$element[0][scrollSize])
+      }
+
+      Collapse.prototype.hide = function () {
+        if (this.transitioning || !this.$element.hasClass('in')) return
+
+        var startEvent = $.Event('hide.bs.collapse')
+        this.$element.trigger(startEvent)
+        if (startEvent.isDefaultPrevented()) return
+
+        var dimension = this.dimension()
+
+        this.$element[dimension](this.$element[dimension]())[0].offsetHeight
+
+        this.$element
+          .addClass('collapsing')
+          .removeClass('collapse in')
+          .attr('aria-expanded', false)
+
+        this.$trigger
+          .addClass('collapsed')
+          .attr('aria-expanded', false)
+
+        this.transitioning = 1
+
+        var complete = function () {
+          this.transitioning = 0
+          this.$element
+            .removeClass('collapsing')
+            .addClass('collapse')
+            .trigger('hidden.bs.collapse')
+        }
+
+        if (!$.support.transition) return complete.call(this)
+
+        this.$element
+          [dimension](0)
+          .one('bsTransitionEnd', $.proxy(complete, this))
+          .emulateTransitionEnd(Collapse.TRANSITION_DURATION)
+      }
+
+      Collapse.prototype.toggle = function () {
+        this[this.$element.hasClass('in') ? 'hide' : 'show']()
+      }
+
+      Collapse.prototype.getParent = function () {
+        return $(this.options.parent)
+          .find('[data-toggle="collapse"][data-parent="' + this.options.parent + '"]')
+          .each($.proxy(function (i, element) {
+            var $element = $(element)
+            this.addAriaAndCollapsedClass(getTargetFromTrigger($element), $element)
+          }, this))
+          .end()
+      }
+
+      Collapse.prototype.addAriaAndCollapsedClass = function ($element, $trigger) {
+        var isOpen = $element.hasClass('in')
+
+        $element.attr('aria-expanded', isOpen)
+        $trigger
+          .toggleClass('collapsed', !isOpen)
+          .attr('aria-expanded', isOpen)
+      }
+
+      function getTargetFromTrigger($trigger) {
+        var href
+        var target = $trigger.attr('data-target')
+          || (href = $trigger.attr('href')) && href.replace(/.*(?=#[^\s]+$)/, '') // strip for ie7
+
+        return $(target)
+      }
+
+
+      // COLLAPSE PLUGIN DEFINITION
+      // ==========================
+
+      function Plugin(option) {
+        return this.each(function () {
+          var $this   = $(this)
+          var data    = $this.data('bs.collapse')
+          var options = $.extend({}, Collapse.DEFAULTS, $this.data(), typeof option == 'object' && option)
+
+          if (!data && options.toggle && /show|hide/.test(option)) options.toggle = false
+          if (!data) $this.data('bs.collapse', (data = new Collapse(this, options)))
+          if (typeof option == 'string') data[option]()
+        })
+      }
+
+      var old = $.fn.collapse
+
+      $.fn.collapse             = Plugin
+      $.fn.collapse.Constructor = Collapse
+
+
+      // COLLAPSE NO CONFLICT
+      // ====================
+
+      $.fn.collapse.noConflict = function () {
+        $.fn.collapse = old
+        return this
+      }
+
+
+      // COLLAPSE DATA-API
+      // =================
+
+      $(document).on('click.bs.collapse.data-api', '[data-toggle="collapse"]', function (e) {
+        var $this   = $(this)
+
+        if (!$this.attr('data-target')) e.preventDefault()
+
+        var $target = getTargetFromTrigger($this)
+        var data    = $target.data('bs.collapse')
+        var option  = data ? 'toggle' : $this.data()
+
+        Plugin.call($target, option)
+      })
+
+    }(jQuery);
+    </script><script>
+    window.initializeCodeFolding = function(show) {
+
+      // handlers for show-all and hide all
+      $("#rmd-show-all-code").click(function() {
+        $('div.r-code-collapse').each(function() {
+          $(this).collapse('show');
+        });
+      });
+      $("#rmd-hide-all-code").click(function() {
+        $('div.r-code-collapse').each(function() {
+          $(this).collapse('hide');
+        });
+      });
+
+      // index for unique code element ids
+      var currentIndex = 1;
+
+      // select all R code blocks
+      var rCodeBlocks = $('pre.sourceCode, pre.r, pre.python, pre.bash, pre.sql, pre.cpp, pre.stan, pre.js');
+      rCodeBlocks.each(function() {
+
+        // create a collapsable div to wrap the code in
+        var div = $('<div class="collapse r-code-collapse"></div>');
+        if (show)
+          div.addClass('in');
+        var id = 'rcode-643E0F36' + currentIndex++;
+        div.attr('id', id);
+        $(this).before(div);
+        $(this).detach().appendTo(div);
+
+        // add a show code button right above
+        var showCodeText = $('<span>' + (show ? 'Hide' : 'Code') + '</span>');
+        var showCodeButton = $('<button type="button" class="btn btn-default btn-xs code-folding-btn pull-right"></button>');
+        showCodeButton.append(showCodeText);
+        showCodeButton
+            .attr('data-toggle', 'collapse')
+            .attr('data-target', '#' + id)
+            .attr('aria-expanded', show)
+            .attr('aria-controls', id);
+
+        var buttonRow = $('<div class="row"></div>');
+        var buttonCol = $('<div class="col-md-12"></div>');
+
+        buttonCol.append(showCodeButton);
+        buttonRow.append(buttonCol);
+
+        div.before(buttonRow);
+
+        // update state of button on show/hide
+        div.on('hidden.bs.collapse', function () {
+          showCodeText.text('Code');
+        });
+        div.on('show.bs.collapse', function () {
+          showCodeText.text('Hide');
+        });
+      });
+
+    }
+    </script><script>
+    /* ========================================================================
+     * Bootstrap: dropdown.js v3.3.7
+     * http://getbootstrap.com/javascript/#dropdowns
+     * ========================================================================
+     * Copyright 2011-2016 Twitter, Inc.
+     * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
+     * ======================================================================== */
+
+
+    +function ($) {
+      'use strict';
+
+      // DROPDOWN CLASS DEFINITION
+      // =========================
+
+      var backdrop = '.dropdown-backdrop'
+      var toggle   = '[data-toggle="dropdown"]'
+      var Dropdown = function (element) {
+        $(element).on('click.bs.dropdown', this.toggle)
+      }
+
+      Dropdown.VERSION = '3.3.7'
+
+      function getParent($this) {
+        var selector = $this.attr('data-target')
+
+        if (!selector) {
+          selector = $this.attr('href')
+          selector = selector && /#[A-Za-z]/.test(selector) && selector.replace(/.*(?=#[^\s]*$)/, '') // strip for ie7
+        }
+
+        var $parent = selector && $(selector)
+
+        return $parent && $parent.length ? $parent : $this.parent()
+      }
+
+      function clearMenus(e) {
+        if (e && e.which === 3) return
+        $(backdrop).remove()
+        $(toggle).each(function () {
+          var $this         = $(this)
+          var $parent       = getParent($this)
+          var relatedTarget = { relatedTarget: this }
+
+          if (!$parent.hasClass('open')) return
+
+          if (e && e.type == 'click' && /input|textarea/i.test(e.target.tagName) && $.contains($parent[0], e.target)) return
+
+          $parent.trigger(e = $.Event('hide.bs.dropdown', relatedTarget))
+
+          if (e.isDefaultPrevented()) return
+
+          $this.attr('aria-expanded', 'false')
+          $parent.removeClass('open').trigger($.Event('hidden.bs.dropdown', relatedTarget))
+        })
+      }
+
+      Dropdown.prototype.toggle = function (e) {
+        var $this = $(this)
+
+        if ($this.is('.disabled, :disabled')) return
+
+        var $parent  = getParent($this)
+        var isActive = $parent.hasClass('open')
+
+        clearMenus()
+
+        if (!isActive) {
+          if ('ontouchstart' in document.documentElement && !$parent.closest('.navbar-nav').length) {
+            // if mobile we use a backdrop because click events don't delegate
+            $(document.createElement('div'))
+              .addClass('dropdown-backdrop')
+              .insertAfter($(this))
+              .on('click', clearMenus)
+          }
+
+          var relatedTarget = { relatedTarget: this }
+          $parent.trigger(e = $.Event('show.bs.dropdown', relatedTarget))
+
+          if (e.isDefaultPrevented()) return
+
+          $this
+            .trigger('focus')
+            .attr('aria-expanded', 'true')
+
+          $parent
+            .toggleClass('open')
+            .trigger($.Event('shown.bs.dropdown', relatedTarget))
+        }
+
+        return false
+      }
+
+      Dropdown.prototype.keydown = function (e) {
+        if (!/(38|40|27|32)/.test(e.which) || /input|textarea/i.test(e.target.tagName)) return
+
+        var $this = $(this)
+
+        e.preventDefault()
+        e.stopPropagation()
+
+        if ($this.is('.disabled, :disabled')) return
+
+        var $parent  = getParent($this)
+        var isActive = $parent.hasClass('open')
+
+        if (!isActive && e.which != 27 || isActive && e.which == 27) {
+          if (e.which == 27) $parent.find(toggle).trigger('focus')
+          return $this.trigger('click')
+        }
+
+        var desc = ' li:not(.disabled):visible a'
+        var $items = $parent.find('.dropdown-menu' + desc)
+
+        if (!$items.length) return
+
+        var index = $items.index(e.target)
+
+        if (e.which == 38 && index > 0)                 index--         // up
+        if (e.which == 40 && index < $items.length - 1) index++         // down
+        if (!~index)                                    index = 0
+
+        $items.eq(index).trigger('focus')
+      }
+
+
+      // DROPDOWN PLUGIN DEFINITION
+      // ==========================
+
+      function Plugin(option) {
+        return this.each(function () {
+          var $this = $(this)
+          var data  = $this.data('bs.dropdown')
+
+          if (!data) $this.data('bs.dropdown', (data = new Dropdown(this)))
+          if (typeof option == 'string') data[option].call($this)
+        })
+      }
+
+      var old = $.fn.dropdown
+
+      $.fn.dropdown             = Plugin
+      $.fn.dropdown.Constructor = Dropdown
+
+
+      // DROPDOWN NO CONFLICT
+      // ====================
+
+      $.fn.dropdown.noConflict = function () {
+        $.fn.dropdown = old
+        return this
+      }
+
+
+      // APPLY TO STANDARD DROPDOWN ELEMENTS
+      // ===================================
+
+      $(document)
+        .on('click.bs.dropdown.data-api', clearMenus)
+        .on('click.bs.dropdown.data-api', '.dropdown form', function (e) { e.stopPropagation() })
+        .on('click.bs.dropdown.data-api', toggle, Dropdown.prototype.toggle)
+        .on('keydown.bs.dropdown.data-api', toggle, Dropdown.prototype.keydown)
+        .on('keydown.bs.dropdown.data-api', '.dropdown-menu', Dropdown.prototype.keydown)
+
+    }(jQuery);
+    </script><style type="text/css">
+    .code-folding-btn { margin-bottom: 4px; }
+    .row { display: flex; }
+    .collapse { display: none; }
+    .in { display:block }
+    .pull-right > .dropdown-menu {
+        right: 0;
+        left: auto;
+    }
+    .open > .dropdown-menu {
+        display: block;
+    }
+    .dropdown-menu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        z-index: 1000;
+        display: none;
+        float: left;
+        min-width: 160px;
+        padding: 5px 0;
+        margin: 2px 0 0;
+        font-size: 14px;
+        text-align: left;
+        list-style: none;
+        background-color: #fff;
+        -webkit-background-clip: padding-box;
+        background-clip: padding-box;
+        border: 1px solid #ccc;
+        border: 1px solid rgba(0,0,0,.15);
+        border-radius: 4px;
+        -webkit-box-shadow: 0 6px 12px rgba(0,0,0,.175);
+        box-shadow: 0 6px 12px rgba(0,0,0,.175);
+    }
+    </style>
+<script>
+    $(document).ready(function () {
+      window.initializeCodeFolding("show" === "show");
+    });
+    </script><script>
+    document.write('<div class="btn-group pull-right" style="position: absolute; top: 20%; right: 2%; z-index: 200"><button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" data-_extension-text-contrast=""><span>Code</span> <span class="caret"></span></button><ul class="dropdown-menu" style="min-width: 50px;"><li><a id="rmd-show-all-code" href="#">Show All Code</a></li><li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li></ul></div>')
+    </script><script src="https://cdnjs.cloudflare.com/ajax/libs/autocomplete.js/0.38.0/autocomplete.jquery.min.js" integrity="sha512-GU9ayf+66Xx2TmpxqJpliWbT5PiGYxpaG8rfnBEk1LL8l1KGkRShhngwdXK1UgqhAzWpZHSiYPc09/NwDQIGyg==" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mark.js/8.11.1/mark.min.js" integrity="sha512-5CYOlHXGh6QpOFA/TeTylKLWfB3ftPsde7AnmhuitiTX4K5SqCLBeKro6sPS8ilsz1Q4NRx3v8Ko2IBiszzdww==" crossorigin="anonymous"></script><!-- CSS --><style type="text/css">
+    
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  </style>
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-spy="scroll" data-target="#toc">
+
+<div class="container-fluid">
+<div class="row">
+  <header class="col-sm-12 col-lg-3 sidebar sidebar-book"><a class="sr-only sr-only-focusable" href="#content">Skip to main content</a>
+
+    <div class="d-flex align-items-start justify-content-between">
+      <h1>
+        <a href="index.html" title="">纵向与事件时间数据的联合模型及其在 R 中的应用</a>
+      </h1>
+      <button class="btn btn-outline-primary d-lg-none ml-2 mt-1" type="button" data-toggle="collapse" data-target="#main-nav" aria-expanded="true" aria-controls="main-nav"><i class="fas fa-bars"></i><span class="sr-only">Show table of contents</span></button>
+    </div>
+
+    <div id="main-nav" class="collapse-lg">
+      <form role="search">
+        <input id="search" class="form-control" type="search" placeholder="Search" aria-label="Search">
+</form>
+
+      <nav aria-label="Table of contents"><h2>Table of contents</h2>
+        <ul class="book-toc list-unstyled">
+<li><a class="" href="index.html">前言</a></li>
+<li><a class="" href="%E7%9B%AE%E5%BD%95.html">目录</a></li>
+<li class="book-part">正文</li>
+<li><a class="" href="chap1.html"><span class="header-section-number">1</span> 介绍</a></li>
+<li><a class="" href="chap2.html"><span class="header-section-number">2</span> 纵向数据分析</a></li>
+<li><a class="active" href="chap3.html"><span class="header-section-number">3</span> 事件时间数据分析</a></li>
+<li><a class="" href="chap4.html"><span class="header-section-number">4</span> 纵向与事件时间数据的联合模型</a></li>
+<li><a class="" href="chap5.html"><span class="header-section-number">5</span> 标准联合模型的扩展</a></li>
+<li><a class="" href="chap6.html"><span class="header-section-number">6</span> 联合模型诊断</a></li>
+<li><a class="" href="chap7.html"><span class="header-section-number">7</span> 联合模型的预测和准确性</a></li>
+<li class="book-part">附录</li>
+<li><a class="" href="A.html"><span class="header-section-number">A</span> R 的简要介绍</a></li>
+<li class="book-part">—</li>
+<li><a class="" href="bib.html">参考文献</a></li>
+</ul>
+
+        <div class="book-extra">
+          
+        </div>
+      </nav>
+</div>
+  </header><main class="col-sm-12 col-md-9 col-lg-7" id="content"><div id="chap3" class="section level1" number="3">
+<h1>
+<span class="header-section-number">第 3 章</span> 事件时间数据分析<a class="anchor" aria-label="anchor" href="#chap3"><i class="fas fa-link"></i></a>
+</h1>
+<p>本章介绍了生存数据分析的基本概念，以及相对风险模型类别，这是构成纵向与事件时间数据的联合模型的第二个组成部分。尤其关注时依协变量的处理。我们特别介绍了两种类型的时变协变量（即内生性和外源性），并解释了何时需要对协变量过程和事件发生风险进行联合建模，以得出有效的推论。</p>
+<div id="sec3-1" class="section level2" number="3.1">
+<h2>
+<span class="header-section-number">3.1</span> 事件时间数据的特征<a class="anchor" aria-label="anchor" href="#sec3-1"><i class="fas fa-link"></i></a>
+</h2>
+<p>许多研究的主要目的是分析发生预先指定的感兴趣事件之前的时间。在这些设定中，响应变量是事件发生之前的时间，通常称为<strong>失效时间</strong> (failure time)、<strong>生存时间</strong> (survival time) 或<strong>事件时间</strong> (event time). 生存分析在临床和流行病学研究中使用最多，其中事件可能是死亡、肿瘤的出现、某些疾病的发展、疾病的复发、怀孕或戒烟。然而，在其他学科中也经常遇到事件时间。例如，在社会学中，我们可能对第一次婚姻的持续时间感兴趣，对报纸或杂志订阅时间的营销感兴趣，以及对工业中机器组件正常运行的时间感兴趣。过去，对生存数据的研究主要集中在生存概率的估计，以及在不同条件下对实验对象的生存分布进行简单的分组比较。近年来，研究重点主要转向了生存数据的统计建模。生存分析中使用的回归模型具有诸多优势，可以同时分析多个独立的预后因素，在调整基线特征的异质性和不均衡性的同时评估治疗差异，并使预测结果更加准确。</p>
+<p>在分析失效时间的统计数据时，必须考虑的首要特征是它们分布的形状。具体来说，由于事件时间必须为正数，因此它们的分布形状通常是有偏的。因此，依赖于正态分布的统计方法并不直接适用，如果用于生存数据，可能会产生无效的结果。然而，在许多情况下，通过对事件时间进行适当的变换（例如取对数或平方根）可以轻松克服这个问题。生存时间分析与其他统计领域最重要的区别在于<strong>删失</strong> (censoring). 删失数据的特点是，并非所有研究对象的事件时间都能得到完全观测。这会产生两方面的影响。首先，标准的统计工具，如样本均值和标准差、<span class="math inline">\(t\)</span> 检验和线性回归，它们假定我们拥有完整的信息，因此会对事件时间和有关量的分布产生有偏估计。其次，与完全数据相比，推断对生存时间分布的错误指定更为敏感。删失数据的分析取决于描述删失发生方式的删失机制的性质。首先，我们可以根据删失时间和实际事件时间在时间轴上的相对位置对删失机制进行分类，具体有如下类别：</p>
+<div class="rmdnote">
+<p><strong>右删失</strong> (right censoring)：对于研究对象的一个子集，只知道感兴趣的事件在某个时间点之后发生。例如，一个研究对象可能在研究结束时尚未经历感兴趣的事件（固定的 I 型删失），或者在记录了一定数量的事件后研究终止，因此并非所有研究对象在研究结束时都发生了事件（固定的 II 型删失），或者一个研究对象可能离开研究区域，因此无法继续参与（随机删失）。在这些例子中，对于一些研究对象，我们知道他们的事件发生在最后一次观测时间之后。</p>
+<p><strong>左删失</strong> (left censoring)：对于研究对象的一个子集，只知道感兴趣的事件发生在某个时间点之前。左删失的一个典型例子是一年级的孩子能够拼写自己名字的年龄。有些孩子能够在一年级之前做到这一点，但具体时间尚不清楚。</p>
+<p><strong>区间删失</strong> (interval censoring)：对于研究对象的一个子集，只知道感兴趣的事件发生在两个特定的时间点之间。区间删失通常发生在对疾病发病时间感兴趣的研究中。例如，艾滋病毒感染者定期接受艾滋病发病检测。当一名患者发现呈阳性时，实际上知道的是，该患者在当次就诊前与当次就诊之间的某个时间点患上了这种疾病。</p>
+</div>
+<p>区间删失是最常见的删失类型，因为当包含真实失效时间的区间的上限为无穷大或下限为零时，它实际上分别是右删失和左删失。</p>
+<p>删失机制的第二种分类与研究对象删失的概率是否取决于失效过程有关。更具体地说，我们有：</p>
+<div class="rmdnote">
+<p><strong>信息性删失</strong> (informative censoring)：研究对象因直接与预期失效时间相关的原因退出研究（例如由于预后恶化）。更正式地说，如果在任何时间 <span class="math inline">\(t\)</span>，仍在研究中的研究对象的失效率与退出研究的研究对象的失效率不同，那么删失机制就是信息性的。在某种意义上，信息性删失与 <a href="chap2.html#sec2-3-1">2.3.1</a> 节中介绍的纵向研究中的 MNAR 缺失数据机制在精神上是相似的。</p>
+<p><strong>非信息性删失</strong> (noninformative censoring)：当受试者因与预后无关的原因退出研究时，但这可能取决于协变量。同样与纵向研究进行类比，非信息性删失对应于 MCAR 缺失数据机制。</p>
+</div>
+<p>对于不同的删失机制类型，应采用不同的推断程序。就第一种分类而言，大多数文献都集中在能够处理右删失数据的方法上，因为这类数据最常见。就第二种分类而言，当删失机制具有信息性时，不幸的是，我们能做的事情很少。与纵向研究中的 MNAR 缺失数据机制类似，问题在于观察到的数据不足以对删失机制进行建模。因此，除非提供外部信息，否则在这些情况下进行有意义的分析的可能性相当有限。由于这些复杂性，大多数文献都集中在非信息性删失数据的方法上。在本书中，我们也只考虑非信息性右删失。</p>
+</div>
+<div id="sec3-2" class="section level2" number="3.2">
+<h2>
+<span class="header-section-number">3.2</span> 生存分析的基本函数<a class="anchor" aria-label="anchor" href="#sec3-2"><i class="fas fa-link"></i></a>
+</h2>
+<p>令 <span class="math inline">\(T^*\)</span> 表示所研究的失效时间的随机变量。主要用于描述 <span class="math inline">\(T^*\)</span> 分布的函数是<strong>生存函数</strong> (survival function). 如果事件是死亡，它表示死亡发生在 <span class="math inline">\(t\)</span> 之后的概率，即存活时间 <span class="math inline">\(t\)</span> 的概率。假定 <span class="math inline">\(T^*\)</span> 是连续的，则生存函数定义为</p>
+<p><span class="math display">\[\mathcal{S}(t)=\Pr(T^*&gt;t)=\int_t^\infty p(s)ds\]</span></p>
+<p>其中 <span class="math inline">\(p(\cdot)\)</span> 表示相应的概率密度函数。生存函数必须是随着 <span class="math inline">\(t\)</span> 的增加而非增的，其中 <span class="math inline">\(\mathcal{S}(t=0)\)</span> 总是等于 1. 在生存分析中发挥突出作用的另一个函数是<strong>风险函数</strong> (hazard function)。它描述了一个事件在时间区间 <span class="math inline">\([t,t+dt)\)</span> 内的瞬时风险，前提是生存到 <span class="math inline">\(t\)</span>，它定义为</p>
+<p><span class="math display">\[\begin{aligned}h(t)=\lim_{dt\to0}\frac{\Pr(t\leq T^*&lt;t+dt\mid T^*\geq t)}{dt},\quad t&gt;0.\end{aligned}\]</span></p>
+<p>根据其定义，<span class="math inline">\(h(\cdot)\)</span> 也称为瞬时风险函数 (instantaneous risk function) 或简称为风险函数 (risk hazard). 生存函数也可用风险函数表示为</p>
+<p><span class="math display" id="eq:3-1">\[\begin{align}
+\mathcal{S}(t)=\exp\bigl\{-\mathcal{H}(t)\bigr\}=\exp\bigl\{-\int_0^th(s)ds\bigr\}
+\tag{3.1}
+\end{align}\]</span></p>
+<p>其中 <span class="math inline">\(\mathcal H(t)\)</span> 称为累积风险函数 (cumulative risk/hazard function)，描述直到时间 <span class="math inline">\(t\)</span> 为止的累积风险。函数 <span class="math inline">\(\mathcal H(t)\)</span> 也可以解释为在时间 <span class="math inline">\(t\)</span> 之前观察到的事件的预期数量。</p>
+<p>当我们有兴趣根据手头的随机样本估计这两个函数或事件时间分布的任何其他特征时，必须考虑删失。具体来说，令 <span class="math inline">\(T_i\)</span> 表示受试者 <span class="math inline">\(i\)</span> 的观测事件时间，定义为真实事件时间和删失时间 <span class="math inline">\(C_i\)</span> 的较小值。我们还引入了事件指示符 <span class="math inline">\(\delta_i=I(T^*_i\leqslant C_i)\)</span>，如果观测事件时间对应于真实事件时间，则取 1，否则取 0，其中 <span class="math inline">\(I(\cdot)\)</span> 表示指示函数 (indicator function). 一般来说，在生存分析中，我们感兴趣的是仅使用可用信息，即使用 <span class="math inline">\(\{T_i,\delta_i\}\)</span>来估计 <span class="math inline">\(T^*_i\)</span> 的分布特征。我们首先讨论生存函数的估计。Kaplan and Meier (1958) 提出了最著名的估计。这是一个非参数估计，不对失效时间的潜在分布做出任何假定。为引入该估计，令 <span class="math inline">\(t_1,\ldots,t_k\)</span> 表示手头样本中的唯一事件时间。使用全概率定律 (law of total probability)，在任何时间点 <span class="math inline">\(t\)</span> 生存的概率可以写为条件概率的乘积：</p>
+<p><span class="math display">\[\begin{aligned}\Pr(T^*&gt;t)=\Pr(T^*&gt;t\mid T^*&gt;t-1)\times\Pr(T^*&gt;t-1\mid T^*&gt;t-2)\times\ldots\end{aligned}\]</span></p>
+<p>为了估计每个唯一事件时间的生存概率，我们利用上述展开式，并在计算条件概率时，通过适当调整处于风险中的研究对象（即尚未发生事件且未删失的研究对象）的数量来考虑删失，从而得到如下估计</p>
+<p><span class="math display" id="eq:3-2">\[\begin{align}
+\hat{\mathcal{S}}_{KM}(t)=\prod_{\begin{array}{c}i:t_i\leq t\\\end{array}}\frac{r_i-d_i}{r_i}
+\tag{3.2}
+\end{align}\]</span></p>
+<p>其中 <span class="math inline">\(r_i\)</span> 表示在唯一事件 <span class="math inline">\(t_i\)</span> 处仍处于风险中的受试者的数量，<span class="math inline">\(d_i\)</span> 是在 <span class="math inline">\(t_i\)</span> 处的事件数。可以使用 Greenwood 公式 (Greenwood, 1926; Kalbfleisch and Prentice, 2002, Section 1.4) 来计算 <span class="math inline">\(\hat{\mathcal{S}}_{KM}(t)\)</span> 的方差，并使用 <span class="math inline">\(\hat{\mathcal{S}}_{KM}(t)\)</span> 的渐近正态性，可求出 <span class="math inline">\({\mathcal{S}}(t)\)</span> 的置信区间。然而，更好的方法是基于 <span class="math inline">\(\log\mathcal{H}(t)\)</span> 的对称区间推导 <span class="math inline">\({\mathcal{S}}(t)\)</span> 的非对称置信区间。这确保了 <span class="math inline">\({\mathcal{S}}(t)\)</span> 的置信限不会跨越区间 <span class="math inline">\([0,1]\)</span> 的界。<span class="math inline">\(\log\hat{\mathcal{H}}_{KM}(t)\)</span> 的方差是使用与 Greenwood 公式中 <span class="math inline">\(\hat{\mathcal{S}}_{KM}(t)\)</span> 的方差相似的原理得出的，结果为</p>
+<p><span class="math display">\[\begin{aligned}\text{v}\hat{\text{a}}\text{r}\big\{\log\hat{\mathcal{H}}_{KM}(t)\big\}&amp;=\frac{\sum_{i:t_i\leq t}d_i/\{r_i(r_i-d_i)\}}{\left[\sum_{i:t_i\leq t}\log\{(r_i-d_i)/r_i\}\right]^2}\end{aligned}\]</span></p>
+<p>在上述 <span class="math inline">\({\mathcal{S}}(t)\)</span> 的非对称置信区间的推导中，我们使用了累积风险函数的 Kaplan-Meier 估计 <span class="math inline">\(\hat{\mathcal{H}}_{KM}(t)\)</span>。利用关系式 <a href="chap3.html#eq:3-1">(3.1)</a>，这实际上由 <span class="math inline">\(\hat{\mathcal{H}}_{KM}(t)=-\log\hat{\mathcal{S}}_{KM}(t)\)</span> 给出。另一个类似的累积风险函数非参数估计量是 Nelson-Aalen 估计，为此已经发展了丰富的渐近理论 (Altschuler, 1970; Nelson, 1972; Aalen, 1976; Fleming and Harrington, 1991)</p>
+<p><span class="math display">\[\hat{\mathcal{H}}_{NA}(t)=\sum_{i:t_i\leq t}\frac{d_i}{r_i}\]</span></p>
+<p>其中 <span class="math inline">\(d_i\)</span> 和 <span class="math inline">\(r_i\)</span> 的解释与 Kaplan-Meier 估计相同。基于 Nelson-Aalen 估计并再次使用关系式 <a href="chap3.html#eq:3-1">(3.1)</a>，我们可以推导出以下生存函数估计</p>
+<p><span class="math display" id="eq:3-3">\[\begin{align}
+\hat{\mathcal{S}}_B(t)=\exp\bigl\{-\hat{\mathcal{H}}_{NA}(t)\bigr\}=\prod_{i:t_i\leq t}\exp(-d_i/r_i)
+\tag{3.3}
+\end{align}\]</span></p>
+<p>这由 Breslow (1972) 提出。为了基于 Breslow 估计推导 <span class="math inline">\(\mathcal S(t)\)</span> 的置信区间，，我们再次使用与 Greenwood 公式中 <span class="math inline">\(\log\hat{\mathcal{H}}_{KM}(t)\)</span> 的方差相似的公式来估计 <span class="math inline">\(\log\hat{\mathcal{H}}_{NA}(t)\)</span> 的方差。生存函数的两个估计是渐近等价的。然而，在有限样本中 <span class="math inline">\(\hat{\mathcal{S}}_B(t)\geq\hat{\mathcal{S}}_{KM}(t)\)</span>，更重要的是，如果最大观测事件时间 <span class="math inline">\(T_i\)</span> 对应于真实事件时间，则 <span class="math inline">\(\hat{\mathcal{S}}_{KM}(T_i)=0\)</span>，而 <span class="math inline">\(\hat{\mathcal{S}}_{B}(T_i)&gt;0\)</span>。一般来说，Breslow 估计具有比 Kaplan-Meier 一致更小 (uniformly lower) 的方差，但它是上偏的 (biased upward)，特别是当 <span class="math inline">\(\hat{\mathcal{S}}(t)\)</span> 接近零时。在比较均方误差时，这些方面会权衡 (Fleming and Harrington, 1984)。图 3.1 给出了针对 PBC 数据集分别计算生存函数和累积风险函数的 Kaplan-Meier 和 Nelson-Aalen 估计的图示。</p>
+<details><summary><font color="#B95953">图 3.1</font>
+</summary><img src="figure/figure%203.1.png#center" style="width:80.0%"></details><div id="sec3-2-1" class="section level3" number="3.2.1">
+<h3>
+<span class="header-section-number">3.2.1</span> 删失数据的似然构造<a class="anchor" aria-label="anchor" href="#sec3-2-1"><i class="fas fa-link"></i></a>
+</h3>
+<p>当生存函数 <span class="math inline">\(\mathcal S(t)\)</span> 假定为一个特定的参数形式时，所关心参数的估计通常基于最大似然法，具体来说，令 <span class="math inline">\(\{T_i,\delta_i\},i = 1,\ldots,n\)</span> 表示来自分布函数 <span class="math inline">\(\mathcal P\)</span> 的随机样本中的生存信息，分布函数 <span class="math inline">\(\mathcal P\)</span> 由 <span class="math inline">\(\theta\)</span> 参数化，概率密度函数 <span class="math inline">\(p(t;\theta)\)</span>。在似然函数的构造中，我们需要考虑删失。更具体地说，在时间 <span class="math inline">\(T_i\)</span> 观察到事件的受试者 <span class="math inline">\(i\)</span> 对似然贡献了 <span class="math inline">\(p(T_i; \theta)\)</span>，而对于在时间 <span class="math inline">\(T_i\)</span> 删失的受试者 <span class="math inline">\(i\)</span>，我们所知道的是她存活到该点，即，<span class="math inline">\(T^*i &gt; T_i = C_i\)</span>，因此，该受试者对似然贡献了 <span class="math inline">\(\mathcal S_i(T_i ; \theta)\)</span>。因此，结合删失和未删失观测的信息，我们得到了对数似然函数</p>
+<p><span class="math display" id="eq:3-4">\[\begin{align}
+\ell(\theta)=\sum_{i=1}^n\delta_i\log p(T_i;\theta)+(1-\delta_i)\log\mathcal{S}_i(T_i;\theta)
+\tag{3.4}
+\end{align}\]</span></p>
+<p>使用关系 <span class="math inline">\(h(t)=p(t)\big/\mathcal{S}(t)\)</span> 和 <span class="math inline">\(\mathcal{S}(t)=\exp\{-\mathcal{H}(t)\}\)</span>，对数似然也可根据风险函数写为</p>
+<p><span class="math display" id="eq:3-5">\[\begin{align}
+\ell(\theta)=\sum_{i=1}^n\delta_i\log h_i(T_i;\theta)-\int_0^{T_i}h_i(s;\theta)ds
+\tag{3.5}
+\end{align}\]</span></p>
+<p>从该等价公式中可以清楚地看出，所有受试者对对数似然的贡献量等于在其相应的观测事件时间<span class="math inline">\(T_i\)</span> 处计算的累积风险函数的负值。经历该事件的受试者额外贡献的量等于在 <span class="math inline">\(T_i=T^*_i\)</span> 处计算的对数风险函数。因此，与未删失的观测相比，删失观测对统计推断的贡献更少。一旦构建了对数似然函数，就可以利用 Newton-Raphson 算法 (Lange, 2004) 之类的迭代优化程序来找到最大似然估计值 <span class="math inline">\(\hat\theta\)</span>。接下来，按照经典的渐近最大似然理论框架 (Cox and Hinkley, 1974) 进行推断。</p>
+</div>
+</div>
+<div id="sec3-3" class="section level2" number="3.3">
+<h2>
+<span class="header-section-number">3.3</span> 相对风险回归模型<a class="anchor" aria-label="anchor" href="#sec3-3"><i class="fas fa-link"></i></a>
+</h2>
+<p>由于 Cox 模型 (Cox, 1972) 在现代生存分析中的普及，比例风险模型（也称为相对风险或相对危险模型）已占据了主导地位。这些模型假定协变量对事件的风险具有乘性效应，公式为</p>
+<p><span class="math display" id="eq:3-6">\[\begin{align}
+\begin{array}{rcl}h_i(t\mid w_i)&amp;=&amp;\lim_{dt\to0}\Pr(t\leq T^*&lt;t+dt\mid T^*\geq t,w_i)\Big/dt\\&amp;=&amp;h_0(t)\exp(\gamma^\top w_i)\end{array}
+\tag{3.6}
+\end{align}\]</span></p>
+<p>其中 <span class="math inline">\(w_i^\top=(w_{i1},\ldots,w_{ip})\)</span> 表示假定与每个受试者的风险相关的协变量向量，<span class="math inline">\(\gamma\)</span> 表示相应的回归系数向量。函数 <span class="math inline">\(h_0(t)\)</span> 称为基线危险或<strong>基线风险函数</strong> (baseline hazard or risk function)，对应于 <span class="math inline">\(\gamma^\top w_i=0\)</span> 的受试者的危险函数。<span class="math inline">\(\gamma^\top w_i\)</span> 是否包括截距 <span class="math inline">\(\gamma_0\)</span> 取决于基线风险函数是否具有恒定的尺度参数。将模型写为对数尺度</p>
+<p><span class="math display">\[\begin{aligned}\log h_i(t\mid w_i)=\log h_0(t)+\gamma_1w_{i1}+\gamma_2w_{i2}+\ldots+\gamma_pw_{ip}\end{aligned}\]</span></p>
+<p>我们观察到，预测变量 <span class="math inline">\(w_j\)</span> 的回归系数 <span class="math inline">\(\gamma_j\)</span> 表示如果 <span class="math inline">\(w_j\)</span> 增加一个单位而所有其他预测变量保持不变，任何固定时间点 <span class="math inline">\(t\)</span> 的对数风险的变化。类似地，<span class="math inline">\(\exp(\gamma_j)\)</span> 表示在任意时间 <span class="math inline">\(t\)</span>，<span class="math inline">\(w_{ij}\)</span> 变化一个单位的风险比。一般来说，具有协变量向量 <span class="math inline">\(w_i\)</span> 的受试者 <span class="math inline">\(i\)</span> 与具有协变量向量 <span class="math inline">\(w_k\)</span> 的受试者 <span class="math inline">\(k\)</span> 的风险比为：</p>
+<p><span class="math display">\[\begin{aligned}\frac{h_i(t\mid w_i)}{h_k(t\mid w_k)}=\exp\{\gamma^\top(w_i-w_k)\}\end{aligned}\]</span></p>
+<p>如 <a href="chap3.html#sec3-1">3.1</a> 节所述，删失的影响之一是推断可能对事件时间分布的错误指定很敏感。在相对风险模型 <a href="chap3.html#eq:3-6">(3.6)</a> 下，<span class="math inline">\(T^*_i\)</span> 的分布假定隐藏在基线风险函数的指定中。例如，当 <span class="math inline">\(T^*_i\)</span> 服从 Weibull 分布时，基线风险函数将形如 <span class="math inline">\(h_0(t)=\phi\sigma_tt^{\sigma_t-1}\)</span>。在这种情况下，模型中所有参数的估计，即回归系数 <span class="math inline">\(\gamma\)</span> 和 <span class="math inline">\(h_0(t)\)</span> 指定中的参数，通过最大化相应的对数似然函数 <a href="chap3.html#eq:3-5">(3.5)</a> 来进行。然而，Cox (1972) 表明，感兴趣的主要参数（即 <span class="math inline">\(\gamma\)</span>）的估计可以基于偏对数似然函数</p>
+<p><span class="math display" id="eq:3-7">\[\begin{align}
+p\ell(\gamma)=\sum_{i=1}^n\delta_i\bigg[\gamma^\top w_i-\log\bigg\{\sum_{T_j\ge T_i}\exp(\gamma^\top w_j)\bigg\}\bigg]
+\tag{3.7}
+\end{align}\]</span></p>
+<p>不需要指定 <span class="math inline">\(h_0(t)\)</span>，即无需指定 <span class="math inline">\(T^*_i\)</span> 的分布。因此，具有未指定基线风险函数的相对风险模型 <a href="chap3.html#eq:3-6">(3.6)</a> 是一个半参数模型，它不对事件时间的分布做出任何假定，但假定协变量对风险率具有乘法作用。直观上，偏似然可视为模型对患者生存时间排序良好程度的度量。尽管这不等于全对数似然 <a href="chap3.html#eq:3-5">(3.5)</a>，但可以这样处理。特别是，通过求解偏对数似然得分方程找到最大偏似然估计</p>
+<p><span class="math display">\[\begin{aligned}\frac{\partial p\ell(\gamma)}{\partial\gamma^\top}=\sum_{i=1}^n\delta_i\bigg\{w_i-\frac{\sum_{T_j\ge T_i}w_j\exp(\gamma^\top w_j)}{\sum_{T_j\ge T_i}\exp(\gamma^\top w_j)}\bigg\}=0\end{aligned}\]</span></p>
+<p>解 <span class="math inline">\(\hat\gamma\)</span> 与均值为 <span class="math inline">\(\gamma_0\)</span>（真参数向量）和方差为 <span class="math inline">\(\left[E\{\mathcal{I}(\gamma^0)\}\right]^{-1}\)</span>（对应于 <a href="chap3.html#eq:3-7">(3.7)</a> 的期望信息矩阵的逆）一致且渐近正态分布。由于该期望需要删失分布的知识，因此通常使用观测信息 <span class="math inline">\(\{\mathcal{I}(\hat{\gamma})\}^{-1}\)</span> 来估计标准误，其中</p>
+<p><span class="math display">\[\mathcal{I}(\hat{\gamma})=-\sum_{i=1}^n\frac{\partial^2p\ell_i(\gamma)}{\partial\gamma^\top\partial\gamma}\Big|_{\gamma=\hat{\gamma}}\]</span></p>
+<p>关于最大偏似然估计相对于最大似然估计（其中 <span class="math inline">\(h_0(t)\)</span> 指定为某些未知参数）的相对效率的全面讨论，可参考 Kalbfleisch and Prentice (2002, Section 5.9).</p>
+<div id="sec3-3-3" class="section level3" number="3.3.1">
+<h3>
+<span class="header-section-number">3.3.1</span> 在 R 中的实现<a class="anchor" aria-label="anchor" href="#sec3-3-3"><i class="fas fa-link"></i></a>
+</h3>
+<p>用于分析事件时间数据的主要 <code>R</code> 包是 <code>survival</code> 包 (Theerneau and Lumley, 2012). 为了加载这个包，我们使用命令 <code><a href="https://github.com/therneau/survival">library("survival")</a></code>。CRAN 中与生存分析相关的其他软件包的完整列表可从 CRAN Task View: Survival Analysis (Allignol and Latouche, 2012) 中获取。用于拟合 Cox 模型的函数是 <code>coxph()</code>，它有两个主要参数，<code>formula</code> 参数指定观测失效时间与协变量之间的关系，<code>data</code> 参数指定包含这些变量的数据框。在 <code>formula</code> 参数的左侧，函数 <code>Surv()</code> 用于指定失效时间的可用信息，即观测失效时间和删失类型（即右、左、区间和计数<a class="footnote-ref" tabindex="0" data-toggle="popover" data-content='&lt;p&gt;选项 &lt;code&gt;counting&lt;/code&gt; 用于指定相对风险模型的计数过程公式，如 &lt;a href="chap3.html#sec3-5"&gt;3.5&lt;/a&gt; 节所述。&lt;/p&gt;'><sup>5</sup></a>）。以下命令说明了如何使用 <code>coxph()</code> 将 Cox 模型拟合到 PBC 数据集，该数据集可从包 <code>JM</code> 中作为数据框 <code>pbc2.id</code> 获得。</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="chap3.html#cb13-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">data</span>(pbc2.id, <span class="at">package =</span> <span class="st">"JM"</span>)</span>
+<span id="cb13-2"><a href="chap3.html#cb13-2" tabindex="-1"></a><span class="sc">&gt;</span> pbc2.id<span class="sc">$</span>status2 <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(pbc2.id<span class="sc">$</span>status <span class="sc">!=</span> <span class="st">"alive"</span>)</span>
+<span id="cb13-3"><a href="chap3.html#cb13-3" tabindex="-1"></a><span class="sc">&gt;</span> coxFit <span class="ot">&lt;-</span> <span class="fu">coxph</span>(<span class="fu">Surv</span>(years, status2) <span class="sc">~</span> drug <span class="sc">+</span> age <span class="sc">+</span> sex,</span>
+<span id="cb13-4"><a href="chap3.html#cb13-4" tabindex="-1"></a>                  <span class="at">data =</span> pbc2.id)</span>
+<span id="cb13-5"><a href="chap3.html#cb13-5" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">summary</span>(coxFit)</span>
+<span id="cb13-6"><a href="chap3.html#cb13-6" tabindex="-1"></a></span>
+<span id="cb13-7"><a href="chap3.html#cb13-7" tabindex="-1"></a>Call<span class="sc">:</span></span>
+<span id="cb13-8"><a href="chap3.html#cb13-8" tabindex="-1"></a><span class="fu">coxph</span>(<span class="at">formula =</span> <span class="fu">Surv</span>(years, status2) <span class="sc">~</span> drug <span class="sc">+</span> age <span class="sc">+</span> sex, <span class="at">data =</span> pbc2.id)</span>
+<span id="cb13-9"><a href="chap3.html#cb13-9" tabindex="-1"></a></span>
+<span id="cb13-10"><a href="chap3.html#cb13-10" tabindex="-1"></a>  n<span class="ot">=</span> <span class="dv">312</span>, number of events<span class="ot">=</span> <span class="dv">169</span> </span>
+<span id="cb13-11"><a href="chap3.html#cb13-11" tabindex="-1"></a></span>
+<span id="cb13-12"><a href="chap3.html#cb13-12" tabindex="-1"></a>                  coef <span class="fu">exp</span>(coef) <span class="fu">se</span>(coef)      z <span class="fu">Pr</span>(<span class="sc">&gt;</span><span class="er">|</span>z<span class="sc">|</span>)   </span>
+<span id="cb13-13"><a href="chap3.html#cb13-13" tabindex="-1"></a>drugD<span class="sc">-</span>penicil <span class="sc">-</span><span class="fl">0.13759</span>   <span class="fl">0.87146</span>  <span class="fl">0.15597</span> <span class="sc">-</span><span class="fl">0.882</span>  <span class="fl">0.37770</span>   </span>
+<span id="cb13-14"><a href="chap3.html#cb13-14" tabindex="-1"></a>age            <span class="fl">0.02149</span>   <span class="fl">1.02172</span>  <span class="fl">0.00772</span>  <span class="fl">2.784</span>  <span class="fl">0.00537</span> <span class="sc">**</span></span>
+<span id="cb13-15"><a href="chap3.html#cb13-15" tabindex="-1"></a>sexfemale     <span class="sc">-</span><span class="fl">0.49330</span>   <span class="fl">0.61061</span>  <span class="fl">0.20735</span> <span class="sc">-</span><span class="fl">2.379</span>  <span class="fl">0.01735</span> <span class="sc">*</span> </span>
+<span id="cb13-16"><a href="chap3.html#cb13-16" tabindex="-1"></a><span class="sc">---</span></span>
+<span id="cb13-17"><a href="chap3.html#cb13-17" tabindex="-1"></a>Signif. codes<span class="sc">:</span>  <span class="dv">0</span> ‘<span class="sc">**</span><span class="er">*</span>’ <span class="fl">0.001</span> ‘<span class="sc">**</span>’ <span class="fl">0.01</span> ‘<span class="sc">*</span>’ <span class="fl">0.05</span> ‘.’ <span class="fl">0.1</span> ‘ ’ <span class="dv">1</span></span>
+<span id="cb13-18"><a href="chap3.html#cb13-18" tabindex="-1"></a></span>
+<span id="cb13-19"><a href="chap3.html#cb13-19" tabindex="-1"></a>              <span class="fu">exp</span>(coef) <span class="fu">exp</span>(<span class="sc">-</span>coef) lower .<span class="dv">95</span> upper .<span class="dv">95</span></span>
+<span id="cb13-20"><a href="chap3.html#cb13-20" tabindex="-1"></a>drugD<span class="sc">-</span>penicil    <span class="fl">0.8715</span>     <span class="fl">1.1475</span>    <span class="fl">0.6419</span>    <span class="fl">1.1831</span></span>
+<span id="cb13-21"><a href="chap3.html#cb13-21" tabindex="-1"></a>age              <span class="fl">1.0217</span>     <span class="fl">0.9787</span>    <span class="fl">1.0064</span>    <span class="fl">1.0373</span></span>
+<span id="cb13-22"><a href="chap3.html#cb13-22" tabindex="-1"></a>sexfemale        <span class="fl">0.6106</span>     <span class="fl">1.6377</span>    <span class="fl">0.4067</span>    <span class="fl">0.9168</span></span>
+<span id="cb13-23"><a href="chap3.html#cb13-23" tabindex="-1"></a></span>
+<span id="cb13-24"><a href="chap3.html#cb13-24" tabindex="-1"></a>Concordance<span class="ot">=</span> <span class="fl">0.573</span>  (<span class="at">se =</span> <span class="fl">0.023</span> )</span>
+<span id="cb13-25"><a href="chap3.html#cb13-25" tabindex="-1"></a>Likelihood ratio test<span class="ot">=</span> <span class="fl">14.97</span>  on <span class="dv">3</span> df,   p<span class="ot">=</span><span class="fl">0.002</span></span>
+<span id="cb13-26"><a href="chap3.html#cb13-26" tabindex="-1"></a>Wald test            <span class="ot">=</span> <span class="fl">16.1</span>  on <span class="dv">3</span> df,   p<span class="ot">=</span><span class="fl">0.001</span></span>
+<span id="cb13-27"><a href="chap3.html#cb13-27" tabindex="-1"></a><span class="fu">Score</span> (logrank) test <span class="ot">=</span> <span class="fl">16.3</span>  on <span class="dv">3</span> df,   p<span class="ot">=</span><span class="fl">0.001</span></span></code></pre></div>
+<p>在前两行中，我们加载并定义复合事件的指标，即死亡或移植，以先到者为准。第三行拟合 Cox 模型。在函数 <code>Surv()</code> 中，我们指定变量 <code>years</code> 表示观测事件时间，变量 <code>status2</code> 表示事件指示符。默认情况下，假定为右删失。在 <code>formula</code> 参数右侧，我们指定死亡或移植的对数相对风险以加性方式取决于患者的治疗、年龄和性别。在最后一行中，调用 <code><a href="https://rdrr.io/r/base/summary.html">summary()</a></code>来总结 Cox 模型的拟合情况。输出中的列 <code>coeffe</code> 包含回归系数估计。更容易解释的是 <code>exp(coeff)</code> 列提供的指数系数，它表示由于每个协变量导致的风险的乘性变化。我们观察到，积极治疗将复合事件的风险降低了约 12.9%，尽管没有统计学意义。另一方面，基线年龄增加一年与风险增加 2.2% 相关，男性发生事件的风险比女性高 63.8%.</p>
+</div>
+</div>
+<div id="sec3-4" class="section level2" number="3.4">
+<h2>
+<span class="header-section-number">3.4</span> 时依协变量<a class="anchor" aria-label="anchor" href="#sec3-4"><i class="fas fa-link"></i></a>
+</h2>
+<p>在 <a href="chap3.html#sec3-3">3.3</a> 节介绍的相对风险模型中，我们假定风险仅取决于随访期间值不变的协变量，如基线年龄、性别、随机分配的治疗等。然而，在许多研究中，研究<strong>时依协变量</strong> (time-dependent covariates) 是否与事件风险相关也可能是有意义的。其中可能包括环境因素、随访期间测量的生化和临床参数以及治疗剂量的调整。</p>
+<p>在我们解释如何在实践中处理这些协变量之前，我们应该首先区分两类不同的时依协变量，即外部或外源协变量和内部或内生协变量。区分时变协变量很重要的原因是，与外源协变量相比，内生协变量需要特殊处理。为了引入这两种类型的协变量，令 <span class="math inline">\(y_i(t)\)</span> 表示受试者 <span class="math inline">\(i\)</span> 在时间 <span class="math inline">\(t\)</span> 的协变量向量，<span class="math inline">\(\mathcal{Y}_i(t)=\{y_i(s),0\leq s&lt;t\}\)</span> 表示直到 <span class="math inline">\(t\)</span> 的协变量史 (covariate history). 根据 Kalbfleisch and Prentice (2002, Section 6.3)，对于所有满足 <span class="math inline">\(0&lt;s\le s\)</span> 且 <span class="math inline">\(ds\rightarrow 0\)</span> 的 <span class="math inline">\(s,t\)</span>，外源协变量的正式定义要求这些协变量满足以下关系</p>
+<p><span class="math display" id="eq:3-8">\[\begin{align}
+\Pr\bigl\{s\leq T_i^*&lt;s+ds\mid T_i^*\geq s,\mathcal{Y}_i(s)\bigr\}\\=\quad\Pr\bigl\{s\leq T_i^*&lt;s+ds\mid T_i^*\geq s,\mathcal{Y}_i(t)\bigr\}
+\tag{3.8}
+\end{align}\]</span></p>
+<p>与其等价的定义为</p>
+<p><span class="math display" id="eq:3-9">\[\begin{align}
+\Pr\bigl\{\mathcal{Y}_i(t)\mid\mathcal{Y}_i(s),T_i^*\ge s\bigr\}=\Pr\bigl\{\mathcal{Y}_i(t)\mid\mathcal{Y}_i(s),T_i^*=s\bigr\},\quad s\le t
+\tag{3.9}
+\end{align}\]</span></p>
+<p>它正式定义了这样的观点：<span class="math inline">\(y_i(\cdot)\)</span> 与时依失效率相关联，但到任何时间 <span class="math inline">\(t &gt; s\)</span> 的未来路径都不会受到时间 <span class="math inline">\(s\)</span> 时发生失效的影响。特别是，外源协变量是一个可预测过程 (predictable process)，这意味着在任何时间 <span class="math inline">\(t\)</span>，其值在 <span class="math inline">\(t\)</span> 之前无限小的时间段内即可得知。另一方面，内生时变协变量是不满足<a href="chap3.html#eq:3-8">(3.8)</a> 或等价地不满足 <a href="chap3.html#eq:3-9">(3.9)</a> 的协变量，并且它们是不可预测的。</p>
+<p>外源协变量的一个标准例子是一天中的时间或一年中的季节。例如，自杀未遂事件的季节性模式已经得到认可，在冬季的几个月里发生率更高。外源协变量的另一个例子是那些从研究开始就预先确定了完整路径的协变量。例如，在一些研究中，人们有兴趣比较根据预定标准调整治疗剂量的治疗策略。另一种类型的外源协变量是受试者外部的随机过程。例如，环境因素的水平，如空气污染，可能与哮喘发作的频率有关。在所有这些例子中，很明显，这些协变量在任何时间点 <span class="math inline">\(t\)</span> 的值都不受真实失效时间的影响，因此满足 <a href="chap3.html#eq:3-9">(3.9)</a>。对于外源协变量，在条件 <a href="chap3.html#eq:3-8">(3.8)</a> 或 <a href="chap3.html#eq:3-9">(3.9)</a> 下，我们可以直接定义以协变量路径为条件的生存函数，使用其与风险函数的关系，即</p>
+<p><span class="math display">\[\begin{array}{rcl}\mathcal{S}_i(t\mid\mathcal{Y}_i(t))&amp;=&amp;\Pr\bigl(T_i^*&gt;t\mid\mathcal{Y}_i(t)\bigr)\\&amp;=&amp;\exp\Bigl\{-\int_0^th_i(s\mid\mathcal{Y}_i(s))ds\Bigr\}\end{array}\]</span></p>
+<p>另一方面，内生协变量通常是随着对研究对象进行的时依测量而出现的。这些包括生物标志物和临床参数，如原发性胆汁性肝硬化患者的血清胆红素水平、HIV 感染患者的 CD4 细胞计数、肝硬化患者的凝血酶原指数和主动脉狭窄患者的主动脉梯度水平（见 <a href="chap1.html#sec1-2">1.2</a> 节）。有几个重要的特征使这种协变量的统计分析复杂化。首先，它们通常需要受试者的生存才能存在。因此，当失效定义为受试者的死亡时，他们的路径携带了关于失效时间的直接信息。更具体地说，只要 <span class="math inline">\(y_i(t−ds)\)</span> 在 <span class="math inline">\(ds \rightarrow 0\)</span> 时存在，生存函数就满足</p>
+<p><span class="math display" id="eq:3-10">\[\begin{align}
+\mathcal{S}_i(t\mid\mathcal{Y}_i(t))=\Pr\bigl(T_i^*&gt;t\mid\mathcal{Y}_i(t)\bigr)=1
+\tag{3.10}
+\end{align}\]</span></p>
+<p>另一方面，受试者在时间 <span class="math inline">\(s\)</span> 的失效对应于在 <span class="math inline">\(t\ge s\)</span> 时不存在协变量，这直接意味着违反了条件 <a href="chap3.html#eq:3-9">(3.9)</a>。此外，式 <a href="chap3.html#eq:3-10">(3.10)</a> 的一个结果是，与外源协变量相反，之前定义为的风险函数为</p>
+<p><span class="math display">\[\begin{aligned}h_{i}(t\mid\mathcal{Y}_{i}(t))=\lim_{dt\to0}\Pr\{t\leq T^{*}&lt;t+dt\mid T^{*}\geq t,\mathcal{Y}_{i}(t)\}\big/dt\end{aligned}\]</span></p>
+<p>与生存函数没有直接关系。也就是说，函数</p>
+<p><span class="math display">\[\mathcal{S}_i(t\mid\mathcal{Y}_i(t))=\exp\Bigl\{-\int_0^th_i(s\mid\mathcal{Y}_i(s))ds\Bigr\}\quad\text{以及}\quad p(t\mid\mathcal{Y}_i(t))=\frac{h_i(t\mid\mathcal{Y}_i(t))}{\mathcal{S}_i(t\mid\mathcal{Y}_i(t))}\]</span></p>
+<p>没有通常的生存和密度函数解释。由于这一特征，基于 <span class="math inline">\(p(·)\)</span> 和 <span class="math inline">\(\mathcal S(·)\)</span> 的对数似然构造 <a href="chap3.html#eq:3-4">(3.4)</a> 对于内生协变量没有意义。内生协变量的另一个特征是它们的测量通常存在误差。该测量误差主要是指由患者自身引起的生物变异，而不是由确定该协变量值的程序/机器引起的误差。特别是，即使在同一天内对同一患者进行两次测量，我们也不期望观察到内生性协变量（如生物标志物）的完全相同的值。因此，对于此类协变量，更合理的假设是观察到的标志物水平实际上是真实标志物水平受到生物变异污染的版本。然而，应该指出的是，测量误差并不是内生性协变量的独特特征，因为一些外源性协变量也存在测量误差（例如空气污染）。内生性协变量的最后一个重要含义是，它们的完整路径到任何时间 <span class="math inline">\(t\)</span> 并没有被完全观测。也就是说，患者的生物标志物或其他临床参数水平仅在患者访问研究中心以提供测量数据的特定场合下才已知，而在这些就诊时间之间是未知的。</p>
+</div>
+<div id="sec3-5" class="section level2" number="3.5">
+<h2>
+<span class="header-section-number">3.5</span> 扩展的 Cox 模型<a class="anchor" aria-label="anchor" href="#sec3-5"><i class="fas fa-link"></i></a>
+</h2>
+<p><a href="chap3.html#sec3-3">3.3</a> 节所介绍的 Cox 模型可通过 Andersen and Gill (1982) 详细研究的计数过程公式进行扩展，以处理外源时依协变量，并在 Fleming and Harrington (1991) 以及 Andersen et al. (1993) 中进行了更详细的介绍。Cox 模型这一公式的直观想法是将事件的发生视为一个非常缓慢的泊松过程的实现 (realization). 在计数过程表示法中，受试者 <span class="math inline">\(i\)</span> 的事件过程写为 <span class="math inline">\(\{N_i(t),R_i(t)\}\)</span>，其中 <span class="math inline">\(N_i(t)\)</span> 表示到时间 <span class="math inline">\(t\)</span> 为止受试者 <span class="math inline">\(i\)</span> 的事件数，<span class="math inline">\(R_i(t)\)</span> 是一个左连续的风险过程，当受试者 <span class="math inline">\(i\)</span> 在时间 <span class="math inline">\(t\)</span> 处于风险时，<span class="math inline">\(R_i(t) = 1\)</span>，否则 <span class="math inline">\(R_i(t) = 0\)</span>。扩展的 Cox 模型（也称为 Andersen-Gill 模型）可表示为：</p>
+<p><span class="math display" id="eq:3-11">\[\begin{align}
+h_i(t\mid\mathcal{Y}_i(t),w_i)=h_0(t)R_i(t)\exp\{\gamma^\top w_i+\alpha y_i(t)\}
+\tag{3.11}
+\end{align}\]</span></p>
+<p>其中，如 <a href="chap3.html#eq:3-6">(3.6)</a> 所示，<span class="math inline">\(w_i\)</span> 表示基线协变量向量，如性别或随机分配的治疗，<span class="math inline">\(y_i(t)\)</span> 表示时依协变量向量。回归系数向量 <span class="math inline">\(\alpha\)</span> 的解释与 <span class="math inline">\(\gamma\)</span> 的解释完全相同。具体来说，简单起见，假定只有一个时依协变量，那么在任何特定的时间点 <span class="math inline">\(t\)</span>，<span class="math inline">\(\exp(\alpha)\)</span> 表示由于在同一时间点 <span class="math inline">\(y_i(t)\)</span> 增加一个单位而导致的事件在时间 <span class="math inline">\(t\)</span> 的风险的相对增加。此外，请注意，由于 <span class="math inline">\(y_i(t)\)</span> 是时依的，模型 <a href="chap3.html#eq:3-11">(3.11)</a> 不再假定风险比在时间上是恒定的。</p>
+<p><span class="math inline">\(\gamma\)</span> 和 <span class="math inline">\(\alpha\)</span> 的估计再次基于相应的偏对数似然函数，该函数可写为</p>
+<p><span class="math display">\[\begin{aligned}p\ell(\gamma)=\,&amp;\sum_{i=1}^{n}\int_{0}^{\infty}\Big\{R_{i}(t)\exp\{\gamma^{\top}w_{i}+\alpha y_{i}(t)\}\\&amp;-\log\Big[\sum_{j}R_{j}(t)\exp\{\gamma^{\top}w_{j}+\alpha y_{j}(t)\}\Big]\Big\}dN_{i}(t)\end{aligned}\]</span></p>
+<p>其中使用了计数过程积分表示法 (Fleming and Harrington, 1991; Andersen et al., 1993). 例如，我们为肝硬化数据集拟合了 Cox 模型，该模型假定死亡风险取决于凝血酶原指数和随机分配的治疗。</p>
+<p><span class="math display">\[\begin{aligned}h_i(t)=h_0(t)\exp\{\gamma\mathtt{Predns}_i+\alpha y_i(t)\}\end{aligned}\]</span></p>
+<p>其中，<code>Predns</code> 是泼尼松治疗组的指示变量，<span class="math inline">\(y_i(t)\)</span> 表示时间 <span class="math inline">\(t\)</span> 的凝血酶原指数水平。在扩展的 Cox 模型中，时依协变量通常使用 (start, stop) 符号进行编码。特别是，每个受试者由多行表示，每行存储了特定时间区间 <span class="math inline">\(y_i(t)\)</span> 的信息。肝硬化数据集中第一位患者的行为</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="chap3.html#cb14-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">data</span>(<span class="st">'prothro'</span>,<span class="at">package =</span> <span class="st">'JM'</span>)</span>
+<span id="cb14-2"><a href="chap3.html#cb14-2" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">head</span>(prothro[<span class="fu">c</span>(<span class="st">"id"</span>, <span class="st">"pro"</span>, <span class="st">"start"</span>, <span class="st">"stop"</span>, <span class="st">"event"</span>)], <span class="at">n =</span> <span class="dv">3</span>)</span>
+<span id="cb14-3"><a href="chap3.html#cb14-3" tabindex="-1"></a></span>
+<span id="cb14-4"><a href="chap3.html#cb14-4" tabindex="-1"></a>  id pro     start      stop event</span>
+<span id="cb14-5"><a href="chap3.html#cb14-5" tabindex="-1"></a><span class="dv">1</span>  <span class="dv">1</span>  <span class="dv">38</span> <span class="fl">0.0000000</span> <span class="fl">0.2436754</span>     <span class="dv">0</span></span>
+<span id="cb14-6"><a href="chap3.html#cb14-6" tabindex="-1"></a><span class="dv">2</span>  <span class="dv">1</span>  <span class="dv">31</span> <span class="fl">0.2436754</span> <span class="fl">0.3805717</span>     <span class="dv">0</span></span>
+<span id="cb14-7"><a href="chap3.html#cb14-7" tabindex="-1"></a><span class="dv">3</span>  <span class="dv">1</span>  <span class="dv">27</span> <span class="fl">0.3805717</span> <span class="fl">0.4134268</span>     <span class="dv">1</span></span></code></pre></div>
+<p><code>start</code> 和 <code>stop</code> 变量表示记录凝血酶原指数的时间区间的限。特别是，对于患者1，凝血酶原在基线时等于 38，在 0.24 年时等于 31，在 0.38 年时为 27. 如果事件发生在相应时间区间的终点，则变量 <code>event</code> 等于1。<code>treat</code> 表示治疗变量，在每个患者的整个随访期内都是固定的。使用以下语法拟合相应的扩展的 Cox 模型：</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="chap3.html#cb15-1" tabindex="-1"></a><span class="sc">&gt;</span> tdCox.pro <span class="ot">&lt;-</span> <span class="fu">coxph</span>(<span class="fu">Surv</span>(start, stop, event) <span class="sc">~</span> pro <span class="sc">+</span> treat,</span>
+<span id="cb15-2"><a href="chap3.html#cb15-2" tabindex="-1"></a>                     <span class="at">data =</span> prothro)</span>
+<span id="cb15-3"><a href="chap3.html#cb15-3" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">summary</span>(tdCox.pro)</span>
+<span id="cb15-4"><a href="chap3.html#cb15-4" tabindex="-1"></a></span>
+<span id="cb15-5"><a href="chap3.html#cb15-5" tabindex="-1"></a>Call<span class="sc">:</span></span>
+<span id="cb15-6"><a href="chap3.html#cb15-6" tabindex="-1"></a><span class="fu">coxph</span>(<span class="at">formula =</span> <span class="fu">Surv</span>(start, stop, event) <span class="sc">~</span> pro <span class="sc">+</span> treat, <span class="at">data =</span> prothro)</span>
+<span id="cb15-7"><a href="chap3.html#cb15-7" tabindex="-1"></a></span>
+<span id="cb15-8"><a href="chap3.html#cb15-8" tabindex="-1"></a>  n<span class="ot">=</span> <span class="dv">2968</span>, number of events<span class="ot">=</span> <span class="dv">292</span> </span>
+<span id="cb15-9"><a href="chap3.html#cb15-9" tabindex="-1"></a></span>
+<span id="cb15-10"><a href="chap3.html#cb15-10" tabindex="-1"></a>                     coef <span class="fu">exp</span>(coef)  <span class="fu">se</span>(coef)</span>
+<span id="cb15-11"><a href="chap3.html#cb15-11" tabindex="-1"></a>pro             <span class="sc">-</span><span class="fl">0.034985</span>  <span class="fl">0.965620</span>  <span class="fl">0.002494</span></span>
+<span id="cb15-12"><a href="chap3.html#cb15-12" tabindex="-1"></a>treatprednisone <span class="sc">-</span><span class="fl">0.137770</span>  <span class="fl">0.871299</span>  <span class="fl">0.118738</span></span>
+<span id="cb15-13"><a href="chap3.html#cb15-13" tabindex="-1"></a>                     z <span class="fu">Pr</span>(<span class="sc">&gt;</span><span class="er">|</span>z<span class="sc">|</span>)    </span>
+<span id="cb15-14"><a href="chap3.html#cb15-14" tabindex="-1"></a>pro             <span class="sc">-</span><span class="fl">14.03</span>   <span class="sc">&lt;</span><span class="fl">2e-16</span> <span class="sc">**</span><span class="er">*</span></span>
+<span id="cb15-15"><a href="chap3.html#cb15-15" tabindex="-1"></a>treatprednisone  <span class="sc">-</span><span class="fl">1.16</span>    <span class="fl">0.246</span>    </span>
+<span id="cb15-16"><a href="chap3.html#cb15-16" tabindex="-1"></a><span class="sc">---</span></span>
+<span id="cb15-17"><a href="chap3.html#cb15-17" tabindex="-1"></a>Signif. codes<span class="sc">:</span>  </span>
+<span id="cb15-18"><a href="chap3.html#cb15-18" tabindex="-1"></a><span class="dv">0</span> ‘<span class="sc">**</span><span class="er">*</span>’ <span class="fl">0.001</span> ‘<span class="sc">**</span>’ <span class="fl">0.01</span> ‘<span class="sc">*</span>’ <span class="fl">0.05</span> ‘.’ <span class="fl">0.1</span> ‘ ’ <span class="dv">1</span></span>
+<span id="cb15-19"><a href="chap3.html#cb15-19" tabindex="-1"></a></span>
+<span id="cb15-20"><a href="chap3.html#cb15-20" tabindex="-1"></a>                <span class="fu">exp</span>(coef) <span class="fu">exp</span>(<span class="sc">-</span>coef) lower .<span class="dv">95</span></span>
+<span id="cb15-21"><a href="chap3.html#cb15-21" tabindex="-1"></a>pro                <span class="fl">0.9656</span>      <span class="fl">1.036</span>    <span class="fl">0.9609</span></span>
+<span id="cb15-22"><a href="chap3.html#cb15-22" tabindex="-1"></a>treatprednisone    <span class="fl">0.8713</span>      <span class="fl">1.148</span>    <span class="fl">0.6904</span></span>
+<span id="cb15-23"><a href="chap3.html#cb15-23" tabindex="-1"></a>                upper .<span class="dv">95</span></span>
+<span id="cb15-24"><a href="chap3.html#cb15-24" tabindex="-1"></a>pro                <span class="fl">0.9704</span></span>
+<span id="cb15-25"><a href="chap3.html#cb15-25" tabindex="-1"></a>treatprednisone    <span class="fl">1.0996</span></span>
+<span id="cb15-26"><a href="chap3.html#cb15-26" tabindex="-1"></a></span>
+<span id="cb15-27"><a href="chap3.html#cb15-27" tabindex="-1"></a>Concordance<span class="ot">=</span> <span class="fl">0.725</span>  (<span class="at">se =</span> <span class="fl">0.018</span> )</span>
+<span id="cb15-28"><a href="chap3.html#cb15-28" tabindex="-1"></a>Likelihood ratio test<span class="ot">=</span> <span class="fl">207.1</span>  on <span class="dv">2</span> df,   p<span class="ot">=</span><span class="er">&lt;</span><span class="fl">2e-16</span></span>
+<span id="cb15-29"><a href="chap3.html#cb15-29" tabindex="-1"></a>Wald test            <span class="ot">=</span> <span class="fl">197.2</span>  on <span class="dv">2</span> df,   p<span class="ot">=</span><span class="er">&lt;</span><span class="fl">2e-16</span></span>
+<span id="cb15-30"><a href="chap3.html#cb15-30" tabindex="-1"></a><span class="fu">Score</span> (logrank) test <span class="ot">=</span> <span class="fl">203.2</span>  on <span class="dv">2</span> df,   p<span class="ot">=</span><span class="er">&lt;</span><span class="fl">2e-16</span></span></code></pre></div>
+<p>与 <a href="chap3.html#sec3-3">3.3</a> 节中用于拟合标准 Cox 模型的语法相比，唯一的区别在于 <code>Surv()</code> 函数的指定，其中前两个参数表示区间的限，最后一个参数是相应的事件指示符。此外，在 <code>data</code> 参数中，数据应以长格式提供。从结果中我们观察到，在校正治疗差异后，凝血酶原指数与死亡风险密切相关，凝血酶原每减少一个单位，风险就会增加为原来的 1.036 倍 (95%CI: 1.031, 1.041).</p>
+<p>Cox 模型的计数过程公式是一个相当通用的公式，它不仅可考虑时依协变量，还可考虑左截断、多个时间尺度、每个受试者的多个事件以及各种形式的病例队列模型等 (Therneau and Grambsch, 2000). 然而，尽管具有这种灵活性，但当时依协变量具有内生性时，扩展的 Cox 模型并不适用。这是因为扩展的 Cox 模型假定时依协变量是可预测过程，测量时没有误差，并且完全指定了它们的完整路径。Cox 模型在计数过程公式下处理时依协变量的特殊方式如图 3.2 所示。更具体地说，假定时依协变量在随访时改变值，并在随访之间的时间区间内保持不变。那么，该模型假定一个事件在任何时间点 <span class="math inline">\(t\)</span> 的风险与同一时间点的协变量的外推值有关。很明显，对于许多内生协变量，如生物标志物，这种阶跃函数近似是不现实的。例如，在上述肝硬化数据集的分析中，假定凝血酶原指数在随访之间保持不变是不合理的，特别是因为随访可能相隔几个月。这实际上意味着这种基于肝硬化数据集的扩展的 Cox 模型的分析不是最佳分析。特别是，这种末次结转 (Last
+Value Carried Forward) 法产生的问题是，参数估计和标准误可能存在严重偏差 (Prentice, 1982). 在本书的其余部分中，我们将介绍一个建模框架，该框架专门用于解释内生时依协变量的特殊特征。</p>
+<details><summary><font color="#B95953">图 3.2</font>
+</summary><img src="figure/figure%203.2.png#center" style="width:80.0%"></details>
+</div>
+<div id="sec3-6" class="section level2" number="3.6">
+<h2>
+<span class="header-section-number">3.6</span> 延伸阅读<a class="anchor" aria-label="anchor" href="#sec3-6"><i class="fas fa-link"></i></a>
+</h2>
+<p>本章的目的是简要介绍失效时间数据的特殊特征，以及相关文献中开发的用于分析此类数据的基本统计工具。然而，这一介绍不是详尽无遗。文献中有许多优秀的文本对生存数据分析的不同方面进行了更深入的研究。特别是，Cox and Oakes (1984), Kalbfleisch and Prentice (2002), Lawless (2002) 以及 Klein and Moeschberger (2003) 详细解释了事件时间数据的特殊特征，如删失和截尾，并详细举例说明了目前可用于其分析的不同统计工具。Fleming and Harrington (1991), Andersen et al. (1993) 和 Aalen et al. (2008) 对使用点过程和鞅的 Cox 模型进行了更为理论化的处理，而 Therneau and Grambsch (2000), Harrell (2001, Chapters 16-20) 以及 Tableman and Kim (2003) 则从更实际的角度出发，主要关注模型构建和模型检验技术，以及它们在标准软件中的实现。Hougaard (2000) 提出了几种多变量生存数据的方法，包括脆弱和边际模型。Duchateauand Janssen (2008) 以及 Wienke (2011) 更详细地介绍了脆弱模型。Sun (2006) 概述了用于分析区间删失失效的可用方法。最后，Ibrahim et al. (2001) 说明了如何在贝叶斯范式下拟合先前文本中提出的标准生存模型。</p>
+
+</div>
+</div>
+
+  <div class="chapter-nav">
+<div class="prev"><a href="chap2.html"><span class="header-section-number">2</span> 纵向数据分析</a></div>
+<div class="next"><a href="chap4.html"><span class="header-section-number">4</span> 纵向与事件时间数据的联合模型</a></div>
+</div></main><div class="col-md-3 col-lg-2 d-none d-md-block sidebar sidebar-chapter">
+    <nav id="toc" data-toggle="toc" aria-label="On this page"><h2>On this page</h2>
+      <ul class="nav navbar-nav">
+<li><a class="nav-link" href="#chap3"><span class="header-section-number">3</span> 事件时间数据分析</a></li>
+<li><a class="nav-link" href="#sec3-1"><span class="header-section-number">3.1</span> 事件时间数据的特征</a></li>
+<li>
+<a class="nav-link" href="#sec3-2"><span class="header-section-number">3.2</span> 生存分析的基本函数</a><ul class="nav navbar-nav"><li><a class="nav-link" href="#sec3-2-1"><span class="header-section-number">3.2.1</span> 删失数据的似然构造</a></li></ul>
+</li>
+<li>
+<a class="nav-link" href="#sec3-3"><span class="header-section-number">3.3</span> 相对风险回归模型</a><ul class="nav navbar-nav"><li><a class="nav-link" href="#sec3-3-3"><span class="header-section-number">3.3.1</span> 在 R 中的实现</a></li></ul>
+</li>
+<li><a class="nav-link" href="#sec3-4"><span class="header-section-number">3.4</span> 时依协变量</a></li>
+<li><a class="nav-link" href="#sec3-5"><span class="header-section-number">3.5</span> 扩展的 Cox 模型</a></li>
+<li><a class="nav-link" href="#sec3-6"><span class="header-section-number">3.6</span> 延伸阅读</a></li>
+</ul>
+
+      <div class="book-extra">
+        <ul class="list-unstyled">
+          
+        </ul>
+</div>
+    </nav>
+</div>
+
+</div>
+</div> <!-- .container -->
+
+<footer class="bg-primary text-light mt-5"><div class="container"><div class="row">
+
+  <div class="col-12 col-md-6 mt-3">
+    <p>"<strong>纵向与事件时间数据的联合模型及其在 R 中的应用</strong>" was written by Wang Zhen. It was last built on 2024-04-19.</p>
+  </div>
+
+  <div class="col-12 col-md-6 mt-3">
+    <p>This book was built by the <a class="text-light" href="https://bookdown.org">bookdown</a> R package.</p>
+  </div>
+
+</div></div>
+</footer><!-- dynamically load mathjax for compatibility with self-contained --><script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    var src = "true";
+    if (src === "" || src === "true") src = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/latest.js?config=TeX-MML-AM_CHTML";
+    if (location.protocol !== "file:")
+      if (/^https?:/.test(src))
+        src = src.replace(/^https?:/, '');
+    script.src = src;
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script><script type="text/x-mathjax-config">const popovers = document.querySelectorAll('a.footnote-ref[data-toggle="popover"]');
+for (let popover of popovers) {
+  const div = document.createElement('div');
+  div.setAttribute('style', 'position: absolute; top: 0, left:0; width:0, height:0, overflow: hidden; visibility: hidden;');
+  div.innerHTML = popover.getAttribute('data-content');
+
+  var has_math = div.querySelector("span.math");
+  if (has_math) {
+    document.body.appendChild(div);
+    MathJax.Hub.Queue(["Typeset", MathJax.Hub, div]);
+    MathJax.Hub.Queue(function() {
+      popover.setAttribute('data-content', div.innerHTML);
+      document.body.removeChild(div);
+    })
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>第 4 章 纵向与事件时间数据的联合模型 | 纵向与事件时间数据的联合模型及其在 R 中的应用</title>
+<meta name="author" content="Wang Zhen">
+<meta name="description" content="基于前两章提出的线性混合效应和相对风险模型，我们在这里介绍了纵向与事件时间数据的标准联合模型。我们讨论了模型参数的最大似然估计，包括优化和数值积分算法、回归系数的推断和随机效应，并提出了一种工具来研究纵向结果的推断对脱落过程假定的敏感性。  4.1 基本联合模型 正如我们在 3.5 节看到的，扩展的 Cox...">
+<meta name="generator" content="bookdown 0.38 with bs4_book()">
+<meta property="og:title" content="第 4 章 纵向与事件时间数据的联合模型 | 纵向与事件时间数据的联合模型及其在 R 中的应用">
+<meta property="og:type" content="book">
+<meta property="og:description" content="基于前两章提出的线性混合效应和相对风险模型，我们在这里介绍了纵向与事件时间数据的标准联合模型。我们讨论了模型参数的最大似然估计，包括优化和数值积分算法、回归系数的推断和随机效应，并提出了一种工具来研究纵向结果的推断对脱落过程假定的敏感性。  4.1 基本联合模型 正如我们在 3.5 节看到的，扩展的 Cox...">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="第 4 章 纵向与事件时间数据的联合模型 | 纵向与事件时间数据的联合模型及其在 R 中的应用">
+<meta name="twitter:description" content="基于前两章提出的线性混合效应和相对风险模型，我们在这里介绍了纵向与事件时间数据的标准联合模型。我们讨论了模型参数的最大似然估计，包括优化和数值积分算法、回归系数的推断和随机效应，并提出了一种工具来研究纵向结果的推断对脱落过程假定的敏感性。  4.1 基本联合模型 正如我们在 3.5 节看到的，扩展的 Cox...">
+<!-- JS --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.4.6/fuse.js" integrity="sha512-zv6Ywkjyktsohkbp9bb45V6tEMoWhzFzXis+LrMehmJZZSys19Yxf1dopHx7WzIKxr5tK2dVcYmaCk2uqdjF4A==" crossorigin="anonymous"></script><script src="https://kit.fontawesome.com/6ecbd6c532.js" crossorigin="anonymous"></script><script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link href="libs/bootstrap-4.6.0/bootstrap.min.css" rel="stylesheet">
+<script src="libs/bootstrap-4.6.0/bootstrap.bundle.min.js"></script><script src="libs/bs3compat-0.7.0/transition.js"></script><script src="libs/bs3compat-0.7.0/tabs.js"></script><script src="libs/bs3compat-0.7.0/bs3compat.js"></script><link href="libs/bs4_book-1.0.0/bs4_book.css" rel="stylesheet">
+<script src="libs/bs4_book-1.0.0/bs4_book.js"></script><script>
+    /* ========================================================================
+     * Bootstrap: transition.js v3.3.7
+     * http://getbootstrap.com/javascript/#transitions
+     * ========================================================================
+     * Copyright 2011-2016 Twitter, Inc.
+     * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
+     * ======================================================================== */
+
+
+    +function ($) {
+      'use strict';
+
+      // CSS TRANSITION SUPPORT (Shoutout: http://www.modernizr.com/)
+      // ============================================================
+
+      function transitionEnd() {
+        var el = document.createElement('bootstrap')
+
+        var transEndEventNames = {
+          WebkitTransition : 'webkitTransitionEnd',
+          MozTransition    : 'transitionend',
+          OTransition      : 'oTransitionEnd otransitionend',
+          transition       : 'transitionend'
+        }
+
+        for (var name in transEndEventNames) {
+          if (el.style[name] !== undefined) {
+            return { end: transEndEventNames[name] }
+          }
+        }
+
+        return false // explicit for ie8 (  ._.)
+      }
+
+      // http://blog.alexmaccaw.com/css-transitions
+      $.fn.emulateTransitionEnd = function (duration) {
+        var called = false
+        var $el = this
+        $(this).one('bsTransitionEnd', function () { called = true })
+        var callback = function () { if (!called) $($el).trigger($.support.transition.end) }
+        setTimeout(callback, duration)
+        return this
+      }
+
+      $(function () {
+        $.support.transition = transitionEnd()
+
+        if (!$.support.transition) return
+
+        $.event.special.bsTransitionEnd = {
+          bindType: $.support.transition.end,
+          delegateType: $.support.transition.end,
+          handle: function (e) {
+            if ($(e.target).is(this)) return e.handleObj.handler.apply(this, arguments)
+          }
+        }
+      })
+
+    }(jQuery);
+    </script><script>
+    /* ========================================================================
+     * Bootstrap: collapse.js v3.3.7
+     * http://getbootstrap.com/javascript/#collapse
+     * ========================================================================
+     * Copyright 2011-2016 Twitter, Inc.
+     * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
+     * ======================================================================== */
+
+    /* jshint latedef: false */
+
+    +function ($) {
+      'use strict';
+
+      // COLLAPSE PUBLIC CLASS DEFINITION
+      // ================================
+
+      var Collapse = function (element, options) {
+        this.$element      = $(element)
+        this.options       = $.extend({}, Collapse.DEFAULTS, options)
+        this.$trigger      = $('[data-toggle="collapse"][href="#' + element.id + '"],' +
+                               '[data-toggle="collapse"][data-target="#' + element.id + '"]')
+        this.transitioning = null
+
+        if (this.options.parent) {
+          this.$parent = this.getParent()
+        } else {
+          this.addAriaAndCollapsedClass(this.$element, this.$trigger)
+        }
+
+        if (this.options.toggle) this.toggle()
+      }
+
+      Collapse.VERSION  = '3.3.7'
+
+      Collapse.TRANSITION_DURATION = 350
+
+      Collapse.DEFAULTS = {
+        toggle: true
+      }
+
+      Collapse.prototype.dimension = function () {
+        var hasWidth = this.$element.hasClass('width')
+        return hasWidth ? 'width' : 'height'
+      }
+
+      Collapse.prototype.show = function () {
+        if (this.transitioning || this.$element.hasClass('in')) return
+
+        var activesData
+        var actives = this.$parent && this.$parent.children('.panel').children('.in, .collapsing')
+
+        if (actives && actives.length) {
+          activesData = actives.data('bs.collapse')
+          if (activesData && activesData.transitioning) return
+        }
+
+        var startEvent = $.Event('show.bs.collapse')
+        this.$element.trigger(startEvent)
+        if (startEvent.isDefaultPrevented()) return
+
+        if (actives && actives.length) {
+          Plugin.call(actives, 'hide')
+          activesData || actives.data('bs.collapse', null)
+        }
+
+        var dimension = this.dimension()
+
+        this.$element
+          .removeClass('collapse')
+          .addClass('collapsing')[dimension](0)
+          .attr('aria-expanded', true)
+
+        this.$trigger
+          .removeClass('collapsed')
+          .attr('aria-expanded', true)
+
+        this.transitioning = 1
+
+        var complete = function () {
+          this.$element
+            .removeClass('collapsing')
+            .addClass('collapse in')[dimension]('')
+          this.transitioning = 0
+          this.$element
+            .trigger('shown.bs.collapse')
+        }
+
+        if (!$.support.transition) return complete.call(this)
+
+        var scrollSize = $.camelCase(['scroll', dimension].join('-'))
+
+        this.$element
+          .one('bsTransitionEnd', $.proxy(complete, this))
+          .emulateTransitionEnd(Collapse.TRANSITION_DURATION)[dimension](this.$element[0][scrollSize])
+      }
+
+      Collapse.prototype.hide = function () {
+        if (this.transitioning || !this.$element.hasClass('in')) return
+
+        var startEvent = $.Event('hide.bs.collapse')
+        this.$element.trigger(startEvent)
+        if (startEvent.isDefaultPrevented()) return
+
+        var dimension = this.dimension()
+
+        this.$element[dimension](this.$element[dimension]())[0].offsetHeight
+
+        this.$element
+          .addClass('collapsing')
+          .removeClass('collapse in')
+          .attr('aria-expanded', false)
+
+        this.$trigger
+          .addClass('collapsed')
+          .attr('aria-expanded', false)
+
+        this.transitioning = 1
+
+        var complete = function () {
+          this.transitioning = 0
+          this.$element
+            .removeClass('collapsing')
+            .addClass('collapse')
+            .trigger('hidden.bs.collapse')
+        }
+
+        if (!$.support.transition) return complete.call(this)
+
+        this.$element
+          [dimension](0)
+          .one('bsTransitionEnd', $.proxy(complete, this))
+          .emulateTransitionEnd(Collapse.TRANSITION_DURATION)
+      }
+
+      Collapse.prototype.toggle = function () {
+        this[this.$element.hasClass('in') ? 'hide' : 'show']()
+      }
+
+      Collapse.prototype.getParent = function () {
+        return $(this.options.parent)
+          .find('[data-toggle="collapse"][data-parent="' + this.options.parent + '"]')
+          .each($.proxy(function (i, element) {
+            var $element = $(element)
+            this.addAriaAndCollapsedClass(getTargetFromTrigger($element), $element)
+          }, this))
+          .end()
+      }
+
+      Collapse.prototype.addAriaAndCollapsedClass = function ($element, $trigger) {
+        var isOpen = $element.hasClass('in')
+
+        $element.attr('aria-expanded', isOpen)
+        $trigger
+          .toggleClass('collapsed', !isOpen)
+          .attr('aria-expanded', isOpen)
+      }
+
+      function getTargetFromTrigger($trigger) {
+        var href
+        var target = $trigger.attr('data-target')
+          || (href = $trigger.attr('href')) && href.replace(/.*(?=#[^\s]+$)/, '') // strip for ie7
+
+        return $(target)
+      }
+
+
+      // COLLAPSE PLUGIN DEFINITION
+      // ==========================
+
+      function Plugin(option) {
+        return this.each(function () {
+          var $this   = $(this)
+          var data    = $this.data('bs.collapse')
+          var options = $.extend({}, Collapse.DEFAULTS, $this.data(), typeof option == 'object' && option)
+
+          if (!data && options.toggle && /show|hide/.test(option)) options.toggle = false
+          if (!data) $this.data('bs.collapse', (data = new Collapse(this, options)))
+          if (typeof option == 'string') data[option]()
+        })
+      }
+
+      var old = $.fn.collapse
+
+      $.fn.collapse             = Plugin
+      $.fn.collapse.Constructor = Collapse
+
+
+      // COLLAPSE NO CONFLICT
+      // ====================
+
+      $.fn.collapse.noConflict = function () {
+        $.fn.collapse = old
+        return this
+      }
+
+
+      // COLLAPSE DATA-API
+      // =================
+
+      $(document).on('click.bs.collapse.data-api', '[data-toggle="collapse"]', function (e) {
+        var $this   = $(this)
+
+        if (!$this.attr('data-target')) e.preventDefault()
+
+        var $target = getTargetFromTrigger($this)
+        var data    = $target.data('bs.collapse')
+        var option  = data ? 'toggle' : $this.data()
+
+        Plugin.call($target, option)
+      })
+
+    }(jQuery);
+    </script><script>
+    window.initializeCodeFolding = function(show) {
+
+      // handlers for show-all and hide all
+      $("#rmd-show-all-code").click(function() {
+        $('div.r-code-collapse').each(function() {
+          $(this).collapse('show');
+        });
+      });
+      $("#rmd-hide-all-code").click(function() {
+        $('div.r-code-collapse').each(function() {
+          $(this).collapse('hide');
+        });
+      });
+
+      // index for unique code element ids
+      var currentIndex = 1;
+
+      // select all R code blocks
+      var rCodeBlocks = $('pre.sourceCode, pre.r, pre.python, pre.bash, pre.sql, pre.cpp, pre.stan, pre.js');
+      rCodeBlocks.each(function() {
+
+        // create a collapsable div to wrap the code in
+        var div = $('<div class="collapse r-code-collapse"></div>');
+        if (show)
+          div.addClass('in');
+        var id = 'rcode-643E0F36' + currentIndex++;
+        div.attr('id', id);
+        $(this).before(div);
+        $(this).detach().appendTo(div);
+
+        // add a show code button right above
+        var showCodeText = $('<span>' + (show ? 'Hide' : 'Code') + '</span>');
+        var showCodeButton = $('<button type="button" class="btn btn-default btn-xs code-folding-btn pull-right"></button>');
+        showCodeButton.append(showCodeText);
+        showCodeButton
+            .attr('data-toggle', 'collapse')
+            .attr('data-target', '#' + id)
+            .attr('aria-expanded', show)
+            .attr('aria-controls', id);
+
+        var buttonRow = $('<div class="row"></div>');
+        var buttonCol = $('<div class="col-md-12"></div>');
+
+        buttonCol.append(showCodeButton);
+        buttonRow.append(buttonCol);
+
+        div.before(buttonRow);
+
+        // update state of button on show/hide
+        div.on('hidden.bs.collapse', function () {
+          showCodeText.text('Code');
+        });
+        div.on('show.bs.collapse', function () {
+          showCodeText.text('Hide');
+        });
+      });
+
+    }
+    </script><script>
+    /* ========================================================================
+     * Bootstrap: dropdown.js v3.3.7
+     * http://getbootstrap.com/javascript/#dropdowns
+     * ========================================================================
+     * Copyright 2011-2016 Twitter, Inc.
+     * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
+     * ======================================================================== */
+
+
+    +function ($) {
+      'use strict';
+
+      // DROPDOWN CLASS DEFINITION
+      // =========================
+
+      var backdrop = '.dropdown-backdrop'
+      var toggle   = '[data-toggle="dropdown"]'
+      var Dropdown = function (element) {
+        $(element).on('click.bs.dropdown', this.toggle)
+      }
+
+      Dropdown.VERSION = '3.3.7'
+
+      function getParent($this) {
+        var selector = $this.attr('data-target')
+
+        if (!selector) {
+          selector = $this.attr('href')
+          selector = selector && /#[A-Za-z]/.test(selector) && selector.replace(/.*(?=#[^\s]*$)/, '') // strip for ie7
+        }
+
+        var $parent = selector && $(selector)
+
+        return $parent && $parent.length ? $parent : $this.parent()
+      }
+
+      function clearMenus(e) {
+        if (e && e.which === 3) return
+        $(backdrop).remove()
+        $(toggle).each(function () {
+          var $this         = $(this)
+          var $parent       = getParent($this)
+          var relatedTarget = { relatedTarget: this }
+
+          if (!$parent.hasClass('open')) return
+
+          if (e && e.type == 'click' && /input|textarea/i.test(e.target.tagName) && $.contains($parent[0], e.target)) return
+
+          $parent.trigger(e = $.Event('hide.bs.dropdown', relatedTarget))
+
+          if (e.isDefaultPrevented()) return
+
+          $this.attr('aria-expanded', 'false')
+          $parent.removeClass('open').trigger($.Event('hidden.bs.dropdown', relatedTarget))
+        })
+      }
+
+      Dropdown.prototype.toggle = function (e) {
+        var $this = $(this)
+
+        if ($this.is('.disabled, :disabled')) return
+
+        var $parent  = getParent($this)
+        var isActive = $parent.hasClass('open')
+
+        clearMenus()
+
+        if (!isActive) {
+          if ('ontouchstart' in document.documentElement && !$parent.closest('.navbar-nav').length) {
+            // if mobile we use a backdrop because click events don't delegate
+            $(document.createElement('div'))
+              .addClass('dropdown-backdrop')
+              .insertAfter($(this))
+              .on('click', clearMenus)
+          }
+
+          var relatedTarget = { relatedTarget: this }
+          $parent.trigger(e = $.Event('show.bs.dropdown', relatedTarget))
+
+          if (e.isDefaultPrevented()) return
+
+          $this
+            .trigger('focus')
+            .attr('aria-expanded', 'true')
+
+          $parent
+            .toggleClass('open')
+            .trigger($.Event('shown.bs.dropdown', relatedTarget))
+        }
+
+        return false
+      }
+
+      Dropdown.prototype.keydown = function (e) {
+        if (!/(38|40|27|32)/.test(e.which) || /input|textarea/i.test(e.target.tagName)) return
+
+        var $this = $(this)
+
+        e.preventDefault()
+        e.stopPropagation()
+
+        if ($this.is('.disabled, :disabled')) return
+
+        var $parent  = getParent($this)
+        var isActive = $parent.hasClass('open')
+
+        if (!isActive && e.which != 27 || isActive && e.which == 27) {
+          if (e.which == 27) $parent.find(toggle).trigger('focus')
+          return $this.trigger('click')
+        }
+
+        var desc = ' li:not(.disabled):visible a'
+        var $items = $parent.find('.dropdown-menu' + desc)
+
+        if (!$items.length) return
+
+        var index = $items.index(e.target)
+
+        if (e.which == 38 && index > 0)                 index--         // up
+        if (e.which == 40 && index < $items.length - 1) index++         // down
+        if (!~index)                                    index = 0
+
+        $items.eq(index).trigger('focus')
+      }
+
+
+      // DROPDOWN PLUGIN DEFINITION
+      // ==========================
+
+      function Plugin(option) {
+        return this.each(function () {
+          var $this = $(this)
+          var data  = $this.data('bs.dropdown')
+
+          if (!data) $this.data('bs.dropdown', (data = new Dropdown(this)))
+          if (typeof option == 'string') data[option].call($this)
+        })
+      }
+
+      var old = $.fn.dropdown
+
+      $.fn.dropdown             = Plugin
+      $.fn.dropdown.Constructor = Dropdown
+
+
+      // DROPDOWN NO CONFLICT
+      // ====================
+
+      $.fn.dropdown.noConflict = function () {
+        $.fn.dropdown = old
+        return this
+      }
+
+
+      // APPLY TO STANDARD DROPDOWN ELEMENTS
+      // ===================================
+
+      $(document)
+        .on('click.bs.dropdown.data-api', clearMenus)
+        .on('click.bs.dropdown.data-api', '.dropdown form', function (e) { e.stopPropagation() })
+        .on('click.bs.dropdown.data-api', toggle, Dropdown.prototype.toggle)
+        .on('keydown.bs.dropdown.data-api', toggle, Dropdown.prototype.keydown)
+        .on('keydown.bs.dropdown.data-api', '.dropdown-menu', Dropdown.prototype.keydown)
+
+    }(jQuery);
+    </script><style type="text/css">
+    .code-folding-btn { margin-bottom: 4px; }
+    .row { display: flex; }
+    .collapse { display: none; }
+    .in { display:block }
+    .pull-right > .dropdown-menu {
+        right: 0;
+        left: auto;
+    }
+    .open > .dropdown-menu {
+        display: block;
+    }
+    .dropdown-menu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        z-index: 1000;
+        display: none;
+        float: left;
+        min-width: 160px;
+        padding: 5px 0;
+        margin: 2px 0 0;
+        font-size: 14px;
+        text-align: left;
+        list-style: none;
+        background-color: #fff;
+        -webkit-background-clip: padding-box;
+        background-clip: padding-box;
+        border: 1px solid #ccc;
+        border: 1px solid rgba(0,0,0,.15);
+        border-radius: 4px;
+        -webkit-box-shadow: 0 6px 12px rgba(0,0,0,.175);
+        box-shadow: 0 6px 12px rgba(0,0,0,.175);
+    }
+    </style>
+<script>
+    $(document).ready(function () {
+      window.initializeCodeFolding("show" === "show");
+    });
+    </script><script>
+    document.write('<div class="btn-group pull-right" style="position: absolute; top: 20%; right: 2%; z-index: 200"><button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" data-_extension-text-contrast=""><span>Code</span> <span class="caret"></span></button><ul class="dropdown-menu" style="min-width: 50px;"><li><a id="rmd-show-all-code" href="#">Show All Code</a></li><li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li></ul></div>')
+    </script><script src="https://cdnjs.cloudflare.com/ajax/libs/autocomplete.js/0.38.0/autocomplete.jquery.min.js" integrity="sha512-GU9ayf+66Xx2TmpxqJpliWbT5PiGYxpaG8rfnBEk1LL8l1KGkRShhngwdXK1UgqhAzWpZHSiYPc09/NwDQIGyg==" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mark.js/8.11.1/mark.min.js" integrity="sha512-5CYOlHXGh6QpOFA/TeTylKLWfB3ftPsde7AnmhuitiTX4K5SqCLBeKro6sPS8ilsz1Q4NRx3v8Ko2IBiszzdww==" crossorigin="anonymous"></script><!-- CSS --><style type="text/css">
+    
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  </style>
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-spy="scroll" data-target="#toc">
+
+<div class="container-fluid">
+<div class="row">
+  <header class="col-sm-12 col-lg-3 sidebar sidebar-book"><a class="sr-only sr-only-focusable" href="#content">Skip to main content</a>
+
+    <div class="d-flex align-items-start justify-content-between">
+      <h1>
+        <a href="index.html" title="">纵向与事件时间数据的联合模型及其在 R 中的应用</a>
+      </h1>
+      <button class="btn btn-outline-primary d-lg-none ml-2 mt-1" type="button" data-toggle="collapse" data-target="#main-nav" aria-expanded="true" aria-controls="main-nav"><i class="fas fa-bars"></i><span class="sr-only">Show table of contents</span></button>
+    </div>
+
+    <div id="main-nav" class="collapse-lg">
+      <form role="search">
+        <input id="search" class="form-control" type="search" placeholder="Search" aria-label="Search">
+</form>
+
+      <nav aria-label="Table of contents"><h2>Table of contents</h2>
+        <ul class="book-toc list-unstyled">
+<li><a class="" href="index.html">前言</a></li>
+<li><a class="" href="%E7%9B%AE%E5%BD%95.html">目录</a></li>
+<li class="book-part">正文</li>
+<li><a class="" href="chap1.html"><span class="header-section-number">1</span> 介绍</a></li>
+<li><a class="" href="chap2.html"><span class="header-section-number">2</span> 纵向数据分析</a></li>
+<li><a class="" href="chap3.html"><span class="header-section-number">3</span> 事件时间数据分析</a></li>
+<li><a class="active" href="chap4.html"><span class="header-section-number">4</span> 纵向与事件时间数据的联合模型</a></li>
+<li><a class="" href="chap5.html"><span class="header-section-number">5</span> 标准联合模型的扩展</a></li>
+<li><a class="" href="chap6.html"><span class="header-section-number">6</span> 联合模型诊断</a></li>
+<li><a class="" href="chap7.html"><span class="header-section-number">7</span> 联合模型的预测和准确性</a></li>
+<li class="book-part">附录</li>
+<li><a class="" href="A.html"><span class="header-section-number">A</span> R 的简要介绍</a></li>
+<li class="book-part">—</li>
+<li><a class="" href="bib.html">参考文献</a></li>
+</ul>
+
+        <div class="book-extra">
+          
+        </div>
+      </nav>
+</div>
+  </header><main class="col-sm-12 col-md-9 col-lg-7" id="content"><div id="chap4" class="section level1" number="4">
+<h1>
+<span class="header-section-number">第 4 章</span> 纵向与事件时间数据的联合模型<a class="anchor" aria-label="anchor" href="#chap4"><i class="fas fa-link"></i></a>
+</h1>
+<p>基于前两章提出的线性混合效应和相对风险模型，我们在这里介绍了纵向与事件时间数据的标准联合模型。我们讨论了模型参数的最大似然估计，包括优化和数值积分算法、回归系数的推断和随机效应，并提出了一种工具来研究纵向结果的推断对脱落过程假定的敏感性。</p>
+<div id="sec4-1" class="section level2" number="4.1">
+<h2>
+<span class="header-section-number">4.1</span> 基本联合模型<a class="anchor" aria-label="anchor" href="#sec4-1"><i class="fas fa-link"></i></a>
+</h2>
+<p>正如我们在 <a href="chap3.html#sec3-5">3.5</a> 节看到的，扩展的 Cox 模型仅适用于外源时依协变量，因此无法处理纵向生物标志物。当主要关注的是这类内生时依协变量与生存之间的关联时，相关文献引入了一种替代的建模框架，称为纵向与事件时间数据的联合建模框架 (Faucett and Thomas, 1996; Wulfsohn and Tsiatis, 1997; Henderson et al, 2000; Tsiatis and Davidian, 2004). 这些联合模型背后的主要动机是将作为主要关注的生存模型与用于内生协变量重复测量的模型相结合，以解释 <a href="chap3.html#sec3-4">3.4</a> 节阐述的特殊特征。为介绍该建模框架，我们将使用与第 <a href="chap2.html#chap2">2</a> 章和第 <a href="chap2.html#chap2">2</a> 章中类似的符号。特别地，我们用 <span class="math inline">\(T^*_i\)</span> 表示第 <span class="math inline">\(i\)</span> 个受试者的真实事件时间，<span class="math inline">\(T_i\)</span> 表示观测事件时间，定义为潜在删失时间 <span class="math inline">\(C_i\)</span> 和 <span class="math inline">\(T^*_i\)</span> 的较小值，<span class="math inline">\(\delta_i = I(T^*_i \le C_i)\)</span> 表示事件指示符。对于内生时依协变量（例如生物标志物），我们令 <span class="math inline">\(y_i(t)\)</span> 表示第 <span class="math inline">\(i\)</span> 个受试者在时间点 <span class="math inline">\(t\)</span> 的观测值。我们应注意到，我们实际上并没有在任何时间 <span class="math inline">\(t\)</span> 观测 <span class="math inline">\(y_i(t)\)</span>，而只是在进行测量的特定时刻 <span class="math inline">\(t_{ij}\)</span> 。因此，纵向观测数据由测量值 <span class="math inline">\(y_{ij}=\{y_i(t_{ij}),j=1,\ldots,n_i\}\)</span> 组成。</p>
+<div id="sec4-1-1" class="section level3" number="4.1.1">
+<h3>
+<span class="header-section-number">4.1.1</span> 生存子模型<a class="anchor" aria-label="anchor" href="#sec4-1-1"><i class="fas fa-link"></i></a>
+</h3>
+<p>我们的目标是度量纵向标志物水平与事件风险之间的关联，同时考虑前者的特殊特征。为了实现这一点，我们引入了项 <span class="math inline">\(m_i(t)\)</span>，它表示时间 <span class="math inline">\(t\)</span> 时纵向结果的真实但未观测到的值。注意，<span class="math inline">\(m_i(t)\)</span> 与 <span class="math inline">\(y_i(t)\)</span> 不同，后者是时间 <span class="math inline">\(t\)</span> 时纵向结果受测量误差影响的值。为了量化 <span class="math inline">\(m_i(t)\)</span> 与事件风险之间的关联强度，一种直接的方法是假定以下形式的相对风险模型</p>
+<p><span class="math display" id="eq:4-1">\[\begin{align}
+h_{i}(t\mid\mathcal{M}_{i}(t),w_{i})&amp;=\quad\lim_{dt\to0}\Pr\{t\leq T_i^*&lt;t+dt\mid T_i^*\geq t,\mathcal{M}_i(t),w_i\}\big/dt\\&amp;=\quad h_0(t)\exp\bigl\{\gamma^\top w_i+\alpha m_i(t)\bigr\},\quad t&gt;0
+\tag{4.1}
+\end{align}\]</span></p>
+<p>其中 <span class="math inline">\(\mathcal{M}_i(t)=\{m_i(s),0\leq s&lt;t\}\)</span> 表示截至时间点 <span class="math inline">\(t\)</span> 的真实但未观测的纵向过程史，<span class="math inline">\(h_0(\cdot)\)</span> 表示基线风险函数，<span class="math inline">\(w_i\)</span> 是基线协变量向量（例如治疗指标、疾病史等）与相应的回归系数向量 <span class="math inline">\(\gamma\)</span>。同样，参数 <span class="math inline">\(\alpha\)</span> 量化了潜在纵向结果对事件风险的影响。<span class="math inline">\(\gamma\)</span> 和 <span class="math inline">\(\alpha\)</span> 的解释与 <a href="chap3.html#sec3-5">3.5</a> 节中的解释完全相同。具体来说，<span class="math inline">\(\exp(\gamma_j)\)</span> 表示在任何时间 <span class="math inline">\(t\)</span> 中 <span class="math inline">\(w_{ij}\)</span> 的单位变化的风险比，而 <span class="math inline">\(\exp(\alpha)\)</span> 表示在时间 <span class="math inline">\(t\)</span> 时由于 <span class="math inline">\(m_i(t)\)</span> 增加一单位而导致的事件风险的相对增加。此外，请注意，相对风险模型 <a href="chap4.html#eq:4-1">(4.1)</a> 假定时间 <span class="math inline">\(t\)</span> 时事件的风险仅取决于时依标志物的当前值 <span class="math inline">\(m_i(t)\)</span>。然而，这不适用于生存函数。特别地，利用生存函数和累积风险函数之间的已知关系，我们得到</p>
+<p><span class="math display" id="eq:4-2">\[\begin{align}
+\mathcal{S}_{i}(t\mid\mathcal{M}_{i}(t),w_{i})&amp;=\quad\Pr\big(T_i^*&gt;t\mid\mathcal{M}_i(t),w_i\big)\\&amp;=\quad\exp\biggl(-\int_0^th_0(s)\exp\bigl\{\gamma^\top w_i+\alpha m_i(s)\bigr\}ds\biggr)
+\tag{4.2}
+\end{align}\]</span></p>
+<p>这意味着相应的生存函数依赖于整个协变量史 <span class="math inline">\(\mathcal M_i(t)\)</span>。正如我们将在 <a href="chap4.html#sec4-3">4.3</a> 节后面看到的，这一特征在联合模型的估计中具有实际重要性，因为生存函数是模型的似然的一部分。</p>
+<p>为了完成 <a href="chap4.html#eq:4-1">(4.1)</a> 的指定，我们需要讨论基线风险函数 <span class="math inline">\(h_0(\cdot)\)</span> 的选择。正如我们在第 <a href="chap3.html#chap3">3</a> 章中所看到的，在标准生存分析中，为了避免错误指定生存时间分布的影响，习惯上完全不指定 <span class="math inline">\(h_0(\cdot)\)</span>。然而，在联合建模框架内，正如我们稍后将在 <a href="chap4.html#sec4-3-3">4.3.3</a> 节中解释的那样，事实证明，遵循这样的路线可能会导致低估参数估计的标准误 (Hsieh et al., 2006)。为了避免此类问题，我们需要明确定义 <span class="math inline">\(h_0(\cdot)\)</span>。标准方案是使用与已知参数分布相对应的风险函数。在生存分析中，通常使用的分布包括 Weibull 分布、log-normal 分布和 Gamma 分布。或者，我们可以选择基线风险函数的参数但灵活的指定。相关文献中提出了几种方法来灵活地对基线风险函数进行建模。例如，Whittemore and Killer (1986) 使用阶跃函数和线性样条来获得风险函数的非参数估计，Rosenberg (1995) 使用 B 样条近似，Herndon and Harrell (1996) 使用限制性立方样条。两个在实践中通常非常令人满意的简单选项是分段常数和回归样条方法。在分段常数模型下，基线风险函数采用以下形式</p>
+<p><span class="math display" id="eq:4-3">\[\begin{align}
+h_0(t)=\sum_{q=1}^Q\xi_qI(v_{q-1}&lt;t\leq v_q)
+\tag{4.3}
+\end{align}\]</span></p>
+<p>其中 <span class="math inline">\(0=v_{0}&lt;v_{1}&lt;\cdots&lt;v_{Q}\)</span> 表示表示时间尺度的分割，其中 <span class="math inline">\(v_Q\)</span> 大于最大观测时间，<span class="math inline">\(\xi_q\)</span> 表示区间 <span class="math inline">\((v_{q−1}, v_q]\)</span> 中的风险值。随着结数的增加，基线风险的指定变得更加灵活。在每个区间 <span class="math inline">\((v_{q−1}, v_q]\)</span> 仅包含单个真实事件时间的极限情况下（假定没有结），该模型相当于完全不指定 <span class="math inline">\(h_0(\cdot)\)</span> 并使用非参数最大似然对其进行估计。对于回归样条模型，对数基线风险函数 <span class="math inline">\(\log h_0(t)\)</span> 扩展为立方样条的 B 样条基函数，如下所示</p>
+<p><span class="math display" id="eq:4-4">\[\begin{align}
+\log h_0(t)=\kappa_0+\sum_{d=1}^m\kappa_dB_d(t,q)
+\tag{4.4}
+\end{align}\]</span></p>
+<p>其中 <span class="math inline">\(\kappa^\top=(\kappa_0,\kappa_1,\ldots,\kappa_m)\)</span> 为样条系数，<span class="math inline">\(q\)</span> 表示 B 样条基函数 <span class="math inline">\(B(\cdot)\)</span> 的次数，以及 <span class="math inline">\(m=\ddot{m}+q-1\)</span>，其中 <span class="math inline">\(\ddot{m}\)</span> 表示内部结数。与分段常数模型类似，增加结数会增加近似 <span class="math inline">\(h_0(\cdot)\)</span> 的灵活性。然而，在这两种方法中，我们应该在偏差和方差之间保持平衡，避免过度拟合。一个标准的经验法则是将参数的总数，包括 <a href="chap4.html#eq:4-1">(4.1)</a> 中线性预测器和 <span class="math inline">\(h_0(\cdot)\)</span> 模型中的参数，保持在样本中事件总数的 1/10 到 1/20 之间 (Harrell, 2001, Section 4.4). 在确定了结数后，它们的位置通常基于观测事件时间 <span class="math inline">\(T_i=\min(T_i^*,C_i)\)</span> 的百分位数或仅基于真实事件时间 <span class="math inline">\(\{T_i:T_i^*\leq C_i,i=1,\ldots,n\}\)</span> ，以便在最大密度的区域中具有更大的灵活性。</p>
+</div>
+<div id="sec4-1-2" class="section level3" number="4.1.2">
+<h3>
+<span class="header-section-number">4.1.2</span> 纵向子模型<a class="anchor" aria-label="anchor" href="#sec4-1-2"><i class="fas fa-link"></i></a>
+</h3>
+<p>在上面提出的生存模型的定义中，我们使用 <span class="math inline">\(m_i(t)\)</span> 来表示时间点 <span class="math inline">\(t\)</span> 的潜在纵向协变量的真实值。然而，如前所述，纵向信息实际上是间歇性收集的，并且在每个受试者的一组几个时间点 <span class="math inline">\(t_{ij}\)</span> 处都有误差。因此，为了度量纵向协变量对事件风险的影响，我们需要估计 <span class="math inline">\(m_i(t)\)</span> 并成功重建每个受试者的完整纵向史 <span class="math inline">\(\mathcal M_i(t)\)</span>。为了实现这一目标，我们假设一个合适的混合效应模型来描述特定于受试者的时间演变。现在我们将重点关注正态分布的纵向结果并使用线性混合效应模型。具体来说，使用类似于 <a href="chap2.html#sec2-2">2.2</a> 节的符号，我们有</p>
+<p><span class="math display" id="eq:4-5">\[\begin{align}
+\left.\left\{\begin{array}{rcl}y_i(t)&amp;=&amp;m_i(t)+\varepsilon_i(t),\\m_i(t)&amp;=&amp;x_i^\top(t)\beta+z_i^\top(t)b_i,\tag{4.5}\\b_i&amp;\sim&amp;\mathcal{N}(0,D),\quad\varepsilon_i(t)\sim\mathcal{N}(0,\sigma^2),\end{array}\right.\right.
+\end{align}\]</span></p>
+<p>其中我们注意到固定效应 <span class="math inline">\(\beta\)</span> 的设计向量 <span class="math inline">\(x_i(t)\)</span> 和随机效应 <span class="math inline">\(b_i\)</span> 的设计向量 <span class="math inline">\(z_i(t)\)</span> 以及误差项 <span class="math inline">\(\varepsilon_i(t)\)</span> 是时依的。此外，与 <a href="chap2.html#sec2-2">2.2</a> 节类似，我们假定误差项是相互独立的，与随机效应无关，并且服从正态分布，均值为零，方差为 <span class="math inline">\(\sigma^2\)</span>。</p>
+<p>混合模型通过假设纵向结果 <span class="math inline">\(y_i(t)\)</span> 的观测水平等于真实水平 <span class="math inline">\(m_i(t)\)</span> 加上随机误差项来解释测量误差问题。此外，<span class="math inline">\(x_i(t)\)</span> 和 <span class="math inline">\(z_i(t)\)</span> 定义中的时间结构以及特定于受试者的随机效应的使用允许为每个受试者重建时依过程 <span class="math inline">\(\mathcal M_i(t)\)</span> 的完整路径。特别是，联合模型背后的直观想法如图 4.1 所示，其中在每个时间点，我们希望将标志物的真实水平（底部面板）与事件风险（顶部面板）相关联。虚线表示扩展的 Cox 模型在处理时变协变量时所假设的阶跃函数，这在许多情况下并不是对特定于受试者的纵向轨迹的真实描述。</p>
+<details><summary><font color="#B95953">图 4.1</font>
+</summary><img src="figure/figure%204.1.png#center" style="width:80.0%"></details><p><br>
+如前所述，生存函数 <a href="chap4.html#eq:4-2">(4.2)</a> 依赖于真实标志物水平的整个历史，因此，为了准确估计 <span class="math inline">\(S_i(t)\)</span>，获得良好的 <span class="math inline">\(\mathcal M_i(t)\)</span> 估计是重要的。这需要考虑 <span class="math inline">\(x_i(t)\)</span> 和 <span class="math inline">\(z_i(t)\)</span> 中时间结构的详细说明，以及可能假设的时间结构和基线协变量之间的交互作用项。</p>
+<p>例如，在受试者表现出高度非线性纵向轨迹的应用中，建议使用灵活的方式来表示 <span class="math inline">\(x_i(t)\)</span> 和 <span class="math inline">\(z_i(t)\)</span>，这可以通过使用可能的时间 <span class="math inline">\(t\)</span> 的函数的高维向量来实现，这些函数可以表示为高阶多项式或样条。与多项式相比，样条通常因其局部自然性和更好的数值性质而受到青睐 (Ruppert et al., 2003). 在联合建模框架中，一些作者已经考虑了基于样条的方法，以灵活地模拟受试者特定的纵向轨迹。例如，Rizopoulos et al. (2009) 和 Brown et al. (2005) 使用了具有多维随机效应的 B 样条，Ding and Wang (2008) 提出了使用具有单一乘性随机效应的 B 样条，而 Rizopoulos and Ghosh (2011) 则考虑了自然立方样条。对受试者特定进演变的高度非线性形状进行建模的另一种方法是在线性混合模型中加入一个额外的随机项，该项用于捕获未被随机效应捕获的观测测量中的剩余序列相关性。在此框架中，线性混合模型采用以下形式</p>
+<p><span class="math display" id="eq:4-6">\[\begin{align}
+y_i(t)=m_i(t)+u_i(t)+\varepsilon_i(t)
+\tag{4.6}
+\end{align}\]</span></p>
+<p>其中 <span class="math inline">\(u_i(t)\)</span> 是一个均值为零的随机过程，与 <span class="math inline">\(b_i\)</span> 和 <span class="math inline">\(\varepsilon_i(t)\)</span> 无关，<span class="math inline">\(m_i(t)\)</span> 具有与 <a href="chap4.html#eq:4-5">(4.5)</a> 中相同的混合效应模型结构。Wang and Taylor (2001) 假设了一个集成的 Ornstein-Uhlenbeck 过程，Henderson et al. (2000) 则考虑了纵向过程和事件过程共享的潜在平稳高斯过程。这两种方法之间的选择在很大程度上是一个哲学问题，部分由分析师对生成数据的“真实”潜在生物机制的信念所决定。特别是，模型 <a href="chap4.html#eq:4-5">(4.5)</a> 假设受试者在整个时间内遵循的轨迹仅由与时间无关的随机效应 <span class="math inline">\(b_i\)</span> 决定。这意味着每个对象的纵向曲线的形状是该对象随时间恒定的固有特征。另一方面，包含序列相关随机项和随机效应的模型 <a href="chap4.html#eq:4-6">(4.6)</a> 试图通过允许特定于受试者的趋势随时间变化来更精确地捕获纵向轨迹的特征。我们应该注意到，由于随机效应和随机序列相关过程都试图对数据中的边际相关性进行适当建模，因此两种方法之间存在信息的竞争。例如，如果我们假设一个具有随机截距和随机斜率结构的线性混合模型，并且随机效应未能充分捕捉过多的序列相关性，那么通过包含序列相关性项 <span class="math inline">\(u_i(t)\)</span> 或者考虑更复杂的随机效应结构（例如，在设计矩阵 <span class="math inline">\(Z_i(t)\)</span> 中使用样条）来扩展这个模型，可能会产生对数据的实际拟合效果难以区分的情况。因此，尽管同时使用精心设计的随机效应和序列相关结构在直觉上可能很有吸引力，但最好选择其中一种。从计算上讲，随机效应方法在实践中更容易实现，因为它只需要适当指定随机效应设计矩阵 <span class="math inline">\(Z_i(t)\)</span>。</p>
+</div>
+</div>
+<div id="sec4-2" class="section level2" number="4.2">
+<h2>
+<span class="header-section-number">4.2</span> R 中的联合建模：与扩展的 Cox 模型比较<a class="anchor" aria-label="anchor" href="#sec4-2"><i class="fas fa-link"></i></a>
+</h2>
+<p>为了说明联合建模方法的优点，我们将其与艾滋病数据集的扩展的 Cox 模型进行比较。具体来说，我们想评估时间 <span class="math inline">\(t\)</span> 时的 CD4 细胞计数平方根与同一时间点的死亡风险之间的关联强度。艾滋病数据集在 R 中作为 <code>JM</code> 包中的数据框 <code>aids</code> (Rizopoulos, 2010, 2012b). 为了加载这个包，我们使用 <code><a href="http://jmr.r-forge.r-project.org/">library("JM")</a></code>。艾滋病数据集以长格式包含每个患者的纵向信息和生存信息。前两名患者的记录信息是</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="chap4.html#cb16-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">head</span>(aids[<span class="fu">c</span>(<span class="st">"patient"</span>, <span class="st">"start"</span>, <span class="st">"stop"</span>, <span class="st">"event"</span>,</span>
+<span id="cb16-2"><a href="chap4.html#cb16-2" tabindex="-1"></a>              <span class="st">"CD4"</span>, <span class="st">"obstime"</span>, <span class="st">"drug"</span>)], <span class="dv">7</span>)</span>
+<span id="cb16-3"><a href="chap4.html#cb16-3" tabindex="-1"></a></span>
+<span id="cb16-4"><a href="chap4.html#cb16-4" tabindex="-1"></a>  patient start  stop event       CD4 obstime drug</span>
+<span id="cb16-5"><a href="chap4.html#cb16-5" tabindex="-1"></a><span class="dv">1</span>       <span class="dv">1</span>     <span class="dv">0</span>  <span class="fl">6.00</span>     <span class="dv">0</span> <span class="fl">10.677078</span>       <span class="dv">0</span>  ddC</span>
+<span id="cb16-6"><a href="chap4.html#cb16-6" tabindex="-1"></a><span class="dv">2</span>       <span class="dv">1</span>     <span class="dv">6</span> <span class="fl">12.00</span>     <span class="dv">0</span>  <span class="fl">8.426150</span>       <span class="dv">6</span>  ddC</span>
+<span id="cb16-7"><a href="chap4.html#cb16-7" tabindex="-1"></a><span class="dv">3</span>       <span class="dv">1</span>    <span class="dv">12</span> <span class="fl">16.97</span>     <span class="dv">0</span>  <span class="fl">9.433981</span>      <span class="dv">12</span>  ddC</span>
+<span id="cb16-8"><a href="chap4.html#cb16-8" tabindex="-1"></a><span class="dv">4</span>       <span class="dv">2</span>     <span class="dv">0</span>  <span class="fl">6.00</span>     <span class="dv">0</span>  <span class="fl">6.324555</span>       <span class="dv">0</span>  ddI</span>
+<span id="cb16-9"><a href="chap4.html#cb16-9" tabindex="-1"></a><span class="dv">5</span>       <span class="dv">2</span>     <span class="dv">6</span> <span class="fl">12.00</span>     <span class="dv">0</span>  <span class="fl">8.124038</span>       <span class="dv">6</span>  ddI</span>
+<span id="cb16-10"><a href="chap4.html#cb16-10" tabindex="-1"></a><span class="dv">6</span>       <span class="dv">2</span>    <span class="dv">12</span> <span class="fl">18.00</span>     <span class="dv">0</span>  <span class="fl">4.582576</span>      <span class="dv">12</span>  ddI</span>
+<span id="cb16-11"><a href="chap4.html#cb16-11" tabindex="-1"></a><span class="dv">7</span>       <span class="dv">2</span>    <span class="dv">18</span> <span class="fl">19.00</span>     <span class="dv">0</span>  <span class="fl">5.000000</span>      <span class="dv">18</span>  ddI</span></code></pre></div>
+<p>其中 <code>start</code>, <code>stop</code> 和 <code>event</code> 表示风险区间和事件状态指示符，使用 <a href="chap3.html#sec3-5">3.5</a> 节中介绍的计数过程公式，<code>CD4</code> 列包含 CD4 细胞计数测量值的平方根，<code>obstime</code> 为记录这些测量值的时间点（事实上它只是 <code>start</code> 列的副本）。我们通过拟合扩展的 Cox 模型开始分析，其中 CD4 细胞计数平方根视为外源时依协变量，并且我们另外控制治疗。模型为</p>
+<p><span class="math display">\[\begin{aligned}h_i(t)=h_0(t)\exp\{\gamma\mathtt{ddI}_i+\alpha y_i(t)\}\end{aligned}\]</span></p>
+<p>其中 <span class="math inline">\(\mathtt{ddI}_i\)</span> 为 ddI 组的虚拟变量，<span class="math inline">\(y_i(t)\)</span> 表示观测 CD4 细胞计数水平的平方根。正如我们在 <a href="chap3.html#sec3-5">3.5</a> 节中看到的，为了在 <code>R</code> 中拟合这个模型，我们使用以下语法</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="chap4.html#cb17-1" tabindex="-1"></a><span class="sc">&gt;</span> td.Cox <span class="ot">&lt;-</span> <span class="fu">coxph</span>(<span class="fu">Surv</span>(start, stop, event) <span class="sc">~</span> drug <span class="sc">+</span> CD4,</span>
+<span id="cb17-2"><a href="chap4.html#cb17-2" tabindex="-1"></a>                  <span class="at">data =</span> aids)</span>
+<span id="cb17-3"><a href="chap4.html#cb17-3" tabindex="-1"></a><span class="sc">&gt;</span> td.Cox</span>
+<span id="cb17-4"><a href="chap4.html#cb17-4" tabindex="-1"></a></span>
+<span id="cb17-5"><a href="chap4.html#cb17-5" tabindex="-1"></a>  patient start  stop event       CD4 obstime drug</span>
+<span id="cb17-6"><a href="chap4.html#cb17-6" tabindex="-1"></a><span class="dv">1</span>       <span class="dv">1</span>     <span class="dv">0</span>  <span class="fl">6.00</span>     <span class="dv">0</span> <span class="fl">10.677078</span>       <span class="dv">0</span>  ddC</span>
+<span id="cb17-7"><a href="chap4.html#cb17-7" tabindex="-1"></a><span class="dv">2</span>       <span class="dv">1</span>     <span class="dv">6</span> <span class="fl">12.00</span>     <span class="dv">0</span>  <span class="fl">8.426150</span>       <span class="dv">6</span>  ddC</span>
+<span id="cb17-8"><a href="chap4.html#cb17-8" tabindex="-1"></a><span class="dv">3</span>       <span class="dv">1</span>    <span class="dv">12</span> <span class="fl">16.97</span>     <span class="dv">0</span>  <span class="fl">9.433981</span>      <span class="dv">12</span>  ddC</span>
+<span id="cb17-9"><a href="chap4.html#cb17-9" tabindex="-1"></a><span class="dv">4</span>       <span class="dv">2</span>     <span class="dv">0</span>  <span class="fl">6.00</span>     <span class="dv">0</span>  <span class="fl">6.324555</span>       <span class="dv">0</span>  ddI</span>
+<span id="cb17-10"><a href="chap4.html#cb17-10" tabindex="-1"></a><span class="dv">5</span>       <span class="dv">2</span>     <span class="dv">6</span> <span class="fl">12.00</span>     <span class="dv">0</span>  <span class="fl">8.124038</span>       <span class="dv">6</span>  ddI</span>
+<span id="cb17-11"><a href="chap4.html#cb17-11" tabindex="-1"></a><span class="dv">6</span>       <span class="dv">2</span>    <span class="dv">12</span> <span class="fl">18.00</span>     <span class="dv">0</span>  <span class="fl">4.582576</span>      <span class="dv">12</span>  ddI</span>
+<span id="cb17-12"><a href="chap4.html#cb17-12" tabindex="-1"></a><span class="dv">7</span>       <span class="dv">2</span>    <span class="dv">18</span> <span class="fl">19.00</span>     <span class="dv">0</span>  <span class="fl">5.000000</span>      <span class="dv">18</span>  ddI</span>
+<span id="cb17-13"><a href="chap4.html#cb17-13" tabindex="-1"></a><span class="sc">&gt;</span> td.Cox <span class="ot">&lt;-</span> <span class="fu">coxph</span>(<span class="fu">Surv</span>(start, stop, event) <span class="sc">~</span> drug <span class="sc">+</span> CD4,</span>
+<span id="cb17-14"><a href="chap4.html#cb17-14" tabindex="-1"></a><span class="sc">+</span>                 <span class="at">data =</span> aids)</span>
+<span id="cb17-15"><a href="chap4.html#cb17-15" tabindex="-1"></a><span class="sc">&gt;</span> td.Cox</span>
+<span id="cb17-16"><a href="chap4.html#cb17-16" tabindex="-1"></a>Call<span class="sc">:</span></span>
+<span id="cb17-17"><a href="chap4.html#cb17-17" tabindex="-1"></a><span class="fu">coxph</span>(<span class="at">formula =</span> <span class="fu">Surv</span>(start, stop, event) <span class="sc">~</span> drug <span class="sc">+</span> CD4, <span class="at">data =</span> aids)</span>
+<span id="cb17-18"><a href="chap4.html#cb17-18" tabindex="-1"></a></span>
+<span id="cb17-19"><a href="chap4.html#cb17-19" tabindex="-1"></a>            coef <span class="fu">exp</span>(coef) <span class="fu">se</span>(coef)      z        p</span>
+<span id="cb17-20"><a href="chap4.html#cb17-20" tabindex="-1"></a>drugddI  <span class="fl">0.30948</span>   <span class="fl">1.36271</span>  <span class="fl">0.14653</span>  <span class="fl">2.112</span>   <span class="fl">0.0347</span></span>
+<span id="cb17-21"><a href="chap4.html#cb17-21" tabindex="-1"></a>CD4     <span class="sc">-</span><span class="fl">0.19343</span>   <span class="fl">0.82412</span>  <span class="fl">0.02437</span> <span class="sc">-</span><span class="fl">7.937</span> <span class="fl">2.08e-15</span></span>
+<span id="cb17-22"><a href="chap4.html#cb17-22" tabindex="-1"></a></span>
+<span id="cb17-23"><a href="chap4.html#cb17-23" tabindex="-1"></a>Likelihood ratio test<span class="ot">=</span><span class="fl">94.62</span>  on <span class="dv">2</span> df, p<span class="ot">=</span><span class="er">&lt;</span> <span class="fl">2.2e-16</span></span>
+<span id="cb17-24"><a href="chap4.html#cb17-24" tabindex="-1"></a>n<span class="ot">=</span> <span class="dv">1405</span>, number of events<span class="ot">=</span> <span class="dv">188</span> </span></code></pre></div>
+<p>我们观察到 CD4 细胞计数确实与死亡风险密切相关。具体来说，CD4 细胞计数平方根的单位减少对应于死亡风险增加为原来的 <span class="math inline">\(\exp(-\alpha) = 1.2\)</span> 倍 (95% CI: 1.16, 1.27). 我们通过指定并拟合一个明确解释 CD4 细胞计数标志物内生性的联合模型来进行。特别是，利用研究的随机化设定，我们拟合了线性混合模型</p>
+<p><span class="math display">\[\begin{array}{rcl}y_i(t)&amp;=&amp;m_i(t)+\varepsilon_i(t)\\&amp;=&amp;\beta_0+\beta_1t+\beta_2\{t\times\mathtt d\mathtt d\mathtt I_i\}+b_{i0}+b_{i1}t+\varepsilon_i(t)\end{array}\]</span></p>
+<p>其中，在固定效应部分，我们包括时间的主效应和治疗与时间的交互作用，在随机效应设计矩阵中，我们包括截距和时间项。对于生存子模型，类似于上述 Cox 模型，我们将治疗作为与时间无关的协变量，并将根据纵向模型估计的 CD4 细胞计数的真实潜在分布作为时依协变量，即</p>
+<p><span class="math display">\[h_i(t)=h_0(t)\exp\{\gamma\mathtt{ddI}_i+\alpha m_i(t)\}\]</span></p>
+<p>与未指定 <span class="math inline">\(h_0(t)\)</span> 的 Cox 模型相反，这里假定基线风险函数是分段常数，其中六个结置于观测事件时间的等距百分位数处。为了使用 <code>JM</code> 包拟合该联合模型，我们首先需要分别拟合线性混合效应模型和 Cox 模型，然后在函数 <code>jointModel()</code> 中提供返回的对象作为主要参数。更具体地说，在默认指定中，由 <code>jointModel()</code> 拟合的联合模型对于纵向和生存子模型具有与这两个单独拟合的模型完全相同的结构，此外，在生存子模型中，估计的“真实”纵向结果 <span class="math inline">\(m_i(t)\)</span> 的效应包含在线性预测器中。Cox 模型需要拟合在仅包含生存信息的数据集中（即每个患者单行观测）。对于艾滋病数据集，这可以使用如下语法构建 <code>aids.id</code> 数据框来生成</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="chap4.html#cb18-1" tabindex="-1"></a><span class="sc">&gt;</span> aids.id <span class="ot">&lt;-</span> aids[<span class="sc">!</span><span class="fu">duplicated</span>(aids<span class="sc">$</span>patient), ]</span></code></pre></div>
+<p>函数 <code>jointModel()</code> 使用拟合的线性混合模型和 Cox 模型（作为前两个参数）来提取所有所需信息（例如，响应向量、设计矩阵、事件指示符等），以拟合联合模型；因此，在对 <code>coxph()</code> 的调用中，我们需要指定 <code>x=TRUE</code><a class="footnote-ref" tabindex="0" data-toggle="popover" data-content="&lt;p&gt;除了在对 &lt;code&gt;coxph()&lt;/code&gt; 的调用中设置 &lt;code&gt;x=TRUE&lt;/code&gt; 之外，还建议（但不是必需）将设置选项 &lt;code&gt;model=TRUE&lt;/code&gt;，这样整个模型框架（而不仅仅是设计矩阵）都将包含在返回的对象中。&lt;/p&gt;"><sup>6</sup></a>，这样 Cox 模型的设计矩阵就包含在返回的对象中。下面的代码说明了如何为艾滋病数据集拟合联合模型</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="chap4.html#cb19-1" tabindex="-1"></a><span class="sc">&gt;</span> lmeFit.aids <span class="ot">&lt;-</span> <span class="fu">lme</span>(CD4 <span class="sc">~</span> obstime <span class="sc">+</span> obstime<span class="sc">:</span>drug,</span>
+<span id="cb19-2"><a href="chap4.html#cb19-2" tabindex="-1"></a>                     <span class="at">random =</span> <span class="sc">~</span> obstime <span class="sc">|</span> patient, <span class="at">data =</span> aids)</span>
+<span id="cb19-3"><a href="chap4.html#cb19-3" tabindex="-1"></a><span class="sc">&gt;</span> coxFit.aids <span class="ot">&lt;-</span> <span class="fu">coxph</span>(<span class="fu">Surv</span>(Time, death) <span class="sc">~</span> drug,</span>
+<span id="cb19-4"><a href="chap4.html#cb19-4" tabindex="-1"></a>                       <span class="at">data =</span> aids.id, <span class="at">x =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb19-5"><a href="chap4.html#cb19-5" tabindex="-1"></a><span class="sc">&gt;</span> jointFit.aids <span class="ot">&lt;-</span> <span class="fu">jointModel</span>(lmeFit.aids, coxFit.aids,</span>
+<span id="cb19-6"><a href="chap4.html#cb19-6" tabindex="-1"></a>                              <span class="at">timeVar =</span> <span class="st">"obstime"</span>, <span class="at">method =</span> <span class="st">"piecewise-PH-aGH"</span>)</span>
+<span id="cb19-7"><a href="chap4.html#cb19-7" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">summary</span>(jointFit.aids)</span>
+<span id="cb19-8"><a href="chap4.html#cb19-8" tabindex="-1"></a></span>
+<span id="cb19-9"><a href="chap4.html#cb19-9" tabindex="-1"></a>Call<span class="sc">:</span></span>
+<span id="cb19-10"><a href="chap4.html#cb19-10" tabindex="-1"></a><span class="fu">jointModel</span>(<span class="at">lmeObject =</span> lmeFit.aids, <span class="at">survObject =</span> coxFit.aids, </span>
+<span id="cb19-11"><a href="chap4.html#cb19-11" tabindex="-1"></a>    <span class="at">timeVar =</span> <span class="st">"obstime"</span>, <span class="at">method =</span> <span class="st">"piecewise-PH-aGH"</span>)</span>
+<span id="cb19-12"><a href="chap4.html#cb19-12" tabindex="-1"></a></span>
+<span id="cb19-13"><a href="chap4.html#cb19-13" tabindex="-1"></a>Data Descriptives<span class="sc">:</span></span>
+<span id="cb19-14"><a href="chap4.html#cb19-14" tabindex="-1"></a>Longitudinal Process        Event Process</span>
+<span id="cb19-15"><a href="chap4.html#cb19-15" tabindex="-1"></a>Number of Observations<span class="sc">:</span> <span class="dv">1405</span>    Number of Events<span class="sc">:</span> <span class="dv">188</span> (<span class="fl">40.3</span>%)</span>
+<span id="cb19-16"><a href="chap4.html#cb19-16" tabindex="-1"></a>Number of Groups<span class="sc">:</span> <span class="dv">467</span></span>
+<span id="cb19-17"><a href="chap4.html#cb19-17" tabindex="-1"></a></span>
+<span id="cb19-18"><a href="chap4.html#cb19-18" tabindex="-1"></a>Joint Model Summary<span class="sc">:</span></span>
+<span id="cb19-19"><a href="chap4.html#cb19-19" tabindex="-1"></a>Longitudinal Process<span class="sc">:</span> Linear mixed<span class="sc">-</span>effects model</span>
+<span id="cb19-20"><a href="chap4.html#cb19-20" tabindex="-1"></a>Event Process<span class="sc">:</span> Relative risk model with piecewise<span class="sc">-</span>constant</span>
+<span id="cb19-21"><a href="chap4.html#cb19-21" tabindex="-1"></a>        baseline risk <span class="cf">function</span></span>
+<span id="cb19-22"><a href="chap4.html#cb19-22" tabindex="-1"></a>Parameterization<span class="sc">:</span> Time<span class="sc">-</span>dependent </span>
+<span id="cb19-23"><a href="chap4.html#cb19-23" tabindex="-1"></a></span>
+<span id="cb19-24"><a href="chap4.html#cb19-24" tabindex="-1"></a>   log.Lik      AIC      BIC</span>
+<span id="cb19-25"><a href="chap4.html#cb19-25" tabindex="-1"></a> <span class="sc">-</span><span class="fl">4328.261</span> <span class="fl">8688.523</span> <span class="fl">8754.864</span></span>
+<span id="cb19-26"><a href="chap4.html#cb19-26" tabindex="-1"></a></span>
+<span id="cb19-27"><a href="chap4.html#cb19-27" tabindex="-1"></a>Variance Components<span class="sc">:</span></span>
+<span id="cb19-28"><a href="chap4.html#cb19-28" tabindex="-1"></a>             StdDev    Corr</span>
+<span id="cb19-29"><a href="chap4.html#cb19-29" tabindex="-1"></a>(Intercept)  <span class="fl">4.5839</span>  (Intr)</span>
+<span id="cb19-30"><a href="chap4.html#cb19-30" tabindex="-1"></a>obstime      <span class="fl">0.1822</span> <span class="sc">-</span><span class="fl">0.0468</span></span>
+<span id="cb19-31"><a href="chap4.html#cb19-31" tabindex="-1"></a>Residual     <span class="fl">1.7377</span>        </span>
+<span id="cb19-32"><a href="chap4.html#cb19-32" tabindex="-1"></a></span>
+<span id="cb19-33"><a href="chap4.html#cb19-33" tabindex="-1"></a>Coefficients<span class="sc">:</span></span>
+<span id="cb19-34"><a href="chap4.html#cb19-34" tabindex="-1"></a>Longitudinal Process</span>
+<span id="cb19-35"><a href="chap4.html#cb19-35" tabindex="-1"></a>                  Value Std.Err z<span class="sc">-</span>value p<span class="sc">-</span>value</span>
+<span id="cb19-36"><a href="chap4.html#cb19-36" tabindex="-1"></a>(Intercept)      <span class="fl">7.2203</span>  <span class="fl">0.2218</span> <span class="fl">32.5537</span> <span class="sc">&lt;</span><span class="fl">0.0001</span></span>
+<span id="cb19-37"><a href="chap4.html#cb19-37" tabindex="-1"></a>obstime         <span class="sc">-</span><span class="fl">0.1917</span>  <span class="fl">0.0217</span> <span class="sc">-</span><span class="fl">8.8374</span> <span class="sc">&lt;</span><span class="fl">0.0001</span></span>
+<span id="cb19-38"><a href="chap4.html#cb19-38" tabindex="-1"></a>obstime<span class="sc">:</span>drugddI  <span class="fl">0.0116</span>  <span class="fl">0.0302</span>  <span class="fl">0.3834</span>  <span class="fl">0.7014</span></span>
+<span id="cb19-39"><a href="chap4.html#cb19-39" tabindex="-1"></a></span>
+<span id="cb19-40"><a href="chap4.html#cb19-40" tabindex="-1"></a>Event Process</span>
+<span id="cb19-41"><a href="chap4.html#cb19-41" tabindex="-1"></a>            Value Std.Err  z<span class="sc">-</span>value p<span class="sc">-</span>value</span>
+<span id="cb19-42"><a href="chap4.html#cb19-42" tabindex="-1"></a>drugddI    <span class="fl">0.3348</span>  <span class="fl">0.1565</span>   <span class="fl">2.1397</span>  <span class="fl">0.0324</span></span>
+<span id="cb19-43"><a href="chap4.html#cb19-43" tabindex="-1"></a>Assoct    <span class="sc">-</span><span class="fl">0.2875</span>  <span class="fl">0.0359</span>  <span class="sc">-</span><span class="fl">8.0141</span> <span class="sc">&lt;</span><span class="fl">0.0001</span></span>
+<span id="cb19-44"><a href="chap4.html#cb19-44" tabindex="-1"></a><span class="fu">log</span>(xi<span class="fl">.1</span>) <span class="sc">-</span><span class="fl">2.5438</span>  <span class="fl">0.1913</span> <span class="sc">-</span><span class="fl">13.2953</span>        </span>
+<span id="cb19-45"><a href="chap4.html#cb19-45" tabindex="-1"></a><span class="fu">log</span>(xi<span class="fl">.2</span>) <span class="sc">-</span><span class="fl">2.2722</span>  <span class="fl">0.1784</span> <span class="sc">-</span><span class="fl">12.7328</span>        </span>
+<span id="cb19-46"><a href="chap4.html#cb19-46" tabindex="-1"></a><span class="fu">log</span>(xi<span class="fl">.3</span>) <span class="sc">-</span><span class="fl">1.9554</span>  <span class="fl">0.2403</span>  <span class="sc">-</span><span class="fl">8.1357</span>        </span>
+<span id="cb19-47"><a href="chap4.html#cb19-47" tabindex="-1"></a><span class="fu">log</span>(xi<span class="fl">.4</span>) <span class="sc">-</span><span class="fl">2.5011</span>  <span class="fl">0.3412</span>  <span class="sc">-</span><span class="fl">7.3297</span>        </span>
+<span id="cb19-48"><a href="chap4.html#cb19-48" tabindex="-1"></a><span class="fu">log</span>(xi<span class="fl">.5</span>) <span class="sc">-</span><span class="fl">2.4152</span>  <span class="fl">0.3156</span>  <span class="sc">-</span><span class="fl">7.6531</span>        </span>
+<span id="cb19-49"><a href="chap4.html#cb19-49" tabindex="-1"></a><span class="fu">log</span>(xi<span class="fl">.6</span>) <span class="sc">-</span><span class="fl">2.4018</span>  <span class="fl">0.4007</span>  <span class="sc">-</span><span class="fl">5.9941</span>        </span>
+<span id="cb19-50"><a href="chap4.html#cb19-50" tabindex="-1"></a><span class="fu">log</span>(xi<span class="fl">.7</span>) <span class="sc">-</span><span class="fl">2.4239</span>  <span class="fl">0.5301</span>  <span class="sc">-</span><span class="fl">4.5725</span>        </span>
+<span id="cb19-51"><a href="chap4.html#cb19-51" tabindex="-1"></a></span>
+<span id="cb19-52"><a href="chap4.html#cb19-52" tabindex="-1"></a>Integration<span class="sc">:</span></span>
+<span id="cb19-53"><a href="chap4.html#cb19-53" tabindex="-1"></a>method<span class="sc">:</span> (pseudo) adaptive Gauss<span class="sc">-</span>Hermite</span>
+<span id="cb19-54"><a href="chap4.html#cb19-54" tabindex="-1"></a>quadrature points<span class="sc">:</span> <span class="dv">5</span> </span>
+<span id="cb19-55"><a href="chap4.html#cb19-55" tabindex="-1"></a></span>
+<span id="cb19-56"><a href="chap4.html#cb19-56" tabindex="-1"></a>Optimization<span class="sc">:</span></span>
+<span id="cb19-57"><a href="chap4.html#cb19-57" tabindex="-1"></a>Convergence<span class="sc">:</span> <span class="dv">0</span> </span></code></pre></div>
+<p><code>jointModel()</code> 的主参数 <code>timeVar</code> 用于指定线性混合效应模型中时间变量的名称，这是 <span class="math inline">\(m_i(t)\)</span> 的内部计算所必需的。<code>method</code> 参数指定了基线风险函数的类型，此处假定其为分段常数，以及数值积分方法（有关数值积分选项的更多信息，请参阅 <a href="chap4.html#sec4-3-5">4.3.5</a> 节）。拟合联合模型的详细输出由函数 <code><a href="https://rdrr.io/r/base/summary.html">summary()</a></code> 生成，该函数返回参数估计及其标准误以及纵向和生存子模型的渐近 Wald 检验等。在 <code>Event Process</code> 的结果中，标记为 <code>Assoct</code> 的参数实际上是 <a href="chap4.html#eq:4-1">(4.1)</a> 中的参数 <span class="math inline">\(\alpha\)</span>，用于度量 <span class="math inline">\(m_i(t)\)</span>（在这个例子中为真实 CD4 细胞计数平方根）与死亡风险之间的关联。参数 <code>xi.1</code>, . . . , <code>xi.7</code>是 <a href="chap4.html#eq:4-3">(4.3)</a> 中分段恒定基线风险函数的参数 <span class="math inline">\(\xi_q(q=1,\ldots,7)\)</span>。联合模型还发现，CD4 细胞计数平方根与死亡风险之间存在强烈关联，标志物的单位减少对应于死亡风险增加为原来的 <span class="math inline">\(\exp(-\alpha)=1.3\)</span> 倍 (95% CI: 1.24, 1.43). 比较扩展的 Cox 模型和联合模型的点估计以及相应的 95% 置信区间，我们能清楚地看到不可忽略的差异。特别地，联合模型中的 CD4 细胞计数平方根的对数风险比比扩展的 Cox 模型中的大大约 49%，并且 Cox 模型的风险比的 95% 置信区间的上限刚好高于联合模型的相同置信区间的下限。这些发现说明了由于 CD4 细胞计数水平测量误差导致的标准 Cox 分析回归系数衰减的程度。</p>
+<p><code>JM</code> 包遵循随机效应范式，目前仅适用于具有独立同分布的误差项的线性混合效应子模型，没有如 <a href="chap4.html#eq:4-6">(4.6)</a> 所示的序列相关结构。因此，在调用 <code><a href="https://rdrr.io/r/stats/lm.html">lm()</a></code> 以生成作为 <code>jointModel()</code> 的第一个参数提供的对象时，用户不应指定相关结构（<code>correlation</code> 参数）或方差函数（<code>weights</code> 参数）。关于随机效应的协方差矩阵，默认情况下 <code>jointModel()</code> 假定它是非结构化的，并估计其所有自由参数。然而，它也允许使用对角协方差阵，该矩阵可以使用 <code>lme()</code> 的 <code>random</code> 参数中的函数 <code>pdDiag()</code> 来指定。当考虑高维随机效应结构时，此选项特别有用。此外，除了拟合艾滋病数据的联合模型中假定的分段恒定基线风险函数外，<code>jointModel()</code> 还允许生存子模型的其他公式。这些是由 <code>method</code> 参数指定的，可用选项有<a class="footnote-ref" tabindex="0" data-toggle="popover" data-content="&lt;p&gt;实际上在 &lt;code&gt;JM&lt;/code&gt; package of version 1.5-2 中，&lt;code&gt;method&lt;/code&gt; 有 11 个可用选项，使用 &lt;code&gt;help(jointModel)&lt;/code&gt; 来查看。&lt;/p&gt;"><sup>7</sup></a></p>
+<ul>
+<li>
+<code>method = "piecewise-PH-GH"</code>：具有分段恒定基线风险函数 <a href="chap4.html#eq:4-3">(4.3)</a> 的相对风险模型 <a href="chap4.html#eq:4-1">(4.1)</a>。默认情况下，使用六个内部结，这些结位于观测事件时间的等距百分位数处。要更改内部结的默认数量，可以使用控制参数 <code>lng.in.kn</code>，而若要直接指定结的位置，可以使用控制参数 <code>knots</code>。</li>
+<li>
+<code>method = "spline-PH-GH"</code>：具有对数基线风险函数 <a href="chap4.html#eq:4-4">(4.4)</a> 的样条近似的相对风险模型 <a href="chap4.html#eq:4-1">(4.1)</a>。与分段常数类似，默认情况下，使用五个内部结，这些结位于观测事件时间的等距百分位数处，参数 <code>lng.in.kn</code> 和 <code>knots</code> 可用于更精细的控制。</li>
+<li>
+<code>method = "Cox-PH-GH"</code>：具有未指定的基线风险函数的相对风险模型 <a href="chap4.html#eq:4-1">(4.1)</a>。这一假定等价于假定 <span class="math inline">\(h_0(\cdot)\)</span> 在唯一的事件发生时刻是离散的，即具有点质量，即
+<span class="math display">\[h_0(t)=\left\{\begin{array}{ll}\xi_q,&amp;t=T_q^*\\0,&amp;t\neq T_q^*\end{array}\right.\]</span>
+其中 <span class="math inline">\(T^*_q\)</span> 表示第 <span class="math inline">\(q\)</span> 个唯一真实事件时间。该选项对应于 Wulfsohn and Tsiatis (1997) 提出的联合模型。</li>
+<li>
+<code>method = "weibull-PH-GH"</code>：具有 Weibull 基线风险函数的相对风险模型 <a href="chap4.html#eq:4-1">(4.1)</a>。此时 <span class="math inline">\(h_0(t)=\sigma_tt^{\sigma_t-1}\)</span> 并且 <a href="chap4.html#eq:4-1">(4.1)</a> 中基线协变量的设计矩阵 <span class="math inline">\(W\)</span> 也包含截距项<a class="footnote-ref" tabindex="0" data-toggle="popover" data-content='&lt;p&gt;请注意，Weibull 基线风险函数的标准公式形如 &lt;span class="math inline"&gt;\(h_0(t)=\phi\sigma_tt^{\sigma_t-1}\)&lt;/span&gt; ，因此截距项对应于 &lt;span class="math inline"&gt;\(\log(\phi)\)&lt;/span&gt;。&lt;/p&gt;'><sup>8</sup></a>。</li>
+<li>
+<code>method = "weibull-AFT-GH"</code>：具有 Weibull 基线风险函数的加速失效时间模型。有关此公式的更多详细信息请参见 <a href="chap5.html#sec5-6">5.6</a> 节。</li>
+</ul>
+</div>
+<div id="sec4-3" class="section level2" number="4.3">
+<h2>
+<span class="header-section-number">4.3</span> 联合模型的估计<a class="anchor" aria-label="anchor" href="#sec4-3"><i class="fas fa-link"></i></a>
+</h2>
+<div id="sec4-3-1" class="section level3" number="4.3.1">
+<h3>
+<span class="header-section-number">4.3.1</span> 两阶段法<a class="anchor" aria-label="anchor" href="#sec4-3-1"><i class="fas fa-link"></i></a>
+</h3>
+<p>由于联合模型可能性的数值计算的复杂性（将在以下各节中解释），拟合这些模型的初始方法集中于两阶段法。具体来说，Self and Pawitan (1992) 提出了一种联合模型，其相对风险子模型形如 <a href="chap4.html#eq:4-1">(4.1)</a>，具有未指定的基线风险函数 <span class="math inline">\(h_0(t)\)</span>，并且项 <span class="math inline">\(\exp\{\alpha m_i(t)\}\)</span> 替换为 <span class="math inline">\(\{1 +\alpha m_i(t)\}\)</span>，使得模型在随机效应 <span class="math inline">\(b_i\)</span> 中呈线性<a class="footnote-ref" tabindex="0" data-toggle="popover" data-content='&lt;p&gt;such that the model would be linear in the random effects &lt;span class="math inline"&gt;\(b_i\)&lt;/span&gt;.&lt;/p&gt;'><sup>9</sup></a>。作者建议使用两步推理法来估计该联合模型，其中第一步使用最小二乘法估计随机效应，第二步则利用这些估计来估计合适的 <span class="math inline">\(m_i(t)\)</span> 值，并将其代入 Cox 模型的偏似然中。Tsiatis et al. (1995) 还开发了一种两阶段法来估计联合模型，该方法结合了 <a href="chap4.html#eq:4-1">(4.1)</a> 和 <a href="chap4.html#eq:4-5">(4.5)</a>，但没有对风险函数线性化。特别地，对于每个唯一的事件时间，他们建议用估计 <span class="math inline">\(E\{m_i(t)\mid\mathcal{Y}_i(t),T_i\geq t\}\)</span> 来代替偏似然贡献中的项 <span class="math inline">\(m_i(t)\)</span>。对于任何事件时间 <span class="math inline">\(t\)</span>，可通过使用在 <span class="math inline">\(t\)</span> 时仍处于风险的所有受试者直到时间 <span class="math inline">\(t\)</span> 的观测响应来拟合相应的混合模型，并使用随机效应 <span class="math inline">\(b_i\)</span> 的经验贝叶斯估计来计算 <span class="math inline">\(m_i(t)\)</span> 的最佳线性无偏预测因子 (best linear unbiased predictor)，来获得该估计。</p>
+<p>尽管这些方法相对容易用标准软件实现，但在许多情况下，它们会产生有偏的结果。Dafni and Tsiatis(1998), Tsiatis and daviddian (2001), Ye et al. (2008b) 以及 Sweeting and Thompson (2011) 的一系列模拟研究都证明了这一点。出于这个原因，这类联合模型的文献主要集中在消除这种偏差的全似然方法上，而非依赖于近似。</p>
+</div>
+<div id="sec4-3-2" class="section level3" number="4.3.2">
+<h3>
+<span class="header-section-number">4.3.2</span> 联合似然公式<a class="anchor" aria-label="anchor" href="#sec4-3-2"><i class="fas fa-link"></i></a>
+</h3>
+<p>为联合模型提出的主要估计方法是（半参数）最大似然 (Wulfsohn and Tsiatis, 1997; Henderson et al., 2000; Hsieh et al., 2006)。Zeng and Cai (2005) 研究了未指定基线风险函数下半参数最大似然估计的渐近性质。Hanson et al. (2011), Chi and Ibrahim (2006), Brown and Ibraham (2003), Xu and Zeger (2001) 以及 Wang and Taylor (2001) 等已经考虑了使用 MCMC 技术的联合模型的贝叶斯估计。此外，Tsiatis and Davidian (2001) 提出了一种条件得分方法，其中随机效应视为讨厌参数 (nuisance parameter)，他们开发了一组无偏估计方程，该方程生成一致和渐近的正态估计。</p>
+<p>作为更传统的方法之一，我们在这里给出了联合模型的最大似然方法的基本原理。最大似然估计是通过与观测结果 <span class="math inline">\(\{T_i,\delta_i,y_i\}\)</span> 的联合分布相对应的对数似然函数的众数推导出来的。为了定义该联合分布，我们假定与时间无关的随机效应向量 <span class="math inline">\(b_i\)</span> 构成了纵向过程和生存过程的基础。这意味着这些随机效应既解释了纵向结果与事件结果之间的关联，也解释了纵向过程中重复测量之间的相关性（条件独立性）。正式地，我们有</p>
+<p><span class="math display" id="eq:4-8">\[\begin{align}
+p(T_i,\delta_i,y_i\mid b_i;\theta)\quad&amp;=\quad p(T_i,\delta_i\mid b_i;\theta)~p(y_i\mid b_i;\theta),\quad\text{以及}
+\tag{4.7}
+\\\\p(y_i\mid b_i;\theta)\quad&amp;=\quad\prod_jp\{y_i(t_{ij})\mid b_i;\theta\}
+\tag{4.8}
+\end{align}\]</span></p>
+<p>其中 <span class="math inline">\(\theta=(\theta_t^\top,\theta_y^\top,\theta_b^\top)^\top\)</span> 表示全参数向量，其中 <span class="math inline">\(\theta_t\)</span> 表示事件时间结果的参数，<span class="math inline">\(\theta_y\)</span> 表示纵向结果的参数，<span class="math inline">\(\theta_b\)</span> 表示随机效应协方差阵的唯一参数，<span class="math inline">\(y_i\)</span> 是第 <span class="math inline">\(i\)</span> 个受试者纵向响应的 <span class="math inline">\(n_i \times 1\)</span> 向量。</p>
+<p>此外我们假定，给定观测历史，删失机制和就诊过程独立于真实事件时间和未来的纵向测量。如前所述，就诊过程是产生收集纵向测量的时间点的机制（随机的或确定的） (Lipsitz et al., 2002)，对于任何时间点 <span class="math inline">\(t\)</span>，我们将 <span class="math inline">\(t\)</span> 之前纵向过程的所有可用信息定义为观测史。实际上，这些假定意味着受试者是否退出研究或出现在诊所进行纵向测量的决定取决于观测史（纵向测量和基线协变量），但不存在额外的依赖于潜在的、与预后相关的潜在受试者特征。当两个过程中的任何一个取决于随机效应时，就会违反这些假设。这是因为这种依赖性隐含地对应于对未来纵向测量的依赖性。对于就诊过程和删失过程的非信息性进行评估通常需要来自主题专家的外部信息，因为观测数据没有足够的信息表明情况并非如此。</p>
+<p>在这些假设下，第 <span class="math inline">\(i\)</span> 个受试者对对数似然的贡献可表示为</p>
+<p><span class="math display" id="eq:4-9">\[\begin{align}
+\log p(T_i,\delta_i,y_i;\theta)&amp;=\log\int p(T_i,\delta_i,y_i,b_i;\theta)~db_i\tag{4.9}\\&amp;=\log\int p(T_i,\delta_i\mid b_i;\theta_t,\beta)\Big[\prod_jp\{y_i(t_{ij})\mid b_i;\theta_y\}\Big]p(b_i;\theta_b)~db_i
+\end{align}\]</span></p>
+<p>其中生存部分的条件密度 <span class="math inline">\(p(T_i,\delta_i\mid b_i;\theta_t,\beta)\)</span> 形如</p>
+<p><span class="math display" id="eq:4-10">\[\begin{align}
+p(T_i,\delta_i\mid b_i;\theta_t,\beta)\quad=&amp;\quad h_i(T_i\mid\mathcal{M}_i(T_i);\theta_t,\beta)^{\delta_i}\mathcal{S}_i(T_i\mid\mathcal{M}_i(T_i);\theta_t,\beta)\tag{4.10}\\
+=&amp;\quad\left[h_0(T_i)\exp\{\gamma^\top w_i+\alpha m_i(T_i)\}\right]^{\delta_i} \\
+&amp;\quad\times\exp\biggl(-\int_0^{T_i}h_0(s)\exp\{\gamma^\top w_i+\alpha m_i(s)\}ds\biggr)
+\end{align}\]</span></p>
+<p>其中，<span class="math inline">\(h_0(\cdot)\)</span> 可以是时间的任意正函数，例如分段常数模型 <a href="chap4.html#eq:4-3">(4.3)</a>、B 样条模型 <a href="chap4.html#eq:4-4">(4.4)</a> 或任何已知分布的风险函数，生存函数由 <a href="chap4.html#eq:4-2">(4.2)</a> 给出。纵向响应和随机效应的联合密度由下式给出</p>
+<p><span class="math display" id="eq:4-11">\[\begin{align}
+p(y_i\mid b_i;\theta)p(b_i;\theta) =&amp;\quad\prod_jp\{y_i(t_{ij})\mid b_i;\theta_y\}p(b_i;\theta_b)  \tag{4.11}\\
+=&amp;\quad(2\pi\sigma^2)^{-n_i/2}\exp\bigl\{-\parallel y_i-X_i\beta-Z_ib_i\parallel^2/2\sigma^2\bigr\} \\
+&amp;\quad\times(2\pi)^{-q_b/2}\mathrm{det}(D)^{-1/2}\exp\!\left(-b_i^\top D^{-1}b_i/2\right)
+\end{align}\]</span></p>
+<p>其中，<span class="math inline">\(q_b\)</span> 表示随机效应向量的维数，并且 <span class="math inline">\(\parallel x\parallel={\left\{\sum_ix_i^2\right\}^{1/2}}\)</span> 表示向量的欧式范数。</p>
+<p>对数似然函数 <span class="math inline">\(\ell(\theta)=\sum_i\log p(T_i,\delta_i,y_i;\theta)\)</span> 关于 <span class="math inline">\(\theta\)</span> 的最大化可使用标准算法来实现，例如期望最大化 (EM, Dempster et al., 1977) 算法或 Newton-Raphson 算法或其任何变体 (Lange, 2004)。在联合建模文献中，EM 算法传统上是首选的（将随机效应视为“缺失数据”），主要是因为在 M 步中，一些参数具有闭合形式的更新。然而，EM 算法的一个严重缺点是其收敛速度是线性的，导致收敛缓慢，尤其是在接近最大值时。尽管如此，Rizopoulos et al. (2009) 指出，对应于 <span class="math inline">\(\ell(\theta)\)</span> 的得分向量实际上是 EM 或 Newton 型算法中所需的关键函数。特别值得注意的是，该得分向量可重写为以下形式：</p>
+<p><span class="math display" id="eq:4-12">\[\begin{align}
+S(\theta)=&amp;\quad\sum_i\frac\partial{\partial\theta^\top}\log\int p(T_i,\delta_i\mid b_i;\theta)p(y_i\mid b_i;\theta)p(b_i;\theta)db_i\\=&amp;\quad\sum_i\frac1{p(T_i,\delta_i,y_i;\theta)}\frac\partial{\partial\theta^\top}\int p(T_i,\delta_i\mid b_i;\theta)p(y_i\mid b_i;\theta)p(b_i;\theta)db_i\\=&amp;\quad\sum_i\frac1{p(T_i,\delta_i,y_i;\theta)}\int\frac\partial{\partial\theta^\top}\{p(T_i,\delta_i\mid b_i;\theta)p(y_i\mid b_i;\theta)p(b_i;\theta)\}db_i\\=&amp;\quad\sum_i\int\Big[\frac\partial{\partial\theta^\top}\log\big\{p(T_i,\delta_i\mid b_i;\theta)p(y_i\mid b_i;\theta)p(b_i;\theta)\big\}\Big]\\&amp;\quad\times\frac{p(T_i,\delta_i\mid b_i;\theta)p(y_i\mid b_i;\theta)p(b_i;\theta)}{p(T_i,\delta_i,y_i;\theta)}db_i\\=&amp;\quad\sum_i\int A(\theta,b_i)p(b_i\mid T_i,\delta_i,y_i;\theta)db_i \tag{4.12}
+\end{align}\]</span></p>
+<p>其中，<span class="math inline">\(A(\cdot)\)</span> 表示完全数据得分向量，由 <span class="math inline">\(A(\theta,b_i)=\partial\{\log p(T_i,\delta_i\mid b_i;\theta)+\log p(y_i\mid b_i;\theta)+\log p(b_i;\theta)\}/\partial\theta^\top\)</span> 给出。请注意，观测数据得分向量表示为完全数据得分向量关于随机效应后验分布的期望值。这意味着 <a href="chap4.html#eq:4-12">(4.12)</a> 可以发挥双重作用。具体来说，如果对应于 <a href="chap4.html#eq:4-12">(4.12)</a> 的得分方程是关于 <span class="math inline">\(\theta\)</span> 求解的，其中 <span class="math inline">\(p(b_i\mid T_i,\delta_i,y_i;\theta)\)</span> 固定为前一次迭代的 <span class="math inline">\(\theta\)</span> 值，则这对应于 EM 算法，而如果得分方程是考虑 <span class="math inline">\(p(b_i\mid T_i,\delta_i,y_i;\theta)\)</span>（也是 <span class="math inline">\(\theta\)</span> 的函数）关于 <span class="math inline">\(\theta\)</span> 求解的，则这相当于观测数据对数似然 <span class="math inline">\(\ell(\theta)\)</span> 的直接最大化。附录 <a href="#B"><strong>??</strong></a> 给出了关于联合模型 EM 算法步骤指定的更多细节。</p>
+<p>最后一个事实也有助于直接计算参数估计的标准误。具体来说，即使我们已经使用 EM 算法估计了联合模型，我们也可以容易地使用观测数据得分向量 <a href="chap4.html#eq:4-12">(4.12)</a> 来计算 Hessian 矩阵，并随后使用观测信息矩阵（即，Hessian 阵的拟的负数）来计算标准误。使用与上述得分向量推导类似的计算，我们可以将 Hessian 矩阵重写为以下形式</p>
+<p><span class="math display">\[\begin{aligned}
+\frac{\partial S_i(\theta)}{\partial\theta}\quad =&amp;\quad\frac{\partial}{\partial\theta}\int A(\theta,b_i)p(b_i\mid T_i,\delta_i,y_i;\theta)db_i  \\
+\quad=&amp;\quad\int\frac{\partial A(\theta,b_i)}{\partial\theta}p(b_i\mid T_i,\delta_i,y_i;\theta)db_i \\
+&amp;+\underbrace{\int A(\theta,b_i)\frac{\partial p(b_i\mid T_i,\delta_i,y_i;\theta)}{\partial\theta}db_i}_{I_1}
+\end{aligned}\]</span></p>
+<p>其中</p>
+<p><span class="math display">\[\begin{aligned}
+I_{1}\quad=&amp;\quad\int A(\theta,b_i)\Big\{\frac{\partial\log p(b_i\mid T_i,\delta_i,y_i;\theta)}{\partial\theta}\Big\}^\top p(b_i\mid T_i,\delta_i,y_i;\theta)db_i \\
+\quad=&amp;\quad\int A(\theta,b_i)\bigg\{\frac{\partial\{\log p(T_i,\delta_i\mid b_i;\theta)+\log p(y_i\mid b_i;\theta)+\log p(b_i;\theta)\}}{\partial\theta} \\
+&amp;\quad-\frac{\partial\log p(T_i,\delta_i,y_i;\theta)}{\partial\theta}\Bigg\}^\top p(b_i\mid T_i,\delta_i,y_i;\theta)db_i \\
+\quad=&amp;\quad\int A(\theta,b_i)\Big\{A(\theta,b_i)-S_i(\theta)\Big\}^\top p(b_i\mid T_i,\delta_i,y_i;\theta)db_i
+\end{aligned}\]</span></p>
+<p>然而，在实践中，通常更容易使用数值求导程序，如前向或中心差分近似 (Press et al., 2007)，并仅使用计算得分向量的函数来计算 Hessian. 在估计了 <span class="math inline">\(\mathcal{I}(\theta)\)</span> 之后，参数估计的标准误可以基于的观测信息矩阵估计，即</p>
+<p><span class="math display">\[\begin{aligned}\operatorname{var}(\hat{\theta})=\{\mathcal{I}(\hat{\theta})\}^{-1},\quad\text{其中}\quad\mathcal{I}(\hat{\theta})=-\sum_{i=1}^n\left.\frac{\partial S_i(\theta)}{\partial\theta}\right|_{\theta=\hat{\theta}}\end{aligned}\]</span></p>
+<p>需要注意的是，由于事件的发生导致的脱落，观测信息矩阵在计算标准误时优于期望信息矩阵；有关更多详细信息，请参阅 <a href="chap4.html#sec4-6">4.6</a> 节以及 Kenward and Molenberghs (1998).</p>
+</div>
+<div id="sec4-3-3" class="section level3" number="4.3.3">
+<h3>
+<span class="header-section-number">4.3.3</span> 具有未指定基线风险函数的标准误<a class="anchor" aria-label="anchor" href="#sec4-3-3"><i class="fas fa-link"></i></a>
+</h3>
+<p>正如我们在第 <a href="chap3.html#chap3">3</a> 章中所讨论的，Cox 模型在标准生存分析中的巨大优势在于，偏似然可用于估计相对风险模型的回归系数。这在实践中意味着（扩展的）Cox 模型的回归系数的标准误和推断具有类似于渐近最大似然理论的良好渐近性质，而不必指定适当的基线风险函数 (Andersen and Gill, 1982).</p>
+<p>不幸的是，在联合建模框架下，这一好特性没有被继承 (Hsieh et al., 2006). 具体来说，由于使用了随机效应，正如我们在 <a href="chap4.html#sec4-3-2">4.3.2</a> 节中所看到的，联合模型的估计不能再仅基于偏似然，而必须采用全似然方法。当我们为生存子模型定义一个具有未指定基线风险函数的联合模型时，似然的计算是基于非参数最大似然参数的，在该参数下，未指定的累积发生率函数 <span class="math inline">\(H_0(t)=\int_0^th_0(s)ds\)</span> 被在唯一事件时间具有跳跃的阶跃函数取代 (van der Vaart, 1998). 在这种设定下，很明显，参数向量 <span class="math inline">\(\theta\)</span> 通常具有非常高的维度，因为它还包含高维度子向量 <span class="math inline">\(h_0(t)\)</span>。从实际的角度来看，参数向量的高维度可能导致产生标准误所需的 Hessian 矩阵的计算和求逆的数值复杂性。因此，标准误的估计通常基于轮廓似然方法。即 <span class="math inline">\(\ell_p(\beta,\sigma,\gamma,\alpha,\hat{h}_0(\beta,\sigma,\gamma,\alpha))\)</span>，其中 <span class="math inline">\(\hat{h}_0(\beta,\sigma,\gamma,\alpha)\)</span> 表示作为剩余参数的函数的 <span class="math inline">\(h_0(t)\)</span> 的非参数最大似然估计。为了使轮廓似然渐近性起作用，这种非参数最大似然估计不应依赖于 <span class="math inline">\(h_0(t)\)</span> (Hsieh et al., 2006). 然而不幸的是，在联合模型下情况并非如此，因为由于使用了随机效应，该估计没有闭合形式的解。在实践中，通常使用来自 EM 算法的 M 步的如下估计：</p>
+<p><span class="math display">\[\begin{aligned}\hat{h}_0(t)&amp;=\sum_{i=1}^n\frac{\delta_iI(T_i=t)}{\sum_{j=1}^nI(T_i\geq t)\int\exp\{\hat{\gamma}^\top w_j+\hat{\alpha}m_j(t,b)\}p(b_i\mid T_i,\delta_i,y_i;\hat{\theta})db_i}\end{aligned}\]</span></p>
+<p>可以看出，通过随机效应的后验分布 <span class="math inline">\(p(b_i\mid T_i,\delta_i,y_i;\hat{\theta})\)</span>，它仍然是 <span class="math inline">\(h_0(t)\)</span> 的函数。因此，基于轮廓得分向量</p>
+<p><span class="math display">\[S(\theta_{-h},\hat{h}_0(\theta_{-h}))=\frac{\partial}{\partial\theta_{-h}^\top}\ell_p(\theta_{-h},\hat{h}_0(\theta_{-h}))\]</span></p>
+<p>的其余参数估计 <span class="math inline">\(\hat{\theta}_{-h}=(\beta,\sigma,\gamma,\alpha)\)</span> 的标准误普遍会被低估。为了克服这个问题，Hsieh et al. (2006) 提出在使用未指定的基线风险函数时使用 Bootstrapping (Efron and Tibshirani, 1994) 来估计标准误。然而很明显，这种方法使得这种类型的联合模型的计算要求相当高。一个可行的替代方案是为 <span class="math inline">\(h_0(t)\)</span> 假定一个灵活但参数化的模型。正如我们在 <a href="chap4.html#sec4-1-1">4.1.1</a> 节中看到的，有两种选择是使用立方样条或分段常数模型。这些参数模型的优点是双重的：首先，它们可以通过增加内部结数来实现任意的灵活性，从而捕获 <span class="math inline">\(h_0(t)\)</span> 的各种形状；其次，在这种模型下，标准误的估计直接服从渐近最大似然理论 (Cox and Hinkley, 1974).</p>
+<p>在函数 <code>jointModel()</code> 中，具有未指定基线风险函数（即参数 <code>method="Cox-PH-GH"</code>）的联合模型的标准误是根据上面介绍的轮廓得分向量计算的，因此用户应预期这些标准误会被低估。</p>
+</div>
+<div id="sec4-3-4" class="section level3" number="4.3.4">
+<h3>
+<span class="header-section-number">4.3.4</span> <code>JM</code> 中的优化控制<a class="anchor" aria-label="anchor" href="#sec4-3-4"><i class="fas fa-link"></i></a>
+</h3>
+<p>函数 <code>jointModel()</code> 实现了一个混合优化过程来定位最大似然估计。具体来说，该过程从 EM 算法开始进行固定次数的迭代，如果没有实现收敛，则切换到 quasi-Newton 算法，直到实现收敛。可用的 quasi-Newton 算法是 <code><a href="https://rdrr.io/r/stats/optim.html">optim()</a></code> 的 BFGS (Nash, 1990) 和 <code><a href="https://rdrr.io/r/stats/nlminb.html">nlminb()</a></code> 的 PORT 程序 (Gay, 1990). 参数的初始值取自线性混合模型和生存模型，这些模型作为 <code>jointModel()</code> 中的前两个参数提供。在 EM 迭代过程中，只要满足以下两个常用标准中的任何一个，就会宣布收敛。</p>
+<p><span class="math display">\[\max\left\{|\theta^{(it)}-\theta^{(it-1)}|\big/(|\theta^{(it-1)}|+\epsilon_1)\right\}&lt;\epsilon_2,\\\ell(\theta^{(it)})-\ell(\theta^{(it-1)})&lt;\epsilon_3\big\{|\ell(\theta^{(it-1)})|+\epsilon_3\big\}\]</span></p>
+<p>其中 <span class="math inline">\(\theta^{(it)}\)</span> 表示第 <span class="math inline">\(i\)</span> 次迭代时的参数值，<span class="math inline">\(\ell(\theta)=\sum_i\log p(T_i,\delta_i,y_i;\theta)\)</span>。<span class="math inline">\(\epsilon_1\)</span> 和 <span class="math inline">\(\epsilon_2\)</span> 的常用值约为 10<sup>−3</sup> 或 10<sup>−4</sup>，默认情况下，<span class="math inline">\(\epsilon_3\)</span> 设置为 <code>sqrt(.Machine$double.eps)</code>，约为 10<sup>–8</sup>。在 quasi-Newton 迭代过程中，通常只使用后一个标准。<code>jointModel()</code> 的 <code>control</code> 参数提供了对优化过程的更精细控制。其他指定了 EM 的次数（参数 <code>iter.EM</code>）和 quasi-Newton 迭代次数（参数 <code>iter.qN</code>）、quasi-Newton 算法的类型（参数 <code>optimizer</code>）、收敛标准的容限（参数 <code>tol1</code>, <code>tol2</code> 和 <code>tol3</code> 分别对应于 <span class="math inline">\(\epsilon_1,\epsilon_2\)</span> 和 <span class="math inline">\(\epsilon_3\)</span>），以及基于得分向量计算 Hessian 矩阵的数值导数的类型（即，前向或中心差分近似——参数 <code>numeriDeriv</code> 和 <code>eps.Hes</code>）。</p>
+<p>通过在 <code>jointModel()</code> 的调用中直接包含感兴趣的 <code>control</code> 参数，可以很容易地更改这些参数的默认值。例如，为了将联合模型拟合到 <a href="chap4.html#sec4-2">4.2</a> 节中介绍的艾滋病数据集，使用 80 次 EM 迭代，具有更严格的收敛容限，并使用中心差分近似来计算标准误，可使用以下语法</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="chap4.html#cb20-1" tabindex="-1"></a><span class="sc">&gt;</span> jointFit.aids <span class="ot">&lt;-</span> <span class="fu">jointModel</span>(lmeFit.aids, coxFit.aids,</span>
+<span id="cb20-2"><a href="chap4.html#cb20-2" tabindex="-1"></a>                              <span class="at">timeVar =</span> <span class="st">"obstime"</span>, <span class="at">method =</span> <span class="st">"piecewise-PH-aGH"</span>, <span class="at">iter.EM =</span> <span class="dv">80</span>,</span>
+<span id="cb20-3"><a href="chap4.html#cb20-3" tabindex="-1"></a>                              <span class="at">tol3 =</span> <span class="fl">1e-09</span>, <span class="at">numeriDeriv =</span> <span class="st">"cd"</span>, <span class="at">eps.Hes =</span> <span class="fl">1e-04</span>)</span></code></pre></div>
+<p>最后一个参数 <code>eps.Hes</code> 控制中心差分近似中的步长长度。</p>
+</div>
+<div id="sec4-3-5" class="section level3" number="4.3.5">
+<h3>
+<span class="header-section-number">4.3.5</span> 数值积分<a class="anchor" aria-label="anchor" href="#sec4-3-5"><i class="fas fa-link"></i></a>
+</h3>
+<p>拟合纵向数据和生存数据的联合模型的一个关键计算困难是，生存函数定义 <a href="chap4.html#eq:4-2">(4.2)</a> 中关于时间的积分 ，以及得分向量 <a href="chap4.html#eq:4-12">(4.12)</a> 指定中关于随机效应的积分，没有解析解，除非在非常特殊的情况下。这意味着在对数似然和得分向量的计算中，通常采用数值方法来近似每个受试者的这些积分。这一特征与数值优化的要求相结合，使得联合模型的拟合成为一项计算密集型任务。</p>
+<p>从联合模型指定中涉及的两个积分来看，关于随机效应的积分是主要的计算瓶颈。具体来说，生存函数定义中的积分总是一维的，并且可以使用 7 点或 15 点 Gauss-Kronrod 规则 (Press et al., 2007) 相对有效地近似它。 然而，随着维数的增加，关于随机效应的积分在计算上变得需要近似。计算这种多维积分的标准数值积分技术包括 Gaussian 求积规则 和 Monte Carlo 采样，并已在文献中常规用于拟合联合模型 (Wulfsohn and Tsiatis, 1997; Henderson et al., 2000; Song et al., 2002). 此外，Rizopoulos et al. (2009) 和 Ye et al. (2008a) 讨论了在假设高维随机效应向量的情况下（例如，如 <a href="chap4.html#sec4-1">4.1</a> 节所述，用于捕捉非线性），将 Laplace 近似用于与 Gaussian 求积 和 Monte Carlo 相比计算效率更高的联合模型。尽管如此，<strong>所有这些方法在计算上仍然要求相对较高，这也是联合模型尚未在现代应用统计学家的工具箱中占据应有位置的主要原因</strong>。</p>
+<p>Rizopoulos (2012a) 提出了一种在一定程度上减小计算负担的替代方法。这种方法背后的想法是首先拟合纵向结果的混合效应模型，并在给定每个受试者的纵向响应的情况下提取关于随机效应后验分布的位置和尺度的信息。然后，该信息用于在联合模型的对数似然和得分向量的定义中适当地重新缩放特定于受试者的被积函数。为了激励这种方法，我们首先引入了用于计算联合模型的得分向量的标准和自适应 Gaussian-Hermite 规则. 在标准 Gaussian-Hermite 规则 下，对于随机效应任何形式的 <span class="math inline">\(A(\cdot)\)</span> 函数，得分向量定义中的积分近似为预先指定的被积函数求值的加权和：</p>
+<p><span class="math display">\[E\{A(\theta,b_i)\mid T_i,\delta_i,y_i;\theta\}=\int A(\theta,b_i)p(b_i\mid T_i,\delta_i,y_i;\theta)db_i\\\quad\quad\approx\quad2^{q_b/2}\sum_{t_1\cdots t_q}\pi_tA(\theta,b_t\sqrt{2})\,\,p(b_t\sqrt{2}\mid T_i,\delta_i,y_i;\theta)\,\,\exp(\|b_t\|^2)\]</span>
+其中 <span class="math inline">\(\sum_{t_1\cdots t_q}\)</span> 是 <span class="math inline">\(\sum_{\large t_1=1}^K\cdots\sum_{\large t_q=1}^K\)</span> 的简写，其中 <span class="math inline">\(K\)</span> 表示求积点的数量，<span class="math inline">\(b_t^\top=(b_{t_1},\ldots,b_{t_q})\)</span> 是具有相应权重 <span class="math inline">\(\pi_t\)</span> 的横坐标。如果被积函数可用 <span class="math inline">\(\exp(-b^\top b)l(b)\)</span> 的形式表示，其中 <span class="math inline">\(l\left(b\right)\)</span> 表示对横坐标进行插值的任何小于等于 <span class="math inline">\(2K − 1\)</span> 次的多项式。因此，随着求积点 <span class="math inline">\(K\)</span> 的数量增加，近似的质量得到改善。然而，由于 Gaussian-Hermite 规则需要对每个随机效应的横坐标的笛卡尔乘积上的被积函数进行计算，计算负担随着 <span class="math inline">\(q_b\)</span> 呈指数增加。另一个对 Gaussian-Hermite 近似质量有很大影响的关键方面是求积点相对于被积函数主质量位置的位置。也就是说，如果 <span class="math inline">\(g(b)=A(\theta,b)p(b\mid T_i,\delta_i,y_i;\theta)\)</span> 集中在远离零的点附近，或者如果 <span class="math inline">\(g(b)\)</span> 中的散布与权函数 <span class="math inline">\(\exp(−b^2)\)</span> 非常不同，那么将标准 Gaussian-Hermite 规则直接应用于 <span class="math inline">\(g(b)\)</span> 可能会给出非常差的近似，即使对于大 <span class="math inline">\(K\)</span> 也是如此，因为求积规则中的横坐标不会位于大多数 <span class="math inline">\(g(b)\)</span> 的质量定位 (Pinheiro and Bates, 1995). 为了解决这个问题，已经提出了自适应 Gaussian-Hermite 规则，该规则在每次迭代中适当地对被积函数进行中心化和缩放。更具体地说</p>
+<p><span class="math display" id="eq:4-13">\[\begin{align}
+&amp;E\{A(\theta,b_i)\mid T_i,\delta_i,y_i;\theta\}\\&amp;\approx\quad2^{q_b/2}|\widehat{B}_i|^{-1}\sum_{t_1\cdots t_q}\pi_tA(\theta,\hat{r}_t)p(\hat{r}_t\mid T_i,\delta_i,y_i;\theta)\exp(\|b_t\|^2)
+\tag{4.13}
+\end{align}\]</span></p>
+<p>其中 <span class="math inline">\(\hat{r}_t=\hat{b}_i+\sqrt{2}\widehat{B}_i^{-1}b_t,\hat{b}_i=\arg\max_b\{\log p(T_i,\delta_i,y_i,b;\theta)\}\)</span>，<span class="math inline">\(\widehat{B}_i\)</span> 表示 <span class="math inline">\(\widehat{H}_i\)</span> 的 Choleski 因子，其中 <span class="math inline">\(\widehat{H}_i=-\partial^2\log p(T_i,\delta_i,y_i,b;\theta)/\partial b\partial b^\top\Big|_{b\boldsymbol{=}\hat{b}_i}\)</span>。使用这种变换，被积函数的行为近似于 <span class="math inline">\(\mathcal{N}(0,2^{-1}\text{I})\)</span> 分布的密度，并且由于 Gaussian-Hermite 权重函数与该密度成正比，因此我们实现了最佳近似。因此，与标准 Gaussian-Hermite 规则相比，自适应 Gaussian-Hermite 规则通常需要少得多的求积来获得相同大小的近似误差。然而，在每次迭代中，对每个受试者的众数 <span class="math inline">\(b_i\)</span> 的位置和二阶导数矩阵 <span class="math inline">\(\widehat{H}_{i}\)</span> 的计算的要求大大增加了计算负担。</p>
+<p>然而幸运的是，通过利用随机效应 <span class="math inline">\(p(b_i|T_i,\delta_i,y_i;\theta)\)</span> 后验分布的性质，可以大大减少自适应 Gaussian-Hermite 规则背后的计算负担，而我们需要确定的就是该后验分布的众数 <span class="math inline">\(b_i\)</span> 及其二阶导数矩阵 <span class="math inline">\(\widehat{H}_{i}\)</span> (Rizopoulos, 2012a). 更具体地说，如果我们把这个密度写在对数尺度上，那么</p>
+<p><span class="math display">\[\begin{aligned}&amp;\log p(b_i\mid T_i,\delta_i,y_i;\theta)\\&amp;\propto\sum_{j=1}^{n_i}\log p\{y_i(t_{ij})\mid b_i;\theta_y\}+\log p(b_i;\theta_b)+\log p(T_i,\delta_i\mid b_i;\theta_t,\beta)\end{aligned}\]</span></p>
+<p>因此，我们观察到，随着 <span class="math inline">\(n_i\)</span> 的增加，对数后验密度中的首项是线性混合模型密度的对数，即 <span class="math inline">\(\log p(y_i\mid b_i;\theta_y)=\sum_j\log p\{y_i(t_{ij})\mid b_i;\theta_y\}\)</span>，它对于 <span class="math inline">\(b_i\)</span> 是二次的，类似于多元正态分布的形状。特别地，使用贝叶斯中心极限定理的变体 (Cox and Hinkley, 1974, pp. 399-400). 并且在一般的正则性条件下，当 <span class="math inline">\(n_i\rightarrow \infty\)</span>，我们得到</p>
+<p><span class="math display" id="eq:4-14">\[\begin{align}
+p(b_i\mid T_i,\delta_i,y_i;\theta)\stackrel{P}{\to}\mathcal{N}(\tilde{b}_i,\widetilde{H}_i^{-1})
+\tag{4.14}
+\end{align}\]</span></p>
+<p>其中 <span class="math inline">\(\tilde{b}_i\)</span> 表示 <span class="math inline">\(\log p(y_i\mid b;\theta_y)\)</span> 关于 <span class="math inline">\(b\)</span> 的众数，并且 <span class="math inline">\(\widetilde{H}_i=-\partial^2\log p(y_i\mid b;\theta_y)/\partial b\partial b^\top\Big|_{b=\tilde{b}_i}\)</span>。在实践中，这表明，随着 <span class="math inline">\(n_i\)</span> 的增加，只利用来自纵向结果的混合效应模型的信息，就足以对每个受试者的被积函数进行重新中心化和重新缩放。因此，我们不必采用自适应 Gaussian-Hermite 规则 <a href="chap4.html#eq:4-13">(4.13)</a> 中的标准变换方法，而是首先拟合线性混合效应模型，从中提取经验贝叶斯估计 <span class="math inline">\(\tilde{b}_i=\arg\max_b\{\log p(y_i,b;\tilde{\theta}_y)\}\)</span> 及其协方差阵 <span class="math inline">\(\widetilde{H}_i^{-1}\)</span>，其中 <span class="math inline">\(\widetilde{H}_i=-\partial^2\log p(y_i,b;\tilde{\theta}_y)/\partial b\partial b^\top\Big|_{b=\tilde{b}_i}\)</span>，然后利用变换</p>
+<p><span class="math display" id="eq:4-15">\[\begin{align}
+&amp;E\{A(\theta,b_i)\mid T_i,\delta_i,y_i;\theta\}\\&amp;\approx\quad2^{q/2}|\widetilde{B}_i|^{-1}\sum_{t_1\cdots t_q}\pi_tA(\theta,\tilde{r}_t)p(\tilde{r}_t\mid T_i,\delta_i,y_i;\theta)\exp(\|b_t\|^2)
+\tag{4.15}
+\end{align}\]</span></p>
+<p>其中 <span class="math inline">\(\tilde{r}_t=\tilde{b}_i+\sqrt2\widetilde{B}^{-1}b_t\)</span>，<span class="math inline">\(\tilde{B}_{i}\)</span> 表示 <span class="math inline">\(\widetilde{H}_{i}\)</span> 的 Choleski 因子，<span class="math inline">\(\tilde{\theta}_{y}\)</span> 是线性混合模型拟合的最大似然估计。该过程与自适应 Gaussian-Hermite 规则非常相似，但我们只在优化开始时实现一次，并且之后我们不再进一步更新求积点。计算优势是双重的：首先，我们可以使用比标准 Gaussian-Hermite 规则更少的求积点；其次，我们可以避免在自适应 Gaussian-Hermite 规则的每次迭代中重新定位求积点，从而节省计算资源。</p>
+<p>为了说明伪自适应规则与标准 Gaussian-Hermite 规则相比的有效性，我们重新拟合了适用于艾滋病数据集（<a href="chap4.html#sec4-2">4.2</a> 节）的联合模型，并选择了不同的求积点数量进行比较，比较了参数估计及其标准误。结果如表 4.1 和表 4.2 所示。我们观察到，标准 Gaussian-Hermite 规则需要大约 13 到 15 个求积点才能提供更稳定的参数估计。相反，即使使用三个点的伪自适应规则的结果也非常接近使用 15 个点的结果。表 4.1 的最后一行包含在不同 Gaussian 求积设置下拟合联合模型所需的时间（以秒为单位），从中我们可以清楚地观察到，使用三个点的伪自适应规则比其他选项快得多。额外的数值研究 (Rizopoulos, 2012a) 表明，伪自适应规则在实践中对纵向和事件时间子模型的参数均表现出色，而且，其性能似乎并未因平均 <span class="math inline">\(n_i\)</span> 很小的事实而受到影响。然而，由于所有类型的混合模型都需要数值积分，因此建议（特别是在困难的数据集中）检查 Gaussian-Hermite 求积点数量增加时最大似然估计的稳定性。</p>
+<details><summary><font color="#B95953">表 4.1</font>
+</summary><img src="figure/table%204.1.png#center" style="width:80.0%"></details><br><details><summary><font color="#B95953">表 4.2</font>
+</summary><img src="figure/table%204.2.png#center" style="width:80.0%"></details>
+</div>
+<div id="sec4-3-6" class="section level3" number="4.3.6">
+<h3>
+<span class="header-section-number">4.3.6</span> <code>JM</code> 中的数值积分控制<a class="anchor" aria-label="anchor" href="#sec4-3-6"><i class="fas fa-link"></i></a>
+</h3>
+<p>函数 <code>jointModel()</code> 提供了三个控制参数，允许对数值积分算法进行精细控制。具体来说，对于生存函数 <a href="chap4.html#eq:4-2">(4.2)</a> 定义中的积分，参数 <code>GKk</code> 控制 Gauss-Kronrod 求积点的数量，而对于关于随机效应的积分，参数 <code>method</code> 和 <code>GHk</code> 控制数值积分的类型和 Gaussian-Hermite 求积点的数量。对于后一种情况，正如我们在 <a href="chap4.html#sec4-2">4.2</a> 节中已经看到的，参数 <code>method</code> 中提供的字符串的前两部分指定了基线风险函数和生存模型的类型。然而，最后一部分指定了数值积分的类型，其中 <code>GH</code> 代表标准 Gaussian-Hermite 规则，<code>aGH</code> 代表伪自适应规则。例如，<a href="chap4.html#sec4-2">4.2</a> 节中拟合的联合模型基于具有默认求积点数量（5 个）的伪自适应规则。要重新拟合具有 15 个点的相同模型，我们应该使用以下语法</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="chap4.html#cb21-1" tabindex="-1"></a><span class="sc">&gt;</span> jointFit.aids <span class="ot">&lt;-</span> <span class="fu">jointModel</span>(lmeFit.aids, coxFit.aids,</span>
+<span id="cb21-2"><a href="chap4.html#cb21-2" tabindex="-1"></a>                              <span class="at">timeVar =</span> <span class="st">"obstime"</span>, <span class="at">method =</span> <span class="st">"piecewise-PH-aGH"</span>, <span class="at">GHk =</span> <span class="dv">15</span>)</span></code></pre></div>
+<p>而要使用标准 Gauss-Hermite 规则和 21 个求积点的随机效应以及 15 点 Gauss-Kronrod 规则拟合联合模型，我们可以使用</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="chap4.html#cb22-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">jointModel</span>(..., <span class="at">method =</span> <span class="st">"piecewise-PH-GH"</span>, <span class="at">GHk =</span> <span class="dv">21</span>, <span class="at">GKk =</span> <span class="dv">15</span>)</span></code></pre></div>
+</div>
+<div id="sec4-3-7" class="section level3" number="4.3.7">
+<h3>
+<span class="header-section-number">4.3.7</span> 收敛问题<a class="anchor" aria-label="anchor" href="#sec4-3-7"><i class="fas fa-link"></i></a>
+</h3>
+<p>我们在前两节中已经看到，拟合纵向数据和生存数据的联合模型需要双重数值积分和优化的结合。与每个结果进行单独分析相比，这些要求使得联合模型在计算和数值上的要求更高。这意味着在某些情况下我们可能会遇到收敛问题。函数 <code>jointModel()</code> 尝试对默认控制参数（例如，求积点数、迭代次数、收敛容差等）做出合理选择，但不能保证这些选择适用于所有数据集。因此，联合建模者还应该对如何通过适当更改控制参数的默认值来微调优化过程形成一般直觉，以便成功地对“困难”数据集拟合感兴趣的联合模型。为了提供这方面的帮助，<code>jointModel()</code> 具有控制参数 <code>verbose</code>，如果将其设置为 <code>TRUE</code>，则会在屏幕上打印达到最大值的优化路径。该参数可用于尽早发现算法可能存在的分歧，从而停止算法并使用不同的默认值重新启动。在大多数情况下，最有用的更改是更改起始值（使用 <code>jointModel()</code> 的参数 <code>init</code>）、增加 EM 迭代次数以及为分段常数或基于样条曲线的基线风险函数选择其他位置的结。</p>
+<p>作为 <code>verbose</code> 参数的一个例子，我们将一个复杂的联合模型拟合到主动脉瓣数据。特别是，从图 4.2 中可以看出，该数据集中的一些患者的主动脉梯度值表现出非线性演变。遵循 <a href="chap4.html#sec4-1-2">4.1.2</a> 节的建议，为了捕获特定于非线性的受试者演变，我们假定了一个灵活的线性混合效应模型，将时间效应扩展为 B 样条基矩阵。该模型指定如下</p>
+<p><span class="math display">\[\begin{aligned}
+y_i(t) =&amp;\quad m_i(t)+\varepsilon_i(t)  \\
+=&amp;\quad(\beta_0+b_{i0})+(\beta_1+b_{i1})B_n(t,\lambda_1)+(\beta_2+b_{i2})B_n(t,\lambda_2)\\\
+&amp;+(\beta_3+b_{i3})B_n(t,\lambda_3)+\beta_4\{B_n(t,\lambda_1)\times\mathtt{TypeOpRR}_i\} \\
+&amp;+\beta_5\{B_n(t,\lambda_2)\times\mathtt{TypeOpRR}_i\}+\beta_6\{B_n(t,\lambda_3)\times\mathtt{TypeOpRR}_i\} \\
+&amp;+\beta_7\mathtt{Age}_i+\beta_8\mathtt{TypeOpRR}_i+\varepsilon_i(t),
+\end{aligned}\]</span></p>
+<details><summary><font color="#B95953">图 4.2</font>
+</summary><img src="figure/figure%204.2.png#center" style="width:80.0%"></details><p><br></p>
+<p>其中 <span class="math inline">\(\{B_n(t,\lambda_k);k=1,2,3\}\)</span> 表示时间的自然立方样条曲线的 B 样条基矩阵，两个内部结位于随访时间的 33.3% 和 66.7% 的百分位数，<span class="math inline">\(\mathtt{TypeOpRR}\)</span> 表示根置换手术类型的虚拟变量，我们还控制了基线时患者的年龄。为了在 <code>R</code> 中拟合该模型，我们使用包 <code>splines</code> 的函数 <code>ns()</code>，该函数生成自然立方样条函数的基矩阵。相应的语法为<a class="footnote-ref" tabindex="0" data-toggle="popover" data-content='&lt;p&gt;作者&lt;a href="http://jmr.r-forge.r-project.org/Chapter4.html"&gt;网站&lt;/a&gt;中的注释：以下代码基于非公开的主动脉瓣数据集，因此无法执行&lt;/p&gt;'><sup>10</sup></a></p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="chap4.html#cb23-1" tabindex="-1"></a><span class="sc">&gt;</span> lmeFit.av <span class="ot">&lt;-</span> <span class="fu">lme</span>(<span class="fu">sqrt</span>(AoGradient) <span class="sc">~</span> <span class="fu">ns</span>(time, <span class="dv">3</span>) <span class="sc">*</span> TypeOp <span class="sc">+</span> Age,</span>
+<span id="cb23-2"><a href="chap4.html#cb23-2" tabindex="-1"></a>                   <span class="at">data =</span> AoValv, <span class="at">random =</span> <span class="fu">list</span>(<span class="at">id =</span> <span class="fu">pdDiag</span>(<span class="at">form =</span> <span class="sc">~</span> <span class="fu">ns</span>(time, <span class="dv">3</span>))))</span></code></pre></div>
+<p>调用 <code>lme()</code> 时 `random`` 参数中的公式指定了随机效应 <span class="math inline">\(b_i^\top=(b_{i0},\ldots,b_{i3})\)</span> 的对角协方差阵。对于生存部分，我们拟合一个简单的 Cox 模型，其中我们仅包含操作类型作为协变量，即</p>
+<p><span class="math display">\[h_i(t\mid\mathcal{M}_i(t),w_i)=h_0(t)\exp\{\gamma\mathtt{TypeOpRR}_i+\alpha m_i(t)\}\]</span></p>
+<p>我们用 <code>R</code> 来拟合它</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="chap4.html#cb24-1" tabindex="-1"></a><span class="sc">&gt;</span> coxFit.av <span class="ot">&lt;-</span> <span class="fu">coxph</span>(<span class="fu">Surv</span>(Time, death) <span class="sc">~</span> TypeOp, <span class="at">data =</span> AoValv.id,</span>
+<span id="cb24-2"><a href="chap4.html#cb24-2" tabindex="-1"></a>                     <span class="at">x =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<p>基于拟合的线性混合模型和 Cox 模型，我们拟合相应的联合模型，并将 <code>verbose</code> 参数设置为 <code>TRUE</code></p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="chap4.html#cb25-1" tabindex="-1"></a><span class="sc">&gt;</span> jointFit.av <span class="ot">&lt;-</span> <span class="fu">jointModel</span>(lmeFit.av, coxFit.av, <span class="at">timeVar =</span> <span class="st">"time"</span>,</span>
+<span id="cb25-2"><a href="chap4.html#cb25-2" tabindex="-1"></a>                            <span class="at">method =</span> <span class="st">"piecewise-PH-aGH"</span>, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="chap4.html#cb26-1" tabindex="-1"></a>iter<span class="sc">:</span> <span class="dv">1</span></span>
+<span id="cb26-2"><a href="chap4.html#cb26-2" tabindex="-1"></a>log<span class="sc">-</span>likelihood<span class="sc">:</span> <span class="sc">-</span><span class="fl">2107.672</span></span>
+<span id="cb26-3"><a href="chap4.html#cb26-3" tabindex="-1"></a>betas<span class="sc">:</span> <span class="fl">4.275</span> <span class="fl">1.4198</span> <span class="fl">2.4489</span> <span class="fl">2.4651</span> <span class="sc">-</span><span class="fl">0.4827</span></span>
+<span id="cb26-4"><a href="chap4.html#cb26-4" tabindex="-1"></a>      <span class="sc">-</span><span class="fl">0.0201</span> <span class="sc">-</span><span class="fl">0.1128</span> <span class="sc">-</span><span class="fl">0.5105</span> <span class="sc">-</span><span class="fl">1.1762</span></span>
+<span id="cb26-5"><a href="chap4.html#cb26-5" tabindex="-1"></a>sigma<span class="sc">:</span> <span class="fl">0.6148</span></span>
+<span id="cb26-6"><a href="chap4.html#cb26-6" tabindex="-1"></a>gammas<span class="sc">:</span> <span class="sc">-</span><span class="fl">0.0336</span></span>
+<span id="cb26-7"><a href="chap4.html#cb26-7" tabindex="-1"></a>alpha<span class="sc">:</span> <span class="sc">-</span><span class="fl">0.3875</span></span>
+<span id="cb26-8"><a href="chap4.html#cb26-8" tabindex="-1"></a>xi<span class="sc">:</span> <span class="fl">0.2721</span> <span class="fl">0.3413</span> <span class="fl">0.431</span> <span class="fl">0.3953</span> <span class="fl">0.9664</span> <span class="fl">0.838</span> <span class="dv">0</span></span>
+<span id="cb26-9"><a href="chap4.html#cb26-9" tabindex="-1"></a>D<span class="sc">:</span> <span class="fl">0.453</span> <span class="fl">4.4725</span> <span class="fl">1.973</span> <span class="fl">1.2492</span></span>
+<span id="cb26-10"><a href="chap4.html#cb26-10" tabindex="-1"></a>    .</span>
+<span id="cb26-11"><a href="chap4.html#cb26-11" tabindex="-1"></a>    .</span>
+<span id="cb26-12"><a href="chap4.html#cb26-12" tabindex="-1"></a>    .</span>
+<span id="cb26-13"><a href="chap4.html#cb26-13" tabindex="-1"></a>iter<span class="sc">:</span> <span class="dv">4</span></span>
+<span id="cb26-14"><a href="chap4.html#cb26-14" tabindex="-1"></a>log<span class="sc">-</span>likelihood<span class="sc">:</span> <span class="dv">0</span></span>
+<span id="cb26-15"><a href="chap4.html#cb26-15" tabindex="-1"></a>betas<span class="sc">:</span> <span class="fl">1377.697</span> <span class="fl">427.4287</span> <span class="sc">-</span><span class="fl">3691.91</span> <span class="sc">-</span><span class="fl">2033.504</span></span>
+<span id="cb26-16"><a href="chap4.html#cb26-16" tabindex="-1"></a>      <span class="sc">-</span><span class="fl">1791.215</span> <span class="fl">1.443</span> <span class="sc">-</span><span class="fl">1806.379</span> <span class="fl">5975.356</span> <span class="fl">5294.583</span></span>
+<span id="cb26-17"><a href="chap4.html#cb26-17" tabindex="-1"></a>sigma<span class="sc">:</span> <span class="fl">8.516</span></span>
+<span id="cb26-18"><a href="chap4.html#cb26-18" tabindex="-1"></a>gammas<span class="sc">:</span> <span class="fl">0.1557</span></span>
+<span id="cb26-19"><a href="chap4.html#cb26-19" tabindex="-1"></a>alpha<span class="sc">:</span> <span class="sc">-</span><span class="fl">0.6494</span></span>
+<span id="cb26-20"><a href="chap4.html#cb26-20" tabindex="-1"></a>xi<span class="sc">:</span> <span class="fl">0.1113</span> <span class="fl">0.143</span> <span class="fl">0.2657</span> <span class="fl">0.3479</span> <span class="fl">0.9492</span> <span class="fl">0.7238</span> <span class="dv">0</span></span>
+<span id="cb26-21"><a href="chap4.html#cb26-21" tabindex="-1"></a>D<span class="sc">:</span> <span class="fl">0.7401</span> <span class="fl">7.0717</span> <span class="fl">2.7674</span> <span class="fl">2.039</span></span></code></pre></div>
+<p>打印的输出是不言自明的。迭代 1 对应于从两个单独拟合的子模型中获得的初始值，并且似乎为联合模型的对数似然产生了一个相当合理的值。然而，通过迭代 4，我们观察到该算法出现了偏差，产生了零的对数似然值，以及纵向子模型的参数的巨大值。在大多数情况下，早期出现的分歧归因于数值积分规则的失败或参数缩放问题。对于这个例子，事实证明是后者。特别是，对于优化算法来说，优化问题（即找到最大值）的良好缩放通常很重要，这意味着任何参数的一个单位变化都会导致对数似然值发生相似量级的变化。然而，从纵向子模型的输出中，我们观察到与其他参数相比，年龄的系数要小几个数量级：</p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb27-1"><a href="chap4.html#cb27-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">summary</span>(lmeFit.av)</span>
+<span id="cb27-2"><a href="chap4.html#cb27-2" tabindex="-1"></a></span>
+<span id="cb27-3"><a href="chap4.html#cb27-3" tabindex="-1"></a>. . .                     Value Std.Error  DF   t<span class="sc">-</span>value p<span class="sc">-</span>value</span>
+<span id="cb27-4"><a href="chap4.html#cb27-4" tabindex="-1"></a>(Intercept)            <span class="fl">4.274976</span> <span class="fl">0.2444552</span> <span class="dv">980</span> <span class="fl">17.487764</span>  <span class="fl">0.0000</span></span>
+<span id="cb27-5"><a href="chap4.html#cb27-5" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">1</span>           <span class="fl">1.419787</span> <span class="fl">0.3136259</span> <span class="dv">980</span>  <span class="fl">4.527007</span>  <span class="fl">0.0000</span></span>
+<span id="cb27-6"><a href="chap4.html#cb27-6" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">2</span>           <span class="fl">2.448946</span> <span class="fl">0.3903572</span> <span class="dv">980</span>  <span class="fl">6.273602</span>  <span class="fl">0.0000</span></span>
+<span id="cb27-7"><a href="chap4.html#cb27-7" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">3</span>           <span class="fl">2.465096</span> <span class="fl">0.2942019</span> <span class="dv">980</span>  <span class="fl">8.378925</span>  <span class="fl">0.0000</span></span>
+<span id="cb27-8"><a href="chap4.html#cb27-8" tabindex="-1"></a>TypeOpRR              <span class="sc">-</span><span class="fl">0.482702</span> <span class="fl">0.1881059</span> <span class="dv">286</span> <span class="sc">-</span><span class="fl">2.566121</span>  <span class="fl">0.0108</span></span>
+<span id="cb27-9"><a href="chap4.html#cb27-9" tabindex="-1"></a>Age                   <span class="sc">-</span><span class="fl">0.020102</span> <span class="fl">0.0038463</span> <span class="dv">286</span> <span class="sc">-</span><span class="fl">5.226250</span>  <span class="fl">0.0000</span></span>
+<span id="cb27-10"><a href="chap4.html#cb27-10" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">1</span><span class="sc">:</span>TypeOpRR <span class="sc">-</span><span class="fl">0.112810</span> <span class="fl">0.4052867</span> <span class="dv">980</span> <span class="sc">-</span><span class="fl">0.278345</span>  <span class="fl">0.7808</span></span>
+<span id="cb27-11"><a href="chap4.html#cb27-11" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">2</span><span class="sc">:</span>TypeOpRR <span class="sc">-</span><span class="fl">0.510547</span> <span class="fl">0.5304223</span> <span class="dv">980</span> <span class="sc">-</span><span class="fl">0.962529</span>  <span class="fl">0.3360</span></span>
+<span id="cb27-12"><a href="chap4.html#cb27-12" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">3</span><span class="sc">:</span>TypeOpRR <span class="sc">-</span><span class="fl">1.176218</span> <span class="fl">0.6369125</span> <span class="dv">980</span> <span class="sc">-</span><span class="fl">1.846749</span>  <span class="fl">0.0651</span></span>
+<span id="cb27-13"><a href="chap4.html#cb27-13" tabindex="-1"></a>. . .</span></code></pre></div>
+<p>这表明，如果我们想在优化过程中避免对数似然的“超调” (overshooting)，我们应该缩放 <code>Age</code> 的系数，使其比其他参数的系数以更小的步长变化。在 <code>jointModel()</code> 中，这可以通过设置 <code>parscale</code> 控制参数来实现，这实际上是 <code><a href="https://rdrr.io/r/stats/optim.html">optim()</a></code> 的控制参数。它控制优化中所有参数的缩放值的向量，这意味着我们应该为联合模型的所有参数指定缩放向量，此问题更简单的解决方案是重新拟合线性混合模型，但年龄由其样本标准差缩放：</p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="chap4.html#cb28-1" tabindex="-1"></a><span class="sc">&gt;</span> lmeFit2.av <span class="ot">&lt;-</span> <span class="fu">lme</span>(<span class="fu">sqrt</span>(AoGradient) <span class="sc">~</span> <span class="fu">ns</span>(time, <span class="dv">3</span>) <span class="sc">*</span> TypeOp <span class="sc">+</span> <span class="fu">I</span>(Age<span class="sc">/</span><span class="dv">15</span>),</span>
+<span id="cb28-2"><a href="chap4.html#cb28-2" tabindex="-1"></a>                    <span class="at">data =</span> AoValv, <span class="at">random =</span> <span class="fu">list</span>(<span class="at">id =</span> <span class="fu">pdDiag</span>(<span class="at">form =</span> <span class="sc">~</span> <span class="fu">ns</span>(time, <span class="dv">3</span>))))</span>
+<span id="cb28-3"><a href="chap4.html#cb28-3" tabindex="-1"></a><span class="sc">&gt;</span> jointFit2.av <span class="ot">&lt;-</span> <span class="fu">jointModel</span>(lmeFit2.av, coxFit.av, <span class="at">timeVar =</span> <span class="st">"time"</span>,</span>
+<span id="cb28-4"><a href="chap4.html#cb28-4" tabindex="-1"></a>                             <span class="at">method =</span> <span class="st">"piecewise-PH-aGH"</span>, <span class="at">verbose =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb28-5"><a href="chap4.html#cb28-5" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">summary</span>(jointFit2.av)</span>
+<span id="cb28-6"><a href="chap4.html#cb28-6" tabindex="-1"></a></span>
+<span id="cb28-7"><a href="chap4.html#cb28-7" tabindex="-1"></a>. . .</span>
+<span id="cb28-8"><a href="chap4.html#cb28-8" tabindex="-1"></a></span>
+<span id="cb28-9"><a href="chap4.html#cb28-9" tabindex="-1"></a>Variance Components<span class="sc">:</span></span>
+<span id="cb28-10"><a href="chap4.html#cb28-10" tabindex="-1"></a>             StdDev</span>
+<span id="cb28-11"><a href="chap4.html#cb28-11" tabindex="-1"></a>(Intercept)  <span class="fl">0.6584</span></span>
+<span id="cb28-12"><a href="chap4.html#cb28-12" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">1</span> <span class="fl">2.1192</span></span>
+<span id="cb28-13"><a href="chap4.html#cb28-13" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">2</span> <span class="fl">1.3661</span></span>
+<span id="cb28-14"><a href="chap4.html#cb28-14" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">3</span> <span class="fl">0.3175</span></span>
+<span id="cb28-15"><a href="chap4.html#cb28-15" tabindex="-1"></a>Residual     <span class="fl">0.6289</span></span>
+<span id="cb28-16"><a href="chap4.html#cb28-16" tabindex="-1"></a></span>
+<span id="cb28-17"><a href="chap4.html#cb28-17" tabindex="-1"></a>Coefficients<span class="sc">:</span></span>
+<span id="cb28-18"><a href="chap4.html#cb28-18" tabindex="-1"></a>Longitudinal Process</span>
+<span id="cb28-19"><a href="chap4.html#cb28-19" tabindex="-1"></a>                        Value Std.Err z<span class="sc">-</span>value p<span class="sc">-</span>value</span>
+<span id="cb28-20"><a href="chap4.html#cb28-20" tabindex="-1"></a>(Intercept)            <span class="fl">4.3392</span>  <span class="fl">0.2422</span> <span class="fl">17.9142</span> <span class="sc">&lt;</span><span class="fl">0.0001</span></span>
+<span id="cb28-21"><a href="chap4.html#cb28-21" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">1</span>           <span class="fl">1.4735</span>  <span class="fl">0.3112</span>  <span class="fl">4.7342</span> <span class="sc">&lt;</span><span class="fl">0.0001</span></span>
+<span id="cb28-22"><a href="chap4.html#cb28-22" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">2</span>           <span class="fl">2.2797</span>  <span class="fl">0.3831</span>  <span class="fl">5.9507</span> <span class="sc">&lt;</span><span class="fl">0.0001</span></span>
+<span id="cb28-23"><a href="chap4.html#cb28-23" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">3</span>           <span class="fl">2.2362</span>  <span class="fl">0.2277</span>  <span class="fl">9.8193</span> <span class="sc">&lt;</span><span class="fl">0.0001</span></span>
+<span id="cb28-24"><a href="chap4.html#cb28-24" tabindex="-1"></a>TypeOpRR              <span class="sc">-</span><span class="fl">0.4845</span>  <span class="fl">0.1886</span> <span class="sc">-</span><span class="fl">2.5683</span>  <span class="fl">0.0102</span></span>
+<span id="cb28-25"><a href="chap4.html#cb28-25" tabindex="-1"></a><span class="fu">I</span>(Age<span class="sc">/</span><span class="dv">15</span>)             <span class="sc">-</span><span class="fl">0.3174</span>  <span class="fl">0.0566</span> <span class="sc">-</span><span class="fl">5.6086</span> <span class="sc">&lt;</span><span class="fl">0.0001</span></span>
+<span id="cb28-26"><a href="chap4.html#cb28-26" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">1</span><span class="sc">:</span>TypeOpRR <span class="sc">-</span><span class="fl">0.0965</span>  <span class="fl">0.4015</span> <span class="sc">-</span><span class="fl">0.2405</span>  <span class="fl">0.8100</span></span>
+<span id="cb28-27"><a href="chap4.html#cb28-27" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">2</span><span class="sc">:</span>TypeOpRR <span class="sc">-</span><span class="fl">0.5994</span>  <span class="fl">0.5066</span> <span class="sc">-</span><span class="fl">1.1831</span>  <span class="fl">0.2368</span></span>
+<span id="cb28-28"><a href="chap4.html#cb28-28" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">3</span><span class="sc">:</span>TypeOpRR <span class="sc">-</span><span class="fl">1.3934</span>  <span class="fl">0.5537</span> <span class="sc">-</span><span class="fl">2.5164</span>  <span class="fl">0.0119</span></span>
+<span id="cb28-29"><a href="chap4.html#cb28-29" tabindex="-1"></a></span>
+<span id="cb28-30"><a href="chap4.html#cb28-30" tabindex="-1"></a>Event Process</span>
+<span id="cb28-31"><a href="chap4.html#cb28-31" tabindex="-1"></a>             Value  Std.Err z<span class="sc">-</span>value p<span class="sc">-</span>value</span>
+<span id="cb28-32"><a href="chap4.html#cb28-32" tabindex="-1"></a>TypeOpRR    <span class="fl">0.0964</span>   <span class="fl">0.3041</span>  <span class="fl">0.3170</span>  <span class="fl">0.7512</span></span>
+<span id="cb28-33"><a href="chap4.html#cb28-33" tabindex="-1"></a>Assoct     <span class="sc">-</span><span class="fl">0.3580</span>   <span class="fl">0.1521</span> <span class="sc">-</span><span class="fl">2.3533</span>  <span class="fl">0.0186</span></span>
+<span id="cb28-34"><a href="chap4.html#cb28-34" tabindex="-1"></a><span class="fu">log</span>(xi<span class="fl">.1</span>)  <span class="sc">-</span><span class="fl">3.1443</span>   <span class="fl">0.6225</span> <span class="sc">-</span><span class="fl">5.0509</span></span>
+<span id="cb28-35"><a href="chap4.html#cb28-35" tabindex="-1"></a><span class="fu">log</span>(xi<span class="fl">.2</span>)  <span class="sc">-</span><span class="fl">2.7835</span>   <span class="fl">0.7187</span> <span class="sc">-</span><span class="fl">3.8731</span></span>
+<span id="cb28-36"><a href="chap4.html#cb28-36" tabindex="-1"></a><span class="fu">log</span>(xi<span class="fl">.3</span>)  <span class="sc">-</span><span class="fl">2.5458</span>   <span class="fl">0.7633</span> <span class="sc">-</span><span class="fl">3.3352</span></span>
+<span id="cb28-37"><a href="chap4.html#cb28-37" tabindex="-1"></a><span class="fu">log</span>(xi<span class="fl">.4</span>)  <span class="sc">-</span><span class="fl">2.6127</span>   <span class="fl">0.8070</span> <span class="sc">-</span><span class="fl">3.2373</span></span>
+<span id="cb28-38"><a href="chap4.html#cb28-38" tabindex="-1"></a><span class="fu">log</span>(xi<span class="fl">.5</span>)  <span class="sc">-</span><span class="fl">1.7131</span>   <span class="fl">0.7661</span> <span class="sc">-</span><span class="fl">2.2361</span></span>
+<span id="cb28-39"><a href="chap4.html#cb28-39" tabindex="-1"></a><span class="fu">log</span>(xi<span class="fl">.6</span>)  <span class="sc">-</span><span class="fl">1.8092</span>   <span class="fl">0.8593</span> <span class="sc">-</span><span class="fl">2.1054</span></span>
+<span id="cb28-40"><a href="chap4.html#cb28-40" tabindex="-1"></a><span class="fu">log</span>(xi<span class="fl">.7</span>) <span class="sc">-</span><span class="fl">14.8215</span> <span class="fl">516.6937</span> <span class="sc">-</span><span class="fl">0.0287</span></span>
+<span id="cb28-41"><a href="chap4.html#cb28-41" tabindex="-1"></a>. . .</span></code></pre></div>
+<p>我们观察到，经过此转换后，联合模型顺利收敛并且没有任何问题，产生合理的参数估计。</p>
+</div>
+</div>
+<div id="sec4-4" class="section level2" number="4.4">
+<h2>
+<span class="header-section-number">4.4</span> 联合模型的渐近推断<a class="anchor" aria-label="anchor" href="#sec4-4"><i class="fas fa-link"></i></a>
+</h2>
+<div id="sec4-4-1" class="section level3" number="4.4.1">
+<h3>
+<span class="header-section-number">4.4.1</span> 假设检验<a class="anchor" aria-label="anchor" href="#sec4-4-1"><i class="fas fa-link"></i></a>
+</h3>
+<p>在最大似然框架下拟合联合模型后，可以直接使用标准的渐近似然推断检验。一般来说，如果我们有兴趣检验零假设</p>
+<p><span class="math display" id="eq:4-16">\[\begin{align}
+H_0:\theta=\theta_0\quad\text{ versus }\quad H_a:\theta\neq\theta_0
+\tag{4.16}
+\end{align}\]</span></p>
+<p>我们可使用：</p>
+<div class="rmdnote">
+<ul>
+<li><p><strong>似然比检验</strong> (Likelihood Ratio Test)，其检验统计量定义为
+<span class="math display">\[LRT=-2\{\ell(\hat{\theta}_0)-\ell(\hat{\theta})\}\]</span>
+其中 <span class="math inline">\(\hat{\theta}_0\)</span> 和 <span class="math inline">\(\hat{\theta}\)</span> 分别表示原假设和备择假设下的最大似然估计。</p></li>
+<li><p><strong>得分检验</strong> (Score Test)，其检验统计量定义为
+<span class="math display">\[U=S^\top(\hat{\theta}_0)\left\{\mathcal{I}(\hat{\theta}_0)\right\}^{-1}S(\hat{\theta}_0)\]</span>
+其中 <span class="math inline">\(S(\cdot)\)</span> 和 <span class="math inline">\(\mathcal I(\cdot)\)</span> 表示备择假设下模型的得分函数和观测信息矩阵。</p></li>
+<li><p><strong>Wald 检验</strong> (Wald Test)，其检验统计量定义为
+<span class="math display">\[W=(\hat{\theta}-\theta_0)^\top\mathcal{I}(\hat{\theta})(\hat{\theta}-\theta_0)\]</span></p></li>
+</ul>
+</div>
+<p>在零假设下，每个检验的渐近分布都是自由度为 <span class="math inline">\(p\)</span> 的卡方分布，其中 <span class="math inline">\(p\)</span> 表示被检验的参数数量。对于单个参数 <span class="math inline">\(\theta_j\)</span>，Wald 检验等价于 <span class="math inline">\((\hat{\theta}_j-\theta_{0j})/\widehat{s.e.}(\hat{\theta}_j)\)</span>，在零假设下服从渐近标准正态分布。这些检验统计量近似为彼此的低阶泰勒级数展开，且渐近等价。然而在实践中，当我们处理有限样本时，它们通常是不同的。在这种情况下，似然比检验通常认为是最可靠的，Wald 检验则是最不可靠的。得分和 Wald 检验仅需要分别在原假设和备择假设下拟合模型，而似然比检验需要在两个假设下拟合联合模型，因此计算成本较高。如果我们有兴趣检验的变量中存在缺失数据，则得分检验将更加有效，因为它只需要在零假设下拟合模型，因此可以避免逐例删除缺失值（即排除在感兴趣的变量中有缺失值的受试者）。</p>
+<p>在 <a href="chap4.html#sec4-2">4.2</a> 节中介绍的艾滋病联合建模分析中，<code><a href="https://rdrr.io/r/base/summary.html">summary()</a></code> 函数的输出还包含单变量 Wald 检验，用于检验纵向子模型中的每个固定效应 <span class="math inline">\(\beta\)</span> 以及生存子模型中回归系数 <span class="math inline">\(\gamma\)</span> 和关联参数 <span class="math inline">\(\alpha\)</span> 是否在统计上不为零。如果对一般假设感兴趣，那么可以使用上面定义的多元 Wald 检验。例如，对于拟合到艾滋病数据集的联合模型，我们想检验纵向过程中的总体时间效应是否不等于零。这与以下一组假设相对应</p>
+<p><span class="math display">\[\begin{aligned}H_0&amp;:\beta_1=\beta_2=0\\H_a&amp;:\beta_1\neq0\quad\mathrm{or}\quad\beta_2\neq0\end{aligned}\]</span></p>
+<p>其中 <span class="math inline">\(\beta_1\)</span> 是时间效应系数，<span class="math inline">\(\beta_2\)</span> 是时间和治疗之间的交互效应系数。联合模型的 Wald 检验是使用函数 <code><a href="https://rdrr.io/r/stats/anova.html">anova()</a></code> 进行的。在对该函数的调用中，我们指定只需要对纵向子模型的参数进行 Wald 检验</p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="chap4.html#cb29-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">anova</span>(jointFit.aids, <span class="at">process =</span> <span class="st">"Longitudinal"</span>)</span>
+<span id="cb29-2"><a href="chap4.html#cb29-2" tabindex="-1"></a>Marginal Wald Tests Table</span>
+<span id="cb29-3"><a href="chap4.html#cb29-3" tabindex="-1"></a></span>
+<span id="cb29-4"><a href="chap4.html#cb29-4" tabindex="-1"></a>Longitudinal Process</span>
+<span id="cb29-5"><a href="chap4.html#cb29-5" tabindex="-1"></a>              Chisq df <span class="fu">Pr</span>(<span class="sc">&gt;</span><span class="er">|</span>Chi<span class="sc">|</span>)</span>
+<span id="cb29-6"><a href="chap4.html#cb29-6" tabindex="-1"></a>obstime    <span class="fl">126.3887</span>  <span class="dv">2</span>     <span class="sc">&lt;</span><span class="fl">1e-04</span></span>
+<span id="cb29-7"><a href="chap4.html#cb29-7" tabindex="-1"></a>drug         <span class="fl">0.1470</span>  <span class="dv">1</span>     <span class="fl">0.7014</span></span>
+<span id="cb29-8"><a href="chap4.html#cb29-8" tabindex="-1"></a>obstime<span class="sc">:</span>drug <span class="fl">0.1470</span>  <span class="dv">1</span>     <span class="fl">0.7014</span></span></code></pre></div>
+<p>输出表中的每一行都对应于涉及该特定项的所有参数的 Wald 检验。因此，包含时间变量的结果的第一行对应于检验是否所有涉及时间的项都与零显著不同，这反过来对应于上面给出的一组假设。结果表明，总体时间效应相当强。为了检验更一般的假设集，我们可以将 <a href="chap4.html#eq:4-16">(4.16)</a> 重写为</p>
+<p><span class="math display">\[\begin{aligned}H_0:L\theta=0\quad\text{ versus }\quad H_a:L\theta\neq0\end{aligned}\]</span></p>
+<p>其中 <span class="math inline">\(L\)</span> 指定我们要检验的系数的线性组合。例如，为了检验生存子模型中的协变量是否有助于解释晚期艾滋病患者死亡风险的变异性，即检验全局零假设</p>
+<p><span class="math display">\[\begin{aligned}H_0&amp;:\gamma=\alpha=0\\H_a&amp;:\gamma\neq0\quad\mathrm{or}\quad\alpha\neq0\end{aligned}\]</span></p>
+<p>我们指定我们只对生存子模型的参数感兴趣，并且 <span class="math inline">\(L\)</span> 是适当维度的单位矩阵：</p>
+<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb30-1"><a href="chap4.html#cb30-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">anova</span>(jointFit.aids, <span class="at">process =</span> <span class="st">"Event"</span>, <span class="at">L =</span> <span class="fu">diag</span>(<span class="dv">2</span>))</span>
+<span id="cb30-2"><a href="chap4.html#cb30-2" tabindex="-1"></a>Marginal Wald Tests Table</span>
+<span id="cb30-3"><a href="chap4.html#cb30-3" tabindex="-1"></a></span>
+<span id="cb30-4"><a href="chap4.html#cb30-4" tabindex="-1"></a>User<span class="sc">-</span>defined Contrasts Matrix</span>
+<span id="cb30-5"><a href="chap4.html#cb30-5" tabindex="-1"></a>    Chisq df <span class="fu">Pr</span>(<span class="sc">&gt;</span><span class="er">|</span>Chi<span class="sc">|</span>)</span>
+<span id="cb30-6"><a href="chap4.html#cb30-6" tabindex="-1"></a>L <span class="fl">67.3251</span>  <span class="dv">2</span>    <span class="sc">&lt;</span> <span class="fl">1e-04</span></span></code></pre></div>
+<p>用于检验经典线性混合模型中固定效应的 Wald 检验的一个问题是，它基于的标准误差低估了 <span class="math inline">\(\hat\beta\)</span> 的真实变异性，因为它们没有考虑到估计方差分量（即随机效应的协方差阵）所引入的变异性 (Dempster et al., 1981). 因此，通常使用具有适当自由度的近似 <span class="math inline">\(F\)</span> 分布，而不是 Wald 检验所假设的标准卡方分布。在联合模型中，这个问题可能会变得更为严重，因为我们不仅忽略了估计方差分量的事实，还需要估计生存过程。从渐近的角度来看，我们期望 Wald 统计量会服从假设的卡方分布，但在有限样本中，联合建模文献中还没有太多工作来调查其性质。因此，尽管似然比检验在计算上更为昂贵，但通常还是建议使用似然比检验。似然比检验也由函数 <code><a href="https://rdrr.io/r/stats/anova.html">anova()</a></code> 通过提供两个拟合的联合模型作为参数来实现，第一个模型始终是零假设下的模型。作为一个例子，我们检验死亡风险的治疗效应。<code><a href="https://rdrr.io/r/base/summary.html">summary()</a></code> 函数输出中包含的 Wald 检验表明，两种治疗之间存在不可忽略的差异（<span class="math inline">\(W=0.3,\text{d.f.}=1,p=0.0324\)</span>）。如上所述，为了实现似然比检验，我们首先需要在零假设下拟合联合模型，即在生存子模型中没有治疗的联合模型（我们还包括线性混合模型以确保完整性）：</p>
+<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="chap4.html#cb31-1" tabindex="-1"></a><span class="sc">&gt;</span> lmeFit.aids <span class="ot">&lt;-</span> <span class="fu">lme</span>(CD4 <span class="sc">~</span> obstime <span class="sc">+</span> obstime<span class="sc">:</span>drug,</span>
+<span id="cb31-2"><a href="chap4.html#cb31-2" tabindex="-1"></a>                     <span class="at">random =</span> <span class="sc">~</span> obstime <span class="sc">|</span> patient, <span class="at">data =</span> aids)</span>
+<span id="cb31-3"><a href="chap4.html#cb31-3" tabindex="-1"></a><span class="sc">&gt;</span> coxFit2.aids <span class="ot">&lt;-</span> <span class="fu">coxph</span>(<span class="fu">Surv</span>(Time, death) <span class="sc">~</span> <span class="dv">1</span>, <span class="at">data =</span> aids.id, <span class="at">x =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb31-4"><a href="chap4.html#cb31-4" tabindex="-1"></a><span class="sc">&gt;</span> jointFit2.aids <span class="ot">&lt;-</span> <span class="fu">jointModel</span>(lmeFit.aids, coxFit2.aids,</span>
+<span id="cb31-5"><a href="chap4.html#cb31-5" tabindex="-1"></a>                               <span class="at">timeVar =</span> <span class="st">"obstime"</span>, <span class="at">method =</span> <span class="st">"piecewise-PH-aGH"</span>)</span>
+<span id="cb31-6"><a href="chap4.html#cb31-6" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">anova</span>(jointFit2.aids, jointFit.aids)</span>
+<span id="cb31-7"><a href="chap4.html#cb31-7" tabindex="-1"></a></span>
+<span id="cb31-8"><a href="chap4.html#cb31-8" tabindex="-1"></a>                   AIC     BIC  log.Lik  LRT df p.value</span>
+<span id="cb31-9"><a href="chap4.html#cb31-9" tabindex="-1"></a>jointFit2.aids <span class="fl">8691.10</span> <span class="fl">8753.30</span> <span class="sc">-</span><span class="fl">4330.55</span></span>
+<span id="cb31-10"><a href="chap4.html#cb31-10" tabindex="-1"></a>jointFit.aids  <span class="fl">8688.52</span> <span class="fl">8754.86</span> <span class="sc">-</span><span class="fl">4328.26</span> <span class="fl">4.58</span>  <span class="dv">1</span>  <span class="fl">0.0323</span></span></code></pre></div>
+<p>我们得出了与 Wald 检验相同的结论。</p>
+<p>与 Wald 和似然比检验相反，得分检验的实现需要一些额外的步骤。这主要是由于得分检验统计量的计算需要在备择假设下计算联合模型的得分向量和 Hessian 矩阵，但是参数取零假设下的相应值。作为如何在 <code>R</code> 中执行此检验的说明，对于艾滋病数据集中的晚期艾滋病毒感染者，我们检验了 CD4 细胞计数的平方根与死亡风险之间无关联的零假设，即</p>
+<p><span class="math display">\[H_{0}:\alpha=0\quad\mathrm{versus}\quad H_{a}:\alpha\neq0\]</span></p>
+<p>为了执行此检验，我们利用 <code>jointModel()</code> 参数提供的灵活性，并使用此函数来计算得分检验统计量所需的组件。作为第一步，我们需要提取零假设下纵向和生存子模型的最大似然估计。对于前者，可以从作为 <code>joinModel()</code> 第一个参数提供的拟合线性混合效应模型中轻松获得这些模型。更具体地说，我们使用函数 <code>fixef()</code> 提取的固定效应系数 <span class="math inline">\(\beta\)</span> 的估计，并使用函数 <code>getVarCov()</code> 提取随机效应协方差阵 <span class="math inline">\(D\)</span> 的估计。残差标准误估计为返回的 <code>lme</code> 对象的 <code>sigma</code> 组件。在从对象 <code>lmeFit.aids</code> 中提取这些估计之前，我们应该注意，默认情况下，函数 <code>lme()</code> 计算混合模型参数的 REML 估计（有关限制性最大似然估计的更多信息，请参见 <a href="chap2.html#sec2-2-1">2.2.1</a> 节）。因此，在提取估计参数之前，我们应首先使用最大似然重新拟合；在 <code>R</code> 中，使用以下语法生成更新后的模型拟合结果：</p>
+<div class="sourceCode" id="cb32"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb32-1"><a href="chap4.html#cb32-1" tabindex="-1"></a><span class="sc">&gt;</span> lmeFitML.aids <span class="ot">&lt;-</span> <span class="fu">update</span>(lmeFit.aids, <span class="at">method =</span> <span class="st">"ML"</span>)</span></code></pre></div>
+<p>对于生存子模型，我们不能重复相同的过程来提取零假设下的参数估计，因为生存子模型 <code>coxFit.aids</code> 是具有未指定基线风险函数的 Cox 模型，而在拟合艾滋病数据集的联合模型中，我们假定了分段常数基线风险函数。为了获得分段常数模型下的系数，我们使用函数 <code>piecewiseExp.ph()</code>。该函数接受一个已拟合的 Cox 模型，并使用泊松回归等价性 (Hougaard, 2000, Secion 2.2.4) 拟合相应的相对风险模型，该模型具有分段常数基线风险。其确定内部结的算法与 <code>jointModel()</code> 中使用的算法完全相同。</p>
+<div class="sourceCode" id="cb33"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb33-1"><a href="chap4.html#cb33-1" tabindex="-1"></a><span class="sc">&gt;</span> pwc <span class="ot">&lt;-</span> <span class="fu">piecewiseExp.ph</span>(coxFit.aids)</span>
+<span id="cb33-2"><a href="chap4.html#cb33-2" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">coef</span>(pwc)</span>
+<span id="cb33-3"><a href="chap4.html#cb33-3" tabindex="-1"></a>        X        xi1        xi2        xi3        xi4        xi5</span>
+<span id="cb33-4"><a href="chap4.html#cb33-4" tabindex="-1"></a><span class="fl">0.2059221</span> <span class="sc">-</span><span class="fl">3.8393612</span> <span class="sc">-</span><span class="fl">3.4105302</span> <span class="sc">-</span><span class="fl">3.0497646</span> <span class="sc">-</span><span class="fl">3.5896874</span> <span class="sc">-</span><span class="fl">3.4312411</span></span>
+<span id="cb33-5"><a href="chap4.html#cb33-5" tabindex="-1"></a>       xi6        xi7</span>
+<span id="cb33-6"><a href="chap4.html#cb33-6" tabindex="-1"></a><span class="sc">-</span><span class="fl">3.3413437</span> <span class="sc">-</span><span class="fl">3.1331363</span></span></code></pre></div>
+<p>该函数的输出是一个 <code>glm</code> 对象，其中系数向量的第一部分对应于 Cox 模型中输入的协变量，其余部分对应基线风险函数 <a href="chap4.html#eq:4-3">(4.3)</a> 参数 <span class="math inline">\(\xi_q,q=1,\ldots,Q\)</span> 的对数。</p>
+<p>为了执行得分检验，我们将所有参数估计收集到一个命名的列表中，并以这些估计作为初始值调用 <code>jointModel()</code> 函数。</p>
+<div class="sourceCode" id="cb34"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb34-1"><a href="chap4.html#cb34-1" tabindex="-1"></a><span class="sc">&gt;</span> init <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb34-2"><a href="chap4.html#cb34-2" tabindex="-1"></a>  <span class="at">betas =</span> <span class="fu">fixef</span>(lmeFitML.aids),</span>
+<span id="cb34-3"><a href="chap4.html#cb34-3" tabindex="-1"></a>               <span class="at">sigma =</span> lmeFitML.aids<span class="sc">$</span>sigma,</span>
+<span id="cb34-4"><a href="chap4.html#cb34-4" tabindex="-1"></a>               <span class="at">D =</span> <span class="fu">getVarCov</span>(lmeFitML.aids),</span>
+<span id="cb34-5"><a href="chap4.html#cb34-5" tabindex="-1"></a>               <span class="at">gammas =</span> <span class="fu">coef</span>(pwc)[<span class="dv">1</span>],</span>
+<span id="cb34-6"><a href="chap4.html#cb34-6" tabindex="-1"></a>               <span class="at">alpha =</span> <span class="dv">0</span>,</span>
+<span id="cb34-7"><a href="chap4.html#cb34-7" tabindex="-1"></a>               <span class="at">xi =</span> <span class="fu">exp</span>(<span class="fu">coef</span>(pwc)[<span class="sc">-</span><span class="dv">1</span>]) <span class="co"># piecewiseExp.ph() returns log(xi)</span></span>
+<span id="cb34-8"><a href="chap4.html#cb34-8" tabindex="-1"></a>)</span>
+<span id="cb34-9"><a href="chap4.html#cb34-9" tabindex="-1"></a><span class="sc">&gt;</span> JMScoreTest <span class="ot">&lt;-</span> <span class="fu">jointModel</span>(lmeFitML.aids, coxFit.aids,</span>
+<span id="cb34-10"><a href="chap4.html#cb34-10" tabindex="-1"></a>                            <span class="at">timeVar =</span> <span class="st">"obstime"</span>, <span class="at">method =</span> <span class="st">"piecewise-PH-aGH"</span>, <span class="at">init =</span> init,</span>
+<span id="cb34-11"><a href="chap4.html#cb34-11" tabindex="-1"></a>                            <span class="at">only.EM =</span> <span class="cn">TRUE</span>, <span class="at">iter.EM =</span> <span class="dv">0</span>)</span></code></pre></div>
+<p>参数 <code>init</code> 接受一个命名的列表，其中包含联合模型参数的初始值，而控制参数仅用于设置一些控制选项。<code>EM = TRUE</code>指定我们只想使用 EM 算法（即，如果未收敛，则不进行 quasi-Newton
+算法），而控制参数中的 <code>iter.EM</code> 设置 EM 迭代的次数；这里我们将其设置为零，这对应于仅对初始值执行所有剩余的计算（即，计算 Hessian 矩阵和得分向量），而不进行对数似然值的最大化。然后，我们从返回的联合模型拟合中提取得分向量，使用函数 <code><a href="https://rdrr.io/r/stats/vcov.html">vcov()</a></code> 获取 Hessian 矩阵，并计算得分检验统计量和相应的 <span class="math inline">\(p\)</span> 值：</p>
+<div class="sourceCode" id="cb35"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb35-1"><a href="chap4.html#cb35-1" tabindex="-1"></a><span class="sc">&gt;</span> score.vector <span class="ot">&lt;-</span> JMScoreTest<span class="sc">$</span>Score</span>
+<span id="cb35-2"><a href="chap4.html#cb35-2" tabindex="-1"></a><span class="sc">&gt;</span> inv.Hessian <span class="ot">&lt;-</span> <span class="fu">vcov</span>(JMScoreTest)</span>
+<span id="cb35-3"><a href="chap4.html#cb35-3" tabindex="-1"></a><span class="sc">&gt;</span> ScoreStat <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">t</span>(score.vector) <span class="sc">%*%</span> inv.Hessian <span class="sc">%*%</span> score.vector)</span>
+<span id="cb35-4"><a href="chap4.html#cb35-4" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">c</span>(<span class="st">"Statistic"</span> <span class="ot">=</span> ScoreStat, <span class="st">"df"</span> <span class="ot">=</span> <span class="dv">1</span>,</span>
+<span id="cb35-5"><a href="chap4.html#cb35-5" tabindex="-1"></a>    <span class="st">"p-value"</span> <span class="ot">=</span> <span class="fu">pchisq</span>(ScoreStat, <span class="at">df =</span> <span class="dv">1</span>, <span class="at">lower.tail =</span> <span class="cn">FALSE</span>))</span>
+<span id="cb35-6"><a href="chap4.html#cb35-6" tabindex="-1"></a></span>
+<span id="cb35-7"><a href="chap4.html#cb35-7" tabindex="-1"></a>   Statistic           df      p<span class="sc">-</span>value</span>
+<span id="cb35-8"><a href="chap4.html#cb35-8" tabindex="-1"></a><span class="fl">8.845084e+01</span> <span class="fl">1.000000e+00</span> <span class="fl">5.211407e-21</span></span></code></pre></div>
+<p>与 <a href="chap4.html#sec4-2">4.2</a>节 <code><a href="https://rdrr.io/r/base/summary.html">summary()</a></code> 方法提供的 Wald 检验结果类似，得分检验也表明 CD4 细胞计数与死亡风险之间存在强烈关联。</p>
+<p>到目前为止，我们看到的三个标准检验只适用于两个嵌套模型的比较，因为零假设下的模型是替代假设下模型的特例。当兴关注点在于比较非嵌套模型时，通常使用信息准则。这些准则背后的主要思想是根据两个模型的最大对数似然值对其进行比较，但对使用过多参数进行惩罚。两个最常用的信息准则是 Akaike’s Information Criterion (<strong>AIC</strong>; Akaike, 1974) 和 Bayesian Information Criterion (<strong>BIC</strong>; Schwarz, 1978). 它们包含在 <code><a href="https://rdrr.io/r/stats/anova.html">anova()</a></code> 和 <code><a href="https://rdrr.io/r/base/summary.html">summary()</a></code> 函数的输出中，定义为</p>
+<p><span class="math display">\[\begin{array}{rcl}AIC&amp;=&amp;-2\ell(\hat\theta)+2n_{par}\\BIC&amp;=&amp;-2\ell(\hat\theta)+n_{par}\log(n)\end{array}\]</span></p>
+<p>其中 <span class="math inline">\(n_{par}\)</span> 表示模型中参数的数量。根据这些定义，值“越小越好”。也就是说，如果我们使用 AIC 或 BIC 来比较相同数据的两个模型，我们优选相同准则值较低的模型。在这两个准则之间的选择可能是一个问题，因为它们在实践中并不总是一致的。AIC 倾向于选择比 BIC 更精细的模型，因为后者对模型的复杂性的惩罚要大得多。请注意，这也是上述艾滋病数据集中生存过程中治疗效应检验的情况。具体来说，AIC 和似然比检验都表明，两种治疗之间的死亡风险存在微小但显著的差异，而 BIC 选择了生存子模型中没有治疗效应的更简约的联合模型。因此，这些准则应视为区分两个（非嵌套）统计模型的经验法则。</p>
+<p>当我们有兴趣检验联合模型中是否应包括额外的随机效应时，就会出现另一个重要问题。这实际上相当于增加随机效应设计矩阵 <span class="math inline">\(D\)</span> 的维度，增加方差分量。在这种情况下，通过在完整模型中设置 <span class="math inline">\(D\)</span> 的某些元素为零，可以获得零假设下的模型。这些元素中至少有一个始终是 <span class="math inline">\(D\)</span> 的对角元（即方差参数），这意味着在零假设下，某些参数被设置为参数空间边界上的值。在这种设置下的问题是，经典的最大似然渐近论证并不适用于边界情况。特别是，Stram and Lee (1994) 根据 Self and Liang (1987) 的结果，以及后来 Verbeke and Molenberghs (2003) 以及 Molenbergh and Verbeke (2007) 在线性混合模型框架中对这一主题的一些工作表明，我们在上面看到的所有三个检验统计量都不服从零假设下声称的 <span class="math inline">\(\chi^2_p\)</span> 分布。作为替代方案，有人建议使用具有适当选择的自由度的卡方分布的混合。然而，Greven et al. (2008) 已经证明，即使这种选择在某些情况下也可能相当保守，并且他们提出了一种基于模拟的方法来近似零假设下似然比检验统计量的分布。在联合建模框架内，关于该问题的研究并不多。作为实际指导，我们建议采用较高的第 I 类错误率，例如 10% 至 15%，以确保我们不会过度简化假定的联合模型的随机效应结构。</p>
+</div>
+<div id="sec4-4-2" class="section level3" number="4.4.2">
+<h3>
+<span class="header-section-number">4.4.2</span> 置信区间<a class="anchor" aria-label="anchor" href="#sec4-4-2"><i class="fas fa-link"></i></a>
+</h3>
+<p>感兴趣参数的渐近 95% 置信区间可以基于 Wald 统计，即 <span class="math inline">\(\hat{\theta}\pm1.96\widehat{s.e.}(\hat{\theta})\)</span>。在 <code>R</code> 中，这些是由 <code><a href="https://rdrr.io/r/stats/confint.html">confint()</a></code> 函数生成的。例如，在 <a href="chap4.html#sec4-3-7">4.3.7</a> 节中，拟合到主动脉瓣数据集的联合模型中，纵向过程中参数的 95% 置信区间通过如下代码获得</p>
+<div class="sourceCode" id="cb36"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb36-1"><a href="chap4.html#cb36-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">confint</span>(jointFit2.av, <span class="at">parm =</span> <span class="st">"Longitudinal"</span>)</span>
+<span id="cb36-2"><a href="chap4.html#cb36-2" tabindex="-1"></a></span>
+<span id="cb36-3"><a href="chap4.html#cb36-3" tabindex="-1"></a>                           <span class="fl">2.5</span> <span class="sc">%        est.     97.5 %</span></span>
+<span id="cb36-4"><a href="chap4.html#cb36-4" tabindex="-1"></a>(Intercept)            <span class="fl">3.8644755</span>  <span class="fl">4.33922289</span>  <span class="fl">4.8139703</span></span>
+<span id="cb36-5"><a href="chap4.html#cb36-5" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">1</span>           <span class="fl">0.8634598</span>  <span class="fl">1.47347658</span>  <span class="fl">2.0834934</span></span>
+<span id="cb36-6"><a href="chap4.html#cb36-6" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">2</span>           <span class="fl">1.5288204</span>  <span class="fl">2.27966532</span>  <span class="fl">3.0305103</span></span>
+<span id="cb36-7"><a href="chap4.html#cb36-7" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">3</span>           <span class="fl">1.7898180</span>  <span class="fl">2.23616498</span>  <span class="fl">2.6825120</span></span>
+<span id="cb36-8"><a href="chap4.html#cb36-8" tabindex="-1"></a>TypeOpRR              <span class="sc">-</span><span class="fl">0.8542210</span> <span class="sc">-</span><span class="fl">0.48448673</span> <span class="sc">-</span><span class="fl">0.1147525</span></span>
+<span id="cb36-9"><a href="chap4.html#cb36-9" tabindex="-1"></a><span class="fu">I</span>(Age<span class="sc">/</span><span class="dv">15</span>)             <span class="sc">-</span><span class="fl">0.4283111</span> <span class="sc">-</span><span class="fl">0.31739557</span> <span class="sc">-</span><span class="fl">0.2064800</span></span>
+<span id="cb36-10"><a href="chap4.html#cb36-10" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">1</span><span class="sc">:</span>TypeOpRR <span class="sc">-</span><span class="fl">0.8834019</span> <span class="sc">-</span><span class="fl">0.09654611</span>  <span class="fl">0.6903097</span></span>
+<span id="cb36-11"><a href="chap4.html#cb36-11" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">2</span><span class="sc">:</span>TypeOpRR <span class="sc">-</span><span class="fl">1.5924389</span> <span class="sc">-</span><span class="fl">0.59943345</span>  <span class="fl">0.3935720</span></span>
+<span id="cb36-12"><a href="chap4.html#cb36-12" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">3</span><span class="sc">:</span>TypeOpRR <span class="sc">-</span><span class="fl">2.4787575</span> <span class="sc">-</span><span class="fl">1.39343219</span> <span class="sc">-</span><span class="fl">0.3081069</span></span></code></pre></div>
+<p>而对于生存过程，风险比的 95% 置信区间通过如下代码获得</p>
+<div class="sourceCode" id="cb37"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb37-1"><a href="chap4.html#cb37-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">exp</span>(<span class="fu">confint</span>(jointFit2.av, <span class="at">parm =</span> <span class="st">"Event"</span>))</span>
+<span id="cb37-2"><a href="chap4.html#cb37-2" tabindex="-1"></a></span>
+<span id="cb37-3"><a href="chap4.html#cb37-3" tabindex="-1"></a>             <span class="fl">2.5</span> <span class="sc">%      est.    97.5 %</span></span>
+<span id="cb37-4"><a href="chap4.html#cb37-4" tabindex="-1"></a>TypeOpRR <span class="fl">0.6067633</span> <span class="fl">1.1012094</span> <span class="fl">1.9985752</span></span>
+<span id="cb37-5"><a href="chap4.html#cb37-5" tabindex="-1"></a>Assoct   <span class="fl">0.5188071</span> <span class="fl">0.6990497</span> <span class="fl">0.9419118</span></span></code></pre></div>
+<p>类似地，拟合值的渐近置信区间可以基于最大似然估计的渐近正态分布。例如，对于纵向过程中的平均纵向演变 <span class="math inline">\(\mu = X\beta\)</span>，我们可以构建以下形式的 95% 逐点置信区间</p>
+<p><span class="math display">\[\begin{aligned}\hat{\mu}\quad&amp;\pm\quad1.96\widehat{s.e.}(\hat{\mu})\Rightarrow\\X\hat{\beta}\quad&amp;\pm\quad1.96\big[\operatorname{diag}\{X\text{v}\hat{\mathrm{a}}\text{r}(\hat{\beta})X^\top\}\big]^{1/2}\end{aligned}\]</span></p>
+<p>其中 <span class="math inline">\(X\)</span> 表示感兴趣的设计矩阵，并且 <span class="math inline">\(\text{v}\hat{\mathrm{a}}\text{r}(\hat{\beta})\)</span> 是对应于 <span class="math inline">\(\hat\beta\)</span> 的观测 Hessian 矩阵的块。为了计算拟合值 <span class="math inline">\(\hat{\mu}=X\hat{\beta}\)</span>、它们的标准误和 <code>R</code> 中相应的 95% 逐点置信区间，我们使用 <code><a href="https://rdrr.io/r/stats/predict.html">predict()</a></code> 函数。作为初始步骤，在调用此函数之前，我们需要构建包含感兴趣的协变值的数据框，基于该数据框导出设计矩阵 <span class="math inline">\(X\)</span>。作为说明，我们基于拟合到主动脉瓣数据集的联合模型，为一位年龄中位数（即 47.3 岁）的患者，展示了两种手术类型的拟合平均纵向演变情况，以及相应的 95% 逐点置信区间。以下 <code>R</code> 代码为每个手术类型构建了一个数据框，该数据框包含从最小到最大观测随访时间的 30 个时间点的规则序列，并将年龄设置为当前样本中的中位数年龄。</p>
+<div class="sourceCode" id="cb38"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb38-1"><a href="chap4.html#cb38-1" tabindex="-1"></a><span class="sc">&gt;</span> DF <span class="ot">&lt;-</span> <span class="fu">with</span>(AoValv, <span class="fu">expand.grid</span>(</span>
+<span id="cb38-2"><a href="chap4.html#cb38-2" tabindex="-1"></a>  <span class="at">time =</span> <span class="fu">seq</span>(<span class="fu">min</span>(time), <span class="fu">max</span>(time), <span class="at">length =</span> <span class="dv">30</span>),</span>
+<span id="cb38-3"><a href="chap4.html#cb38-3" tabindex="-1"></a>  <span class="at">TypeOp =</span> <span class="fu">levels</span>(TypeOp),</span>
+<span id="cb38-4"><a href="chap4.html#cb38-4" tabindex="-1"></a>  <span class="at">Age =</span> <span class="fu">median</span>(AoValv.id<span class="sc">$</span>Age)))</span></code></pre></div>
+<p>接下来，我们将拟合的联合模型 <code>jointFit2.av</code> 和上面的数据框作为主参数提供给 <code><a href="https://rdrr.io/r/stats/predict.html">predict()</a></code> 函数。此外，我们指定要计算 <span class="math inline">\(\mu\)</span> 的置信区间（即参数 <code>interval</code>），并将结果返回在输入的数据框中（即参数 <code>return</code>）</p>
+<div class="sourceCode" id="cb39"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb39-1"><a href="chap4.html#cb39-1" tabindex="-1"></a><span class="sc">&gt;</span> Ps <span class="ot">&lt;-</span> <span class="fu">predict</span>(jointFit2.av, <span class="at">newdata =</span> DF, <span class="at">interval =</span> <span class="st">"confidence"</span>,</span>
+<span id="cb39-2"><a href="chap4.html#cb39-2" tabindex="-1"></a>                <span class="at">return =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb39-3"><a href="chap4.html#cb39-3" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">xyplot</span>(pred <span class="sc">+</span> low <span class="sc">+</span> upp <span class="sc">~</span> time <span class="sc">|</span> TypeOp, <span class="at">data =</span> Ps,</span>
+<span id="cb39-4"><a href="chap4.html#cb39-4" tabindex="-1"></a>         <span class="at">type =</span> <span class="st">"l"</span>, <span class="at">col =</span> <span class="dv">1</span>, <span class="at">lty =</span> <span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">2</span>), <span class="at">lwd =</span> <span class="dv">2</span>,</span>
+<span id="cb39-5"><a href="chap4.html#cb39-5" tabindex="-1"></a>         <span class="at">ylab =</span> <span class="fu">expression</span>(<span class="fu">sqrt</span>(<span class="st">"Aortic Gradient"</span>)), <span class="at">xlab =</span> <span class="st">"Time (years)"</span>)</span></code></pre></div>
+<p>对象 <code>Ps</code> 实际上是输入的数据框 <code>DF</code>，但增加了四个额外的列，其中包含拟合值 <span class="math inline">\(\hat \mi\)</span>、它们的标准误和渐近 95% 逐点置信区间的限。使用 <code>lattice</code> 包 (Sarkar, 2008) 中的函数 <code>xyplot()</code> 生成所得估计的图形，如图 4.3 所示。</p>
+<details><summary><font color="#B95953">图 4.3</font>
+</summary><img src="figure/figure%204.3.png#center" style="width:80.0%"></details>
+</div>
+<div id="sec4-4-3" class="section level3" number="4.4.3">
+<h3>
+<span class="header-section-number">4.4.3</span> 设计考虑<a class="anchor" aria-label="anchor" href="#sec4-4-3"><i class="fas fa-link"></i></a>
+</h3>
+<p>当分别考虑纵向和生存结果时，已有文献中有几个关于设计考虑的建议。对于线性混合模型，我们参考 Verbeke and Molenberghs (2000, Chapter 23) 以及 Fitzmaurice et al. (2004, Chapter 15)，而对于生存模型，我们则参考了 Therneau and Grambsch (2000, Section 3.6). 不幸的是，在联合建模框架中，关于功效和样本量计算以及一般设计的考虑的工作还不多。由于联合模型是相当复杂的模型，很难轻易推导出功效公式，除非做出限制性假设。在这方面，唯一可行的解决方案是采用基于模拟的方法，在这种方法下，从具有所需效应大小的联合模型中模拟数据。</p>
+<p>在设计使用联合模型的研究时，通常会忽略的另一个重要问题是随访时间的选择。具体来说，习惯上要求所有患者在一组预先指定的时间点 <span class="math inline">\(t_1,\ldots,t_q\)</span> 回到研究中心。假设所有患者按要求执行，很明显，我们只记录了这些特定时间点的纵向标志物信息，而没有记录这些时间点之间的信息。然而，我们已经看到，生存函数是联合模型的似然的一部分，它需要估计每个受试者的真实标志物水平的完整路径 <span class="math inline">\(\mathcal{M}_i(t)=\{m_i(s),0\leq s&lt;t\}\)</span>。因此，由于我们只有 <span class="math inline">\(t_1,\ldots,t_q\)</span> 时的信息，我们必须在没有记录信息的这些时间点之间进行插值来估计 <span class="math inline">\(\mathcal{M}_i(t)\)</span>。为了避免这种插值，在设计一项对每个受试者进行 <span class="math inline">\(Q\)</span> 次计划随访测量的研究时，通常建议将随访期跨越 <span class="math inline">\(Q^{\prime}&gt;Q\)</span> 个时间点，创建几个随机的患者组，并要求每组在不同的 <span class="math inline">\(Q\)</span> 个时间点进行就诊。</p>
+</div>
+</div>
+<div id="sec4-5" class="section level2" number="4.5">
+<h2>
+<span class="header-section-number">4.5</span> 随机效应的估计<a class="anchor" aria-label="anchor" href="#sec4-5"><i class="fas fa-link"></i></a>
+</h2>
+<p>到目前为止，我们主要关注联合模型参数 <span class="math inline">\(\theta\)</span> 的估计和推断。而随机效应 <span class="math inline">\(b_i\)</span> 用于描述患者纵向演变的异质性，并建立纵向和事件时间过程之间的关联。尽管如此，在许多情况下，人们的兴趣可能在于对两结果之一进行针对特定患者的预测。为了得出这样的预测，需要对随机效应向量 <span class="math inline">\(b_i\)</span> 进行估计。由于随机效应假定为随机变量，因此很自然地使用贝叶斯范式来估计它们。具体来说，假定 <span class="math inline">\(p(b_i;\theta)\)</span> 是先验分布，<span class="math inline">\(p(T_i,\delta_i\mid b_i;\theta)p(y_i\mid b_i;\theta)\)</span> 是条件似然部分，我们可以推导出相应的后验分布</p>
+<p><span class="math display" id="eq:4-17">\[\begin{align}
+p(b_i\mid T_i,\delta_i,y_i;\theta)&amp;=\quad\frac{p(T_i,\delta_i\mid b_i;\theta)p(y_i\mid b_i;\theta)p(b_i;\theta)}{p(T_i,\delta_i,y_i;\theta)}\\&amp;\propto\quad p(T_i,\delta_i\mid b_i;\theta)p(y_i\mid b_i;\theta)p(b_i;\theta)
+\tag{4.17}
+\end{align}\]</span></p>
+<p>与线性混合模型（后验分布是多元正态分布）框架相反，在联合模型中没有闭合形式的解，必须进行数值计算。然而，正如 <a href="chap4.html#sec4-3-5">4.3.5</a> 节所述，随着纵向测量次数 <span class="math inline">\(n_i\)</span> 的增加，该分布将收敛为正态分布。</p>
+<p>为刻画该后验分布，通常使用标准的总结度量。对于其位置，通常使用均值或众数，分别定义为</p>
+<p><span class="math display" id="eq:4-18">\[\begin{align}
+\left\{\begin{array}{l}\bar b_i=\int b_ip(b_i\mid T_i,\delta_i,y_i;\theta)db_i,\quad\text{以及}\\\hat b_i=\arg\max_b\{\log p(b\mid T_i,\delta_i,y_i;\theta)\}\end{array}\right.
+\tag{4.18}
+\end{align}\]</span></p>
+<p>作为离散的度量，我们可以使用随机效应的后验方差或逆 Hessian 矩阵，即</p>
+<p><span class="math display" id="eq:4-19">\[\begin{align}
+\left\{\begin{array}{l}\operatorname{var}(b_i)=\int(b_i-\bar{b}_i)^2p(b_i\mid T_i,\delta_i,y_i;\theta)~db_i\\\\H_i=\left\{-\frac{\partial^2\log p(b|T_i,\delta_i,y_i;\theta)}{\partial b^\top\partial b}|_{b=\hat{b}_i}\right\}^{-1}\end{array}\right.
+\tag{4.19}
+\end{align}\]</span></p>
+<p>对于 <a href="chap4.html#eq:4-18">(4.18)</a> 和 <a href="chap4.html#eq:4-19">(4.19)</a> 的估计，采用了经验贝叶斯方法，其中我们用 <span class="math inline">\(\hat\theta\)</span> 替换 <span class="math inline">\(\theta\)</span>。在 <code>R</code> 中，这些经验贝叶斯估计是由函数 <code>ranef()</code> 产生的。计算随机效应后验分布的均值 <span class="math inline">\(\bar b_i\)</span> 或众数 <span class="math inline">\(\hat b_i\)</span> 的选择由 <code>type</code> 参数控制，默认值为均值。以下代码使用 <a href="chap4.html#sec4-3-7">4.3.7</a> 节中拟合的联合模型比较了主动脉瓣数据集中前六名患者的两个估计。</p>
+<div class="sourceCode" id="cb40"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb40-1"><a href="chap4.html#cb40-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">head</span>(<span class="fu">ranef</span>(jointFit2.av))</span>
+<span id="cb40-2"><a href="chap4.html#cb40-2" tabindex="-1"></a></span>
+<span id="cb40-3"><a href="chap4.html#cb40-3" tabindex="-1"></a>   (Intercept) <span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">1</span> <span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">2</span> <span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">3</span></span>
+<span id="cb40-4"><a href="chap4.html#cb40-4" tabindex="-1"></a><span class="dv">1</span>   <span class="sc">-</span><span class="fl">1.1623809</span>   <span class="sc">-</span><span class="fl">0.8068030</span>  <span class="sc">-</span><span class="fl">1.02519836</span>   <span class="sc">-</span><span class="fl">0.3556301</span></span>
+<span id="cb40-5"><a href="chap4.html#cb40-5" tabindex="-1"></a><span class="dv">12</span>  <span class="sc">-</span><span class="fl">0.1321869</span>   <span class="sc">-</span><span class="fl">2.8733450</span>   <span class="fl">0.12983730</span>   <span class="sc">-</span><span class="fl">0.1927253</span></span>
+<span id="cb40-6"><a href="chap4.html#cb40-6" tabindex="-1"></a><span class="dv">17</span>   <span class="fl">0.6676618</span>    <span class="fl">6.3404689</span>  <span class="sc">-</span><span class="fl">0.05272436</span>   <span class="sc">-</span><span class="fl">0.4205397</span></span>
+<span id="cb40-7"><a href="chap4.html#cb40-7" tabindex="-1"></a><span class="dv">22</span>  <span class="sc">-</span><span class="fl">1.0028832</span>   <span class="sc">-</span><span class="fl">0.2602472</span>  <span class="sc">-</span><span class="fl">0.80103372</span>   <span class="sc">-</span><span class="fl">0.4455364</span></span>
+<span id="cb40-8"><a href="chap4.html#cb40-8" tabindex="-1"></a><span class="dv">30</span>   <span class="fl">0.3022234</span>    <span class="fl">1.1862843</span>   <span class="fl">0.58932015</span>   <span class="sc">-</span><span class="fl">0.1061563</span></span>
+<span id="cb40-9"><a href="chap4.html#cb40-9" tabindex="-1"></a><span class="dv">32</span>  <span class="sc">-</span><span class="fl">0.2307416</span>   <span class="sc">-</span><span class="fl">1.1798982</span>  <span class="sc">-</span><span class="fl">0.20725047</span>   <span class="sc">-</span><span class="fl">0.4421050</span></span>
+<span id="cb40-10"><a href="chap4.html#cb40-10" tabindex="-1"></a></span>
+<span id="cb40-11"><a href="chap4.html#cb40-11" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">head</span>(<span class="fu">ranef</span>(jointFit2.av, <span class="at">type =</span> <span class="st">"mode"</span>))</span>
+<span id="cb40-12"><a href="chap4.html#cb40-12" tabindex="-1"></a></span>
+<span id="cb40-13"><a href="chap4.html#cb40-13" tabindex="-1"></a>  (Intercept) <span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">1</span> <span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">2</span> <span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">3</span></span>
+<span id="cb40-14"><a href="chap4.html#cb40-14" tabindex="-1"></a><span class="dv">1</span>  <span class="sc">-</span><span class="fl">1.1843751</span>   <span class="sc">-</span><span class="fl">0.7924597</span>  <span class="sc">-</span><span class="fl">1.00020579</span>  <span class="sc">-</span><span class="fl">0.31466724</span></span>
+<span id="cb40-15"><a href="chap4.html#cb40-15" tabindex="-1"></a><span class="dv">12</span> <span class="sc">-</span><span class="fl">0.1233876</span>   <span class="sc">-</span><span class="fl">2.9351389</span>   <span class="fl">0.19557269</span>  <span class="sc">-</span><span class="fl">0.01697451</span></span>
+<span id="cb40-16"><a href="chap4.html#cb40-16" tabindex="-1"></a><span class="dv">17</span>  <span class="fl">0.7093392</span>    <span class="fl">6.1951976</span>   <span class="fl">0.11981311</span>   <span class="fl">0.12332890</span></span>
+<span id="cb40-17"><a href="chap4.html#cb40-17" tabindex="-1"></a><span class="dv">22</span> <span class="sc">-</span><span class="fl">1.0470046</span>   <span class="sc">-</span><span class="fl">0.2106992</span>  <span class="sc">-</span><span class="fl">0.74552794</span>  <span class="sc">-</span><span class="fl">0.31381140</span></span>
+<span id="cb40-18"><a href="chap4.html#cb40-18" tabindex="-1"></a><span class="dv">30</span>  <span class="fl">0.3084187</span>    <span class="fl">1.1835448</span>   <span class="fl">0.60205282</span>  <span class="sc">-</span><span class="fl">0.01085677</span></span>
+<span id="cb40-19"><a href="chap4.html#cb40-19" tabindex="-1"></a><span class="dv">32</span> <span class="sc">-</span><span class="fl">0.2491193</span>   <span class="sc">-</span><span class="fl">1.3722186</span>  <span class="sc">-</span><span class="fl">0.05329907</span>  <span class="sc">-</span><span class="fl">0.07602029</span></span></code></pre></div>
+<p>后验分布的相应离散度估计是通过使用额外的可选参数 <code>postVar</code> 来计算的。同样，<code>type</code> 参数指定计算两个估计中的哪一个。具体来说，当 <code>type = "mean"</code> 且 <code>postVar = TRUE</code> 时，<code>ranef()</code> 返回后验方差，而对于选项 <code>type = "mode"</code>，它返回逆 Hessian 矩阵。我们显示主动脉瓣数据集中的第一个患者</p>
+<div class="sourceCode" id="cb41"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb41-1"><a href="chap4.html#cb41-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">attr</span>(<span class="fu">ranef</span>(jointFit2.av, <span class="at">postVar =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb41-2"><a href="chap4.html#cb41-2" tabindex="-1"></a>       <span class="st">"postVar"</span>)[[<span class="dv">1</span>]]</span>
+<span id="cb41-3"><a href="chap4.html#cb41-3" tabindex="-1"></a></span>
+<span id="cb41-4"><a href="chap4.html#cb41-4" tabindex="-1"></a>              (Intercept) <span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">1</span> <span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">2</span> <span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">3</span></span>
+<span id="cb41-5"><a href="chap4.html#cb41-5" tabindex="-1"></a>(Intercept)   <span class="fl">0.191306871</span> <span class="sc">-</span><span class="fl">0.132015303</span> <span class="sc">-</span><span class="fl">0.322848727</span> <span class="sc">-</span><span class="fl">0.001335748</span></span>
+<span id="cb41-6"><a href="chap4.html#cb41-6" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">1</span> <span class="sc">-</span><span class="fl">0.132015303</span>  <span class="fl">0.765628082</span> <span class="sc">-</span><span class="fl">0.042482949</span>  <span class="fl">0.001492416</span></span>
+<span id="cb41-7"><a href="chap4.html#cb41-7" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">2</span> <span class="sc">-</span><span class="fl">0.322848727</span> <span class="sc">-</span><span class="fl">0.042482949</span>  <span class="fl">0.804884199</span>  <span class="fl">0.001927672</span></span>
+<span id="cb41-8"><a href="chap4.html#cb41-8" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">3</span> <span class="sc">-</span><span class="fl">0.001335748</span>  <span class="fl">0.001492416</span>  <span class="fl">0.001927672</span>  <span class="fl">0.003195026</span></span>
+<span id="cb41-9"><a href="chap4.html#cb41-9" tabindex="-1"></a></span>
+<span id="cb41-10"><a href="chap4.html#cb41-10" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">attr</span>(<span class="fu">ranef</span>(jointFit2.av, <span class="at">type =</span> <span class="st">"mode"</span>, <span class="at">postVar =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb41-11"><a href="chap4.html#cb41-11" tabindex="-1"></a>       <span class="st">"postVar"</span>)[[<span class="dv">1</span>]]</span>
+<span id="cb41-12"><a href="chap4.html#cb41-12" tabindex="-1"></a></span>
+<span id="cb41-13"><a href="chap4.html#cb41-13" tabindex="-1"></a>             (Intercept) <span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">1</span> <span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">2</span> <span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">3</span></span>
+<span id="cb41-14"><a href="chap4.html#cb41-14" tabindex="-1"></a>(Intercept)   <span class="fl">0.20482469</span>  <span class="sc">-</span><span class="fl">0.14697481</span>  <span class="sc">-</span><span class="fl">0.34151558</span>  <span class="sc">-</span><span class="fl">0.03213124</span></span>
+<span id="cb41-15"><a href="chap4.html#cb41-15" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">1</span> <span class="sc">-</span><span class="fl">0.14697481</span>   <span class="fl">0.78573758</span>  <span class="sc">-</span><span class="fl">0.02209749</span>   <span class="fl">0.03603327</span></span>
+<span id="cb41-16"><a href="chap4.html#cb41-16" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">2</span> <span class="sc">-</span><span class="fl">0.34151558</span>  <span class="sc">-</span><span class="fl">0.02209749</span>   <span class="fl">0.83216730</span>   <span class="fl">0.04631669</span></span>
+<span id="cb41-17"><a href="chap4.html#cb41-17" tabindex="-1"></a><span class="fu">ns</span>(time, <span class="dv">3</span>)<span class="dv">3</span> <span class="sc">-</span><span class="fl">0.03213124</span>   <span class="fl">0.03603327</span>   <span class="fl">0.04631669</span>   <span class="fl">0.07689786</span></span></code></pre></div>
+<p>一般来说，我们观察到两种类型的估计（即均值与众数、方差与逆 Hessian 矩阵）之间的差异会非常小。正如 <a href="chap4.html#sec4-3-5">4.3.5</a> 节中所解释的，这是可以预期的，因为联合模型下随机效应的后验分布的主导项是纵向模型的密度，后验分布将很好地近似于正态分布，而对于正态分布这两种类型的估计是重合的。</p>
+</div>
+<div id="sec4-6" class="section level2" number="4.6">
+<h2>
+<span class="header-section-number">4.6</span> 与缺失数据框架的连接<a class="anchor" aria-label="anchor" href="#sec4-6"><i class="fas fa-link"></i></a>
+</h2>
+<p>到目前为止，我们主要是从生存分析的角度来阐述联合模型的动机，即作为一种处理易出错的时依协变量的建模框架。现在我们将注意力转向以纵向结果为主要研究兴趣的情形。在这种情况下，患者发生某个事件通常对应于其纵向过程的中断。这要么是因为该事件发生后无法再收集随访测量数据，要么事件发生后数据的分布发生变化从而认为是无关紧要的。因此，在这样的设定下，显然我们可以直接建立联合模型与 <a href="chap2.html#sec2-3">2.3</a> 节中引入的缺失数据框架之间的联系。我们应该在这里提到，在一些终点事件为死亡的临床研究中，考虑事件时间之后的纵向结果值在概念上可能不合理 (Kurland and Heagerty, 2005; Kurland et al., 2009). 然而，我们也应该注意到，尽管我们已经为观测纵向结果定义了一个混合模型 <a href="chap4.html#eq:4-5">(4.5)</a>，但联合模型隐含地对完全纵向响应向量进行了假设，包括在事件或删失之后收集的观测数据。为了更清楚地说明这一点，我们为每个受试者定义了纵向响应向量的观测和缺失的部分。观测部分 <span class="math inline">\(y_i^o=\{y_i(t_{ij}):t_{ij}&lt;T_i^*,j=1,\ldots,n_i\}\)</span> 由事件时间之前第 <span class="math inline">\(i\)</span> 个受试者的所有观测纵向测量组成，而缺失部分 <span class="math inline">\(y_i^m=\{y_i(t_{ij}):t_{ij}\geq T_i^*,j=1,\ldots,n_i'\}\)</span> 包含在事件没有发生的情况下直到研究结束为止进行的纵向测量。根据这些定义，我们可以导出脱落机制，它是给定纵向响应完全向量 <span class="math inline">\((y_i^o,y_i^m)\)</span> 的情况下脱落时间的条件分布。具体来说，我们有</p>
+<p><span class="math display" id="eq:4-20">\[\begin{align}
+p(T_i^*\mid y_i^o,y_i^m;\theta)&amp; =\quad\int p(T_i^*,b_i\mid y_i^o,y_i^m;\theta)db_i  \\
+&amp;=\quad\int p(T_i^*\mid b_i,y_i^o,y_i^m;\theta)p(b_i\mid y_i^o,y_i^m;\theta)db_i \\
+&amp;=\quad\int p(T_i^*\mid b_i;\theta)p(b_i\mid y_i^o,y_i^m;\theta)db_i
+\tag{4.20}
+\end{align}\]</span></p>
+<p>其中最后一行中的简化是由于条件独立性假设 <a href="chap4.html#eq:4-7">(4.7)</a>。我们观察到，通过随机效应的后验分布 <span class="math inline">\(p(b_i\mid y_i^o,y_i^m;\theta)\)</span>，脱落时间取决于 <span class="math inline">\(y^m_i\)</span>，这意味着联合模型对应于 MNAR 缺失数据机制。对 <a href="chap4.html#eq:4-20">(4.20)</a> 的进一步检查表明，联合模型中脱落机制背后的关键组成部分是随机效应 <span class="math inline">\(b_i\)</span>。更具体地说，正如我们已经看到的，在联合模型中</p>
+<p><span class="math display">\[\left\{\begin{array}{rcl}y_i(t)&amp;=&amp;x_i^\top(t)\beta+z_i^\top(t)b_i+\varepsilon_i(t)\\h_i(t)&amp;=&amp;h_0(t)\exp\bigl[\gamma^\top w_i+\alpha\{x_i^\top(t)\beta+z_i^\top(t)b_i\}\bigr]\end{array}\right.\]</span></p>
+<p>生存子模型和纵向子模型具有相同的随机效应。由于这一特点，联合模型属于 <a href="chap2.html#sec2-3-2">2.3.2</a> 节中介绍的共享参数模型类别 (Wu and Carroll, 1988; Wu and Bailey, 1989; Follmann and Wu, 1995; Vonesh et al., 2006). 在简单的随机效应结构（即随机截距和随机斜率）下，这种缺失数据机制意味着，纵向曲线陡增的受试者可能更多（或更少）地退出。</p>
+<p>这里的一个相关问题是关联参数 <span class="math inline">\(\alpha\)</span> 与缺失数据机制类型的联系。具体来说，<span class="math inline">\(\alpha\)</span> 的零值对应于 MCAR 缺失数据机制，因为一旦以可用的协变量为条件，脱落过程就不取决于缺失或观测纵向响应。此外，由于在 <span class="math inline">\(\alpha=0\)</span> 下，两个子模型中的参数是不同的，因此脱落和纵向过程的联合概率可分解为</p>
+<p><span class="math display">\[\begin{array}{rcl}p(T_i,\delta_i,y_i;\theta)&amp;=&amp;p(T_i,\delta_i;\theta_t)p(y_i;\theta_y,\theta_b)\\&amp;=&amp;p(T_i,\delta_i;\theta_t)\int p(y_i\mid b_i;\theta_y)p(b_i;\theta_b)db_i\end{array}\]</span></p>
+<p>这意味着可以分别估计两个子模型中的参数。尽管如此，由于我们采用了全似然法，因此通过最大化纵向过程的对数似然 <span class="math inline">\(\ell(\theta_y)=\sum_i\log p(y_i;\theta_y)\)</span> 得出的参数估计，在 MAR 缺失数据机制下也将有效，即在脱落仅取决于观测响应的假设下。此外，我们还应该提到，在实践中，当受试者由于删失而离开研究时，也会发生纵向过程数据收集的中断。然而，在联合模型似然函数的制定中，我们假定删失机制可能取决于观测纵向响应和协变量的历史，但独立于未来的纵向结果。因此，在此假设下，删失对应于 MAR 缺失数据机制。</p>
+<p>共享参数模型框架的另一个不错的特性是，这些模型可以非常轻松地处理间歇性缺失和流失。为了了解这是如何实现的，我们根据完全数据 <span class="math inline">\(\{y_i^o,y_i^m\}\)</span> 写出纵向结果观测数据的对数似然函数</p>
+<p><span class="math display">\[\begin{aligned}\ell(\theta)&amp;=\quad\sum_{i=1}^n\log\int p(T_i,\delta_i,y_i^o,y_i^m;\theta)dy_i^m\\&amp;=\quad\sum_{i=1}^n\log\int\int p(T_i,\delta_i,y_i^o,y_i^m\mid b_i;\theta)p(b_i;\theta)dy_i^mdb_i\\&amp;=\quad\sum_{i=1}^n\log\int p(T_i,\delta_i\mid b_i;\theta)\left\{\int p(y_i^o,y_i^m\mid b_i;\theta)dy_i^m\right\}p(b_i;\theta)db_i\\&amp;=\quad\sum_{i=1}^n\log\int p(T_i,\delta_i\mid b_i;\theta)p(y_i^o\mid b_i;\theta)p(b_i;\theta)db_i.\end{aligned}\]</span></p>
+<p>在第一个条件独立性假设 <a href="chap4.html#eq:4-7">(4.7)</a> 下，我们得到脱落的纵向响应 <span class="math inline">\(y^m_i\)</span> 只涉及纵向子模型的密度。此外，在第二个条件独立性假设 <a href="chap4.html#eq:4-8">(4.8)</a> 下，在随机效应的条件纵向响应是相互独立的，因此，关于 <span class="math inline">\(y^m_i\)</span> 的积分可以很容易地忽略。因此，即使某些受试者有间歇性缺失的响应，也可以很容易地获得联合模型的似然，而不需要对缺失的响应进行积分。具体来说，在间歇性缺失数据的情况下，在选择和模式混合模型框架下，需要繁琐的计算来评估似然 (Jansen and Molenberghs, 2008; Troxel et al., 1998, Troxel et al., 1998).</p>
+</div>
+<div id="sec4-7" class="section level2" number="4.7">
+<h2>
+<span class="header-section-number">4.7</span> 联合模型的敏感性分析<a class="anchor" aria-label="anchor" href="#sec4-7"><i class="fas fa-link"></i></a>
+</h2>
+<p>处理纵向结果缺失数据的一个实际问题是，仅根据观测数据无法区分 MAR 和 MNAR 脱落机制。事实上，Molenberghs et al. (2008) 已经表明，每个 MNAR 模型都有一个 MAR 的对应模型，它们对数据的拟合完全相同（即，相同的似然值），尽管这两个模型的推断可能显著不同。这在实践中意味着，任何 MNAR 模型中的不可忽略参数的识别主要是通过建模假设隐式提供的。因此，调查违反任何这些假设的影响的唯一实用方法只能通过敏感性分析 (Diggle et al., 2007; Jansen et al., 2006; Little and Rubin, 2002; Kenward, 1998; Copas and Li, 1997; Diggle and Kenward, 1994).</p>
+<p>传统上，在缺失数据背景中进行敏感性分析的第一步是将假设的 MNAR 模型的结果与相应 MAR 模型的结果进行比较。在我们的设置中，这意味着将联合模型的结果与（在 MAR 下有效的）纵向子模型的结果进行比较。我们首先说明 <a href="chap4.html#sec4-2">4.2</a> 节中使用的艾滋病数据集敏感性分析的第一步。我们用于拟合联合模型的线性混合模型的结果是</p>
+<div class="sourceCode" id="cb42"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb42-1"><a href="chap4.html#cb42-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">summary</span>(lmeFit.aids)</span>
+<span id="cb42-2"><a href="chap4.html#cb42-2" tabindex="-1"></a></span>
+<span id="cb42-3"><a href="chap4.html#cb42-3" tabindex="-1"></a>. . .</span>
+<span id="cb42-4"><a href="chap4.html#cb42-4" tabindex="-1"></a>Random effects<span class="sc">:</span></span>
+<span id="cb42-5"><a href="chap4.html#cb42-5" tabindex="-1"></a> Formula<span class="sc">:</span> <span class="er">~</span>obstime <span class="sc">|</span> patient</span>
+<span id="cb42-6"><a href="chap4.html#cb42-6" tabindex="-1"></a> Structure<span class="sc">:</span> General positive<span class="sc">-</span>definite, Log<span class="sc">-</span>Cholesky parametrization</span>
+<span id="cb42-7"><a href="chap4.html#cb42-7" tabindex="-1"></a>            StdDev    Corr  </span>
+<span id="cb42-8"><a href="chap4.html#cb42-8" tabindex="-1"></a>(Intercept) <span class="fl">4.5901582</span> (Intr)</span>
+<span id="cb42-9"><a href="chap4.html#cb42-9" tabindex="-1"></a>obstime     <span class="fl">0.1738082</span> <span class="sc">-</span><span class="fl">0.155</span></span>
+<span id="cb42-10"><a href="chap4.html#cb42-10" tabindex="-1"></a>Residual    <span class="fl">1.7497905</span>       </span>
+<span id="cb42-11"><a href="chap4.html#cb42-11" tabindex="-1"></a></span>
+<span id="cb42-12"><a href="chap4.html#cb42-12" tabindex="-1"></a>Fixed effects<span class="sc">:</span>  CD4 <span class="sc">~</span> obstime <span class="sc">+</span> obstime<span class="sc">:</span>drug </span>
+<span id="cb42-13"><a href="chap4.html#cb42-13" tabindex="-1"></a>                    Value  Std.Error  DF  t<span class="sc">-</span>value p<span class="sc">-</span>value</span>
+<span id="cb42-14"><a href="chap4.html#cb42-14" tabindex="-1"></a>(Intercept)      <span class="fl">7.188833</span> <span class="fl">0.22215874</span> <span class="dv">936</span> <span class="fl">32.35899</span>  <span class="fl">0.0000</span></span>
+<span id="cb42-15"><a href="chap4.html#cb42-15" tabindex="-1"></a>obstime         <span class="sc">-</span><span class="fl">0.163451</span> <span class="fl">0.02080804</span> <span class="dv">936</span> <span class="sc">-</span><span class="fl">7.85519</span>  <span class="fl">0.0000</span></span>
+<span id="cb42-16"><a href="chap4.html#cb42-16" tabindex="-1"></a>obstime<span class="sc">:</span>drugddI  <span class="fl">0.028272</span> <span class="fl">0.02970929</span> <span class="dv">936</span>  <span class="fl">0.95163</span>  <span class="fl">0.3415</span></span>
+<span id="cb42-17"><a href="chap4.html#cb42-17" tabindex="-1"></a> Correlation<span class="sc">:</span> </span>
+<span id="cb42-18"><a href="chap4.html#cb42-18" tabindex="-1"></a>                (Intr) obstim</span>
+<span id="cb42-19"><a href="chap4.html#cb42-19" tabindex="-1"></a>obstime         <span class="sc">-</span><span class="fl">0.160</span>       </span>
+<span id="cb42-20"><a href="chap4.html#cb42-20" tabindex="-1"></a>obstime<span class="sc">:</span>drugddI  <span class="fl">0.000</span> <span class="sc">-</span><span class="fl">0.682</span></span>
+<span id="cb42-21"><a href="chap4.html#cb42-21" tabindex="-1"></a>. . .</span></code></pre></div>
+<p>从联合模型得到的相应结果是</p>
+<div class="sourceCode" id="cb43"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb43-1"><a href="chap4.html#cb43-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">summary</span>(jointFit.aids)</span>
+<span id="cb43-2"><a href="chap4.html#cb43-2" tabindex="-1"></a></span>
+<span id="cb43-3"><a href="chap4.html#cb43-3" tabindex="-1"></a>. . .</span>
+<span id="cb43-4"><a href="chap4.html#cb43-4" tabindex="-1"></a>Variance Components<span class="sc">:</span></span>
+<span id="cb43-5"><a href="chap4.html#cb43-5" tabindex="-1"></a>             StdDev    Corr</span>
+<span id="cb43-6"><a href="chap4.html#cb43-6" tabindex="-1"></a>(Intercept)  <span class="fl">4.5839</span>  (Intr)</span>
+<span id="cb43-7"><a href="chap4.html#cb43-7" tabindex="-1"></a>obstime      <span class="fl">0.1822</span> <span class="sc">-</span><span class="fl">0.0468</span></span>
+<span id="cb43-8"><a href="chap4.html#cb43-8" tabindex="-1"></a>Residual     <span class="fl">1.7377</span>        </span>
+<span id="cb43-9"><a href="chap4.html#cb43-9" tabindex="-1"></a></span>
+<span id="cb43-10"><a href="chap4.html#cb43-10" tabindex="-1"></a>Coefficients<span class="sc">:</span></span>
+<span id="cb43-11"><a href="chap4.html#cb43-11" tabindex="-1"></a>Longitudinal Process</span>
+<span id="cb43-12"><a href="chap4.html#cb43-12" tabindex="-1"></a>                  Value Std.Err z<span class="sc">-</span>value</span>
+<span id="cb43-13"><a href="chap4.html#cb43-13" tabindex="-1"></a>(Intercept)      <span class="fl">7.2203</span>  <span class="fl">0.2218</span> <span class="fl">32.5537</span></span>
+<span id="cb43-14"><a href="chap4.html#cb43-14" tabindex="-1"></a>obstime         <span class="sc">-</span><span class="fl">0.1917</span>  <span class="fl">0.0217</span> <span class="sc">-</span><span class="fl">8.8374</span></span>
+<span id="cb43-15"><a href="chap4.html#cb43-15" tabindex="-1"></a>obstime<span class="sc">:</span>drugddI  <span class="fl">0.0116</span>  <span class="fl">0.0302</span>  <span class="fl">0.3834</span></span>
+<span id="cb43-16"><a href="chap4.html#cb43-16" tabindex="-1"></a>                p<span class="sc">-</span>value</span>
+<span id="cb43-17"><a href="chap4.html#cb43-17" tabindex="-1"></a>(Intercept)     <span class="sc">&lt;</span><span class="fl">0.0001</span></span>
+<span id="cb43-18"><a href="chap4.html#cb43-18" tabindex="-1"></a>obstime         <span class="sc">&lt;</span><span class="fl">0.0001</span></span>
+<span id="cb43-19"><a href="chap4.html#cb43-19" tabindex="-1"></a>obstime<span class="sc">:</span>drugddI  <span class="fl">0.7014</span></span>
+<span id="cb43-20"><a href="chap4.html#cb43-20" tabindex="-1"></a>. . .</span></code></pre></div>
+<p>我们应该注意到，缺失数据机制的潜在错误指定（例如，假定 MAR，但真实的是 MNAR）可能会影响参数估计和标准误估计。考虑到这一点，我们观察到固定效应估计有一些小的敏感性，通过比较参数估计除以它们相应的标准误的值（即联合模型拟合结果中的 <code>z-value</code> 列和线性混合模型拟合结果中的 <code>t-value</code> 列），很容易注意到这一点。</p>
+<p>为了继续我们的敏感性分析，我们应该决定是留在共享参数/联合模型框架内，还是选择另一种类型的 MNAR 模型，例如选择模型或模式混合模型。在缺失数据的情况下，大多数统计文献侧重于选择和模式混合模型的敏感性分析 (Ibrahim and Molenberghs, 2009; Molenberghs and Kenward, 2007; Little and Rubin, 2002; Little, 1995; Digger and Kenward, 1994; Little, 1993, 1994)，而在共享参数模型框架方面的工作很少 (Creemers et al., 2010; Tsonaka et al., 2010, 2009). 因为本书的重点是联合模型，所以我们将选择留在这个建模框架中。同样，我们现在可以在全局敏感性和局部敏感性分析之间进行选择。前者需要拟合几个联合模型，并在生存子模型 <a href="chap4.html#eq:4-1">(4.1)</a> 中进行了几次替换。这些可能包括校正额外的基线协变量或使用纵向标志物的其他参数化。我们将在 <a href="chap5.html#sec5-1">5.1</a> 节中进一步阐述这一主题。在局部敏感性的情况下，我们将重点放在 MNAR 模型上，并评估在该特定模型下，非随机脱落如何影响推断。研究这种敏感性问题的一个很好的工具是 Troxel et al. (2004) 和 Ma et al. (2004) 为选择模型提出的局部不可忽略敏感性指数 (local sensitivity to non-ignorability, ISNI)，Viviani et al. (2012) 提出了将工具用于共享参数模型的方法。该指数的目的是研究纵向过程的最大似然估计在多大程度上受到关于脱落机制不可忽略性假设的影响。为了引入这一指数，对于关联参数 <span class="math inline">\(\alpha\)</span> 的固定值，令 <span class="math inline">\(\hat{\beta}(\alpha)\)</span> 和 <span class="math inline">\(\hat{\theta}_{-\beta}(\alpha)\)</span> 分别表示纵向子模型中固定效应的最大似然估计，以及联合模型除 <span class="math inline">\(\beta\)</span> 之外所有参数的最大似然估计。ISNI 是在 <span class="math inline">\(\alpha=0\)</span> 时的局部行为的度量，即</p>
+<p><span class="math display" id="eq:4-21">\[\begin{align}
+\text{ISNI}&amp;=\left.\frac{\partial}{\partial\alpha}\hat{\beta}(\alpha)\right|_{\alpha=0}
+\tag{4.21}
+\end{align}\]</span></p>
+<p>它量化了当 <span class="math inline">\(|\alpha|\)</span> 远离零时，预期的 <span class="math inline">\(\hat{\beta}(\alpha)\)</span> 变化的速度。由于 <a href="chap4.html#eq:4-21">(4.21)</a> 无法解析地推导，Troxel et al.(2004) 提出使用 MNAR 模型的对数似然的二阶泰勒级数展开来近似它。具体来说，令 <span class="math inline">\(\beta^{(0)}=\hat{\beta}(0)\)</span> 和 <span class="math inline">\(\hat{\theta}_{-\beta}^{(0)}=\hat{\theta}_{-\beta}(0)\)</span>，表示 <span class="math inline">\(\alpha=0\)</span> 下的最大似然估计。对联合模型的对数似然在 <span class="math inline">\(\theta^{(0)}=\{\beta^{(0)},\hat{\theta}_{-\beta}^{(0)},\alpha=0\}\)</span> 处的二阶近似为</p>
+<p><span class="math display">\[\begin{aligned}\ell(\theta)\quad\approx&amp;\quad\ell(\theta^{(0)})+\left(\theta-\theta^{(0)}\right)^\top\left\{\frac{\partial}{\partial\theta^\top}\ell(\theta)\Big|_{\theta=\theta^{(0)}}\right\}\\&amp;+\frac12\big(\theta-\theta^{(0)}\big)^\top\bigg\{\frac{\partial^2}{\partial\theta^\top\partial\theta}\ell(\theta)\bigg|_{\theta=\theta^{(0)}}\bigg\}\big(\theta-\theta^{(0)}\big)\end{aligned}\]</span></p>
+<p>这得到 <a href="chap4.html#eq:4-21">(4.21)</a> 的如下近似</p>
+<p><span class="math display" id="eq:4-22">\[\begin{align}
+\text{ISNI}\approx-\Big\{\left.\frac{\partial^2}{\partial\beta^\top\partial\beta}\ell(\theta)\right|_{\theta=\theta^{(0)}}\Big\}^{-1}\left\{\left.\frac{\partial^2}{\partial\beta^\top\partial\alpha}\ell(\theta)\right|_{\theta=\theta^{(0)}}\right\}
+\tag{4.22}
+\end{align}\]</span></p>
+<p>我们观察到，<a href="chap4.html#eq:4-22">(4.22)</a> 的近似的计算仅需在 <span class="math inline">\(\alpha=0\)</span> 下计算联合模型的 Hessian 矩阵。此计算可通过函数 <code>jointModel()</code> 使用适当的控制参数以及对于结果的后期操作来执行。继续对艾滋病数据集的敏感性分析，我们将计算线性混合模型的固定效应参数 <span class="math inline">\(\beta\)</span> 的 ISNI。简便起见，我们为联合模型假定一个具有 Weibull 相对风险的事件时间结果子模型。作为初始步骤，我们需要计算 <span class="math inline">\(\alpha=0\)</span> 下的纵向和生存子模型的最大似然估计。对于前者，这些可从 <a href="chap4.html#sec4-2">4.2</a> 节中使用的拟合模型对象 <code>lmeFit.aids</code> 中获得。对于生存子模型，我们使用 <code>survival</code> 包中的 <code>survreg()</code> 函数，如下所示</p>
+<div class="sourceCode" id="cb44"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb44-1"><a href="chap4.html#cb44-1" tabindex="-1"></a><span class="sc">&gt;</span> WeibFit.aids <span class="ot">&lt;-</span> <span class="fu">survreg</span>(<span class="fu">Surv</span>(Time, death) <span class="sc">~</span> drug, <span class="at">data =</span> aids.id,</span>
+<span id="cb44-2"><a href="chap4.html#cb44-2" tabindex="-1"></a>                          <span class="at">x =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb44-3"><a href="chap4.html#cb44-3" tabindex="-1"></a><span class="sc">&gt;</span> WeibFit.aids</span>
+<span id="cb44-4"><a href="chap4.html#cb44-4" tabindex="-1"></a></span>
+<span id="cb44-5"><a href="chap4.html#cb44-5" tabindex="-1"></a>Call<span class="sc">:</span></span>
+<span id="cb44-6"><a href="chap4.html#cb44-6" tabindex="-1"></a><span class="fu">survreg</span>(<span class="at">formula =</span> <span class="fu">Surv</span>(Time, death) <span class="sc">~</span> drug, <span class="at">data =</span> aids.id, <span class="at">x =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb44-7"><a href="chap4.html#cb44-7" tabindex="-1"></a></span>
+<span id="cb44-8"><a href="chap4.html#cb44-8" tabindex="-1"></a>Coefficients<span class="sc">:</span></span>
+<span id="cb44-9"><a href="chap4.html#cb44-9" tabindex="-1"></a>(Intercept)     drugddI </span>
+<span id="cb44-10"><a href="chap4.html#cb44-10" tabindex="-1"></a>  <span class="fl">3.3107850</span>  <span class="sc">-</span><span class="fl">0.1535739</span> </span>
+<span id="cb44-11"><a href="chap4.html#cb44-11" tabindex="-1"></a></span>
+<span id="cb44-12"><a href="chap4.html#cb44-12" tabindex="-1"></a>Scale<span class="ot">=</span> <span class="fl">0.7323405</span> </span>
+<span id="cb44-13"><a href="chap4.html#cb44-13" tabindex="-1"></a></span>
+<span id="cb44-14"><a href="chap4.html#cb44-14" tabindex="-1"></a><span class="fu">Loglik</span>(model)<span class="ot">=</span> <span class="sc">-</span><span class="fl">825.4</span>   <span class="fu">Loglik</span>(intercept only)<span class="ot">=</span> <span class="sc">-</span><span class="fl">826.5</span></span>
+<span id="cb44-15"><a href="chap4.html#cb44-15" tabindex="-1"></a>    Chisq<span class="ot">=</span> <span class="fl">2.06</span> on <span class="dv">1</span> degrees of freedom, p<span class="ot">=</span> <span class="fl">0.151</span> </span>
+<span id="cb44-16"><a href="chap4.html#cb44-16" tabindex="-1"></a>n<span class="ot">=</span> <span class="dv">467</span> </span></code></pre></div>
+<p>我们应该注意到，<code>survreg()</code> 拟合 Weibull 模型（默认情况下），但在加速失效时间参数化下。这对应于以下真实事件时间的对数线性模型</p>
+<p><span class="math display">\[\log T_i^*=\tilde{\gamma}_0+\tilde{\gamma}\mathtt{ddI}_i+\sigma_t\epsilon_i\]</span></p>
+<p>其中 <span class="math inline">\(\mathtt{ddI}\)</span> 是 ddI 组的虚拟变量，<span class="math inline">\(\epsilon_i\)</span> 是服从极值分布的误差项，<span class="math inline">\(\sigma_t\)</span> 是尺度参数。因为我们想要相对风险参数化下 Weibull 模型的最大似然估计，所以我们需要使用变换 <span class="math inline">\(\gamma=-\tilde{\gamma}/\sigma_{t}\)</span>，其中 <span class="math inline">\(\gamma\)</span> 表示 <a href="chap4.html#eq:4-1">(4.1)</a> 下的参数，其中 <span class="math inline">\(h_0(t)=\sigma_tt^{\sigma_t-1}\)</span>。正如我们在 <a href="chap4.html#sec4-4-1">4.4.1</a> 节中看到的，要在 <span class="math inline">\(\alpha = 0\)</span> 下两个子模型最大似然估计处计算联合模型的 Hessian 矩阵，我们将提供这些矩阵，并指定我们不希望 <code>jointModel()</code> 继续执行对数似然的优化；我们用如下语法来实现这一点<a class="footnote-ref" tabindex="0" data-toggle="popover" data-content="&lt;p&gt;译者在拟合 &lt;code&gt;ISNI.aids&lt;/code&gt; 时 Hessian 矩阵非正定。原因不详。&lt;/p&gt;"><sup>11</sup></a></p>
+<div class="sourceCode" id="cb45"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb45-1"><a href="chap4.html#cb45-1" tabindex="-1"></a><span class="sc">&gt;</span> init.list <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">betas =</span> <span class="fu">fixef</span>(lmeFit.aids), <span class="at">sigma =</span> lmeFit.aids<span class="sc">$</span>sigma,</span>
+<span id="cb45-2"><a href="chap4.html#cb45-2" tabindex="-1"></a>  <span class="at">D =</span> <span class="fu">getVarCov</span>(lmeFit.aids), <span class="at">gammas =</span> <span class="sc">-</span><span class="fu">coef</span>(WeibFit.aids)<span class="sc">/</span>WeibFit.aids<span class="sc">$</span>scale,</span>
+<span id="cb45-3"><a href="chap4.html#cb45-3" tabindex="-1"></a>  <span class="at">sigma.t =</span> WeibFit.aids<span class="sc">$</span>scale, <span class="at">alpha =</span> <span class="dv">0</span>)</span>
+<span id="cb45-4"><a href="chap4.html#cb45-4" tabindex="-1"></a></span>
+<span id="cb45-5"><a href="chap4.html#cb45-5" tabindex="-1"></a><span class="sc">&gt;</span> ISNI.aids <span class="ot">&lt;-</span> <span class="fu">jointModel</span>(lmeFit.aids, WeibFit.aids, <span class="at">timeVar =</span> <span class="st">"obstime"</span>,</span>
+<span id="cb45-6"><a href="chap4.html#cb45-6" tabindex="-1"></a>  <span class="at">method =</span> <span class="st">"weibull-PH-aGH"</span>, <span class="at">iter.EM =</span> <span class="dv">0</span>, <span class="at">only.EM =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb45-7"><a href="chap4.html#cb45-7" tabindex="-1"></a>  <span class="at">init =</span> init.list)</span></code></pre></div>
+<p>在参数 <code>init</code> 中，我们为命名的列表提供联合模型参数的初始值，我们将控制参数 <code>only.EM</code> 设为 <code>TRUE</code>，以便指定我们只想使用 EM 算法（即，如果未达到收敛，则不要继续使用 quasi-Newton 算法），并且我们还设置了控制参数 <code>iter.EM</code> 为 0. 为了提取 Hessian 矩阵的相应块并计算 ISNI，我们使用以下命令<a class="footnote-ref" tabindex="0" data-toggle="popover" data-content="&lt;p&gt;译者所得结果与原书结果不同，原因不详。&lt;/p&gt;"><sup>12</sup></a></p>
+<div class="sourceCode" id="cb46"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb46-1"><a href="chap4.html#cb46-1" tabindex="-1"></a><span class="sc">&gt;</span> H <span class="ot">&lt;-</span> ISNI.aids<span class="sc">$</span>Hessian</span>
+<span id="cb46-2"><a href="chap4.html#cb46-2" tabindex="-1"></a><span class="sc">&gt;</span> H.inv <span class="ot">&lt;-</span> <span class="fu">solve</span>(H)</span>
+<span id="cb46-3"><a href="chap4.html#cb46-3" tabindex="-1"></a><span class="sc">&gt;</span> pBetas <span class="ot">&lt;-</span> <span class="fu">head</span>(<span class="fu">grep</span>(<span class="st">"Y."</span>, <span class="fu">colnames</span>(H), <span class="at">fixed =</span> <span class="cn">TRUE</span>), <span class="sc">-</span><span class="dv">1</span>)</span>
+<span id="cb46-4"><a href="chap4.html#cb46-4" tabindex="-1"></a><span class="sc">&gt;</span> pAlpha <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="fu">colnames</span>(H) <span class="sc">==</span> <span class="st">"T.alpha"</span>)</span>
+<span id="cb46-5"><a href="chap4.html#cb46-5" tabindex="-1"></a><span class="sc">&gt;</span> isni <span class="ot">&lt;-</span> <span class="sc">-</span> <span class="fu">c</span>(H.inv[pBetas, pBetas] <span class="sc">%*%</span> H[pBetas, pAlpha])</span>
+<span id="cb46-6"><a href="chap4.html#cb46-6" tabindex="-1"></a><span class="sc">&gt;</span> se.betas <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">diag</span>(<span class="fu">vcov</span>(lmeFit.aids)))</span>
+<span id="cb46-7"><a href="chap4.html#cb46-7" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">round</span>(<span class="fu">cbind</span>(<span class="at">ISNI =</span> isni, <span class="at">rISNI =</span> isni<span class="sc">/</span>se.betas), <span class="dv">3</span>)</span>
+<span id="cb46-8"><a href="chap4.html#cb46-8" tabindex="-1"></a></span>
+<span id="cb46-9"><a href="chap4.html#cb46-9" tabindex="-1"></a>                  ISNI  rISNI</span>
+<span id="cb46-10"><a href="chap4.html#cb46-10" tabindex="-1"></a>(Intercept)      <span class="fl">0.096</span>  <span class="fl">0.433</span></span>
+<span id="cb46-11"><a href="chap4.html#cb46-11" tabindex="-1"></a>obstime         <span class="sc">-</span><span class="fl">0.207</span> <span class="sc">-</span><span class="fl">9.965</span></span>
+<span id="cb46-12"><a href="chap4.html#cb46-12" tabindex="-1"></a>obstime<span class="sc">:</span>drugddI <span class="sc">-</span><span class="fl">0.064</span> <span class="sc">-</span><span class="fl">2.168</span></span></code></pre></div>
+<p>前两行从联合模型中提取 Hessian 矩阵并计算其逆矩阵，第三行和第四行计算分别对应于 <span class="math inline">\(\beta\)</span> 和 <span class="math inline">\(\alpha\)</span> 的 Hessian 矩阵各行的位置索引向量，第五行根据定义计算 ISNI. 输出中的第二列是相对 ISNI，它是 ISNI 除以线性混合模型（即 MAR）下 <span class="math inline">\(\hat\beta(0)\)</span> 的标准误估计。Troxel et al. (2004) 提出了该相对指数，以便比较每个参数的预期敏感性的大小。这些作者认为，在非随机脱落的情况下，大于 1 的值表示相应参数估计的敏感性增加。因此，对于艾滋病数据集，随着 <span class="math inline">\(|\alpha|\)</span> 远离零，我们预计两个治疗组的斜率估计会更敏感。</p>
+<p>我们应该以一句警示来结束这次敏感性分析。具体来说，请注意，我们只研究了报告结果对联合模型 <a href="chap4.html#eq:4-20">(4.20)</a> 所隐含的 MNAR 机制的敏感性。然而，正如我们之前提到的，观测数据无法区分不同的缺失数据机制，因此，如果真实的脱落机制是另一种类型，那么结果的敏感性可能会更大。</p>
+
+</div>
+</div>
+
+  <div class="chapter-nav">
+<div class="prev"><a href="chap3.html"><span class="header-section-number">3</span> 事件时间数据分析</a></div>
+<div class="next"><a href="chap5.html"><span class="header-section-number">5</span> 标准联合模型的扩展</a></div>
+</div></main><div class="col-md-3 col-lg-2 d-none d-md-block sidebar sidebar-chapter">
+    <nav id="toc" data-toggle="toc" aria-label="On this page"><h2>On this page</h2>
+      <ul class="nav navbar-nav">
+<li><a class="nav-link" href="#chap4"><span class="header-section-number">4</span> 纵向与事件时间数据的联合模型</a></li>
+<li>
+<a class="nav-link" href="#sec4-1"><span class="header-section-number">4.1</span> 基本联合模型</a><ul class="nav navbar-nav">
+<li><a class="nav-link" href="#sec4-1-1"><span class="header-section-number">4.1.1</span> 生存子模型</a></li>
+<li><a class="nav-link" href="#sec4-1-2"><span class="header-section-number">4.1.2</span> 纵向子模型</a></li>
+</ul>
+</li>
+<li><a class="nav-link" href="#sec4-2"><span class="header-section-number">4.2</span> R 中的联合建模：与扩展的 Cox 模型比较</a></li>
+<li>
+<a class="nav-link" href="#sec4-3"><span class="header-section-number">4.3</span> 联合模型的估计</a><ul class="nav navbar-nav">
+<li><a class="nav-link" href="#sec4-3-1"><span class="header-section-number">4.3.1</span> 两阶段法</a></li>
+<li><a class="nav-link" href="#sec4-3-2"><span class="header-section-number">4.3.2</span> 联合似然公式</a></li>
+<li><a class="nav-link" href="#sec4-3-3"><span class="header-section-number">4.3.3</span> 具有未指定基线风险函数的标准误</a></li>
+<li><a class="nav-link" href="#sec4-3-4"><span class="header-section-number">4.3.4</span> JM 中的优化控制</a></li>
+<li><a class="nav-link" href="#sec4-3-5"><span class="header-section-number">4.3.5</span> 数值积分</a></li>
+<li><a class="nav-link" href="#sec4-3-6"><span class="header-section-number">4.3.6</span> JM 中的数值积分控制</a></li>
+<li><a class="nav-link" href="#sec4-3-7"><span class="header-section-number">4.3.7</span> 收敛问题</a></li>
+</ul>
+</li>
+<li>
+<a class="nav-link" href="#sec4-4"><span class="header-section-number">4.4</span> 联合模型的渐近推断</a><ul class="nav navbar-nav">
+<li><a class="nav-link" href="#sec4-4-1"><span class="header-section-number">4.4.1</span> 假设检验</a></li>
+<li><a class="nav-link" href="#sec4-4-2"><span class="header-section-number">4.4.2</span> 置信区间</a></li>
+<li><a class="nav-link" href="#sec4-4-3"><span class="header-section-number">4.4.3</span> 设计考虑</a></li>
+</ul>
+</li>
+<li><a class="nav-link" href="#sec4-5"><span class="header-section-number">4.5</span> 随机效应的估计</a></li>
+<li><a class="nav-link" href="#sec4-6"><span class="header-section-number">4.6</span> 与缺失数据框架的连接</a></li>
+<li><a class="nav-link" href="#sec4-7"><span class="header-section-number">4.7</span> 联合模型的敏感性分析</a></li>
+</ul>
+
+      <div class="book-extra">
+        <ul class="list-unstyled">
+          
+        </ul>
+</div>
+    </nav>
+</div>
+
+</div>
+</div> <!-- .container -->
+
+<footer class="bg-primary text-light mt-5"><div class="container"><div class="row">
+
+  <div class="col-12 col-md-6 mt-3">
+    <p>"<strong>纵向与事件时间数据的联合模型及其在 R 中的应用</strong>" was written by Wang Zhen. It was last built on 2024-04-19.</p>
+  </div>
+
+  <div class="col-12 col-md-6 mt-3">
+    <p>This book was built by the <a class="text-light" href="https://bookdown.org">bookdown</a> R package.</p>
+  </div>
+
+</div></div>
+</footer><!-- dynamically load mathjax for compatibility with self-contained --><script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    var src = "true";
+    if (src === "" || src === "true") src = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/latest.js?config=TeX-MML-AM_CHTML";
+    if (location.protocol !== "file:")
+      if (/^https?:/.test(src))
+        src = src.replace(/^https?:/, '');
+    script.src = src;
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script><script type="text/x-mathjax-config">const popovers = document.querySelectorAll('a.footnote-ref[data-toggle="popover"]');
+for (let popover of popovers) {
+  const div = document.createElement('div');
+  div.setAttribute('style', 'position: absolute; top: 0, left:0; width:0, height:0, overflow: hidden; visibility: hidden;');
+  div.innerHTML = popover.getAttribute('data-content');
+
+  var has_math = div.querySelector("span.math");
+  if (has_math) {
+    document.body.appendChild(div);
+    MathJax.Hub.Queue(["Typeset", MathJax.Hub, div]);
+    MathJax.Hub.Queue(function() {
+      popover.setAttribute('data-content', div.innerHTML);
+      document.body.removeChild(div);
+    })
+  }
+}
+</script>
+</body>
+</html>

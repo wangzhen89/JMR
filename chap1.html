@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>第 1 章 介绍 | 纵向与事件时间数据的联合模型及其在 R 中的应用</title>
+<meta name="author" content="Wang Zhen">
+<meta name="description" content="1.1 目标 在随访研究中，通常会为每个样本单元收集不同类型的结果，其中可能包括几个纵向测量的响应，以及发生特定关注事件之前的时间。这类研究中感兴趣的研究问题通常需要对记录的结果进行单独分析，但在许多情况下，兴趣也可能在于研究它们的关联结构。后一种情况的一个常见例子可以在有关生物标志物研究中找到，许多临床研究旨在确定对事件时间结果具有强大预后能力的生物标志物。标准例子包括人类免疫缺陷病毒...">
+<meta name="generator" content="bookdown 0.38 with bs4_book()">
+<meta property="og:title" content="第 1 章 介绍 | 纵向与事件时间数据的联合模型及其在 R 中的应用">
+<meta property="og:type" content="book">
+<meta property="og:description" content="1.1 目标 在随访研究中，通常会为每个样本单元收集不同类型的结果，其中可能包括几个纵向测量的响应，以及发生特定关注事件之前的时间。这类研究中感兴趣的研究问题通常需要对记录的结果进行单独分析，但在许多情况下，兴趣也可能在于研究它们的关联结构。后一种情况的一个常见例子可以在有关生物标志物研究中找到，许多临床研究旨在确定对事件时间结果具有强大预后能力的生物标志物。标准例子包括人类免疫缺陷病毒...">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="第 1 章 介绍 | 纵向与事件时间数据的联合模型及其在 R 中的应用">
+<meta name="twitter:description" content="1.1 目标 在随访研究中，通常会为每个样本单元收集不同类型的结果，其中可能包括几个纵向测量的响应，以及发生特定关注事件之前的时间。这类研究中感兴趣的研究问题通常需要对记录的结果进行单独分析，但在许多情况下，兴趣也可能在于研究它们的关联结构。后一种情况的一个常见例子可以在有关生物标志物研究中找到，许多临床研究旨在确定对事件时间结果具有强大预后能力的生物标志物。标准例子包括人类免疫缺陷病毒...">
+<!-- JS --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.4.6/fuse.js" integrity="sha512-zv6Ywkjyktsohkbp9bb45V6tEMoWhzFzXis+LrMehmJZZSys19Yxf1dopHx7WzIKxr5tK2dVcYmaCk2uqdjF4A==" crossorigin="anonymous"></script><script src="https://kit.fontawesome.com/6ecbd6c532.js" crossorigin="anonymous"></script><script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link href="libs/bootstrap-4.6.0/bootstrap.min.css" rel="stylesheet">
+<script src="libs/bootstrap-4.6.0/bootstrap.bundle.min.js"></script><script src="libs/bs3compat-0.7.0/transition.js"></script><script src="libs/bs3compat-0.7.0/tabs.js"></script><script src="libs/bs3compat-0.7.0/bs3compat.js"></script><link href="libs/bs4_book-1.0.0/bs4_book.css" rel="stylesheet">
+<script src="libs/bs4_book-1.0.0/bs4_book.js"></script><script>
+    /* ========================================================================
+     * Bootstrap: transition.js v3.3.7
+     * http://getbootstrap.com/javascript/#transitions
+     * ========================================================================
+     * Copyright 2011-2016 Twitter, Inc.
+     * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
+     * ======================================================================== */
+
+
+    +function ($) {
+      'use strict';
+
+      // CSS TRANSITION SUPPORT (Shoutout: http://www.modernizr.com/)
+      // ============================================================
+
+      function transitionEnd() {
+        var el = document.createElement('bootstrap')
+
+        var transEndEventNames = {
+          WebkitTransition : 'webkitTransitionEnd',
+          MozTransition    : 'transitionend',
+          OTransition      : 'oTransitionEnd otransitionend',
+          transition       : 'transitionend'
+        }
+
+        for (var name in transEndEventNames) {
+          if (el.style[name] !== undefined) {
+            return { end: transEndEventNames[name] }
+          }
+        }
+
+        return false // explicit for ie8 (  ._.)
+      }
+
+      // http://blog.alexmaccaw.com/css-transitions
+      $.fn.emulateTransitionEnd = function (duration) {
+        var called = false
+        var $el = this
+        $(this).one('bsTransitionEnd', function () { called = true })
+        var callback = function () { if (!called) $($el).trigger($.support.transition.end) }
+        setTimeout(callback, duration)
+        return this
+      }
+
+      $(function () {
+        $.support.transition = transitionEnd()
+
+        if (!$.support.transition) return
+
+        $.event.special.bsTransitionEnd = {
+          bindType: $.support.transition.end,
+          delegateType: $.support.transition.end,
+          handle: function (e) {
+            if ($(e.target).is(this)) return e.handleObj.handler.apply(this, arguments)
+          }
+        }
+      })
+
+    }(jQuery);
+    </script><script>
+    /* ========================================================================
+     * Bootstrap: collapse.js v3.3.7
+     * http://getbootstrap.com/javascript/#collapse
+     * ========================================================================
+     * Copyright 2011-2016 Twitter, Inc.
+     * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
+     * ======================================================================== */
+
+    /* jshint latedef: false */
+
+    +function ($) {
+      'use strict';
+
+      // COLLAPSE PUBLIC CLASS DEFINITION
+      // ================================
+
+      var Collapse = function (element, options) {
+        this.$element      = $(element)
+        this.options       = $.extend({}, Collapse.DEFAULTS, options)
+        this.$trigger      = $('[data-toggle="collapse"][href="#' + element.id + '"],' +
+                               '[data-toggle="collapse"][data-target="#' + element.id + '"]')
+        this.transitioning = null
+
+        if (this.options.parent) {
+          this.$parent = this.getParent()
+        } else {
+          this.addAriaAndCollapsedClass(this.$element, this.$trigger)
+        }
+
+        if (this.options.toggle) this.toggle()
+      }
+
+      Collapse.VERSION  = '3.3.7'
+
+      Collapse.TRANSITION_DURATION = 350
+
+      Collapse.DEFAULTS = {
+        toggle: true
+      }
+
+      Collapse.prototype.dimension = function () {
+        var hasWidth = this.$element.hasClass('width')
+        return hasWidth ? 'width' : 'height'
+      }
+
+      Collapse.prototype.show = function () {
+        if (this.transitioning || this.$element.hasClass('in')) return
+
+        var activesData
+        var actives = this.$parent && this.$parent.children('.panel').children('.in, .collapsing')
+
+        if (actives && actives.length) {
+          activesData = actives.data('bs.collapse')
+          if (activesData && activesData.transitioning) return
+        }
+
+        var startEvent = $.Event('show.bs.collapse')
+        this.$element.trigger(startEvent)
+        if (startEvent.isDefaultPrevented()) return
+
+        if (actives && actives.length) {
+          Plugin.call(actives, 'hide')
+          activesData || actives.data('bs.collapse', null)
+        }
+
+        var dimension = this.dimension()
+
+        this.$element
+          .removeClass('collapse')
+          .addClass('collapsing')[dimension](0)
+          .attr('aria-expanded', true)
+
+        this.$trigger
+          .removeClass('collapsed')
+          .attr('aria-expanded', true)
+
+        this.transitioning = 1
+
+        var complete = function () {
+          this.$element
+            .removeClass('collapsing')
+            .addClass('collapse in')[dimension]('')
+          this.transitioning = 0
+          this.$element
+            .trigger('shown.bs.collapse')
+        }
+
+        if (!$.support.transition) return complete.call(this)
+
+        var scrollSize = $.camelCase(['scroll', dimension].join('-'))
+
+        this.$element
+          .one('bsTransitionEnd', $.proxy(complete, this))
+          .emulateTransitionEnd(Collapse.TRANSITION_DURATION)[dimension](this.$element[0][scrollSize])
+      }
+
+      Collapse.prototype.hide = function () {
+        if (this.transitioning || !this.$element.hasClass('in')) return
+
+        var startEvent = $.Event('hide.bs.collapse')
+        this.$element.trigger(startEvent)
+        if (startEvent.isDefaultPrevented()) return
+
+        var dimension = this.dimension()
+
+        this.$element[dimension](this.$element[dimension]())[0].offsetHeight
+
+        this.$element
+          .addClass('collapsing')
+          .removeClass('collapse in')
+          .attr('aria-expanded', false)
+
+        this.$trigger
+          .addClass('collapsed')
+          .attr('aria-expanded', false)
+
+        this.transitioning = 1
+
+        var complete = function () {
+          this.transitioning = 0
+          this.$element
+            .removeClass('collapsing')
+            .addClass('collapse')
+            .trigger('hidden.bs.collapse')
+        }
+
+        if (!$.support.transition) return complete.call(this)
+
+        this.$element
+          [dimension](0)
+          .one('bsTransitionEnd', $.proxy(complete, this))
+          .emulateTransitionEnd(Collapse.TRANSITION_DURATION)
+      }
+
+      Collapse.prototype.toggle = function () {
+        this[this.$element.hasClass('in') ? 'hide' : 'show']()
+      }
+
+      Collapse.prototype.getParent = function () {
+        return $(this.options.parent)
+          .find('[data-toggle="collapse"][data-parent="' + this.options.parent + '"]')
+          .each($.proxy(function (i, element) {
+            var $element = $(element)
+            this.addAriaAndCollapsedClass(getTargetFromTrigger($element), $element)
+          }, this))
+          .end()
+      }
+
+      Collapse.prototype.addAriaAndCollapsedClass = function ($element, $trigger) {
+        var isOpen = $element.hasClass('in')
+
+        $element.attr('aria-expanded', isOpen)
+        $trigger
+          .toggleClass('collapsed', !isOpen)
+          .attr('aria-expanded', isOpen)
+      }
+
+      function getTargetFromTrigger($trigger) {
+        var href
+        var target = $trigger.attr('data-target')
+          || (href = $trigger.attr('href')) && href.replace(/.*(?=#[^\s]+$)/, '') // strip for ie7
+
+        return $(target)
+      }
+
+
+      // COLLAPSE PLUGIN DEFINITION
+      // ==========================
+
+      function Plugin(option) {
+        return this.each(function () {
+          var $this   = $(this)
+          var data    = $this.data('bs.collapse')
+          var options = $.extend({}, Collapse.DEFAULTS, $this.data(), typeof option == 'object' && option)
+
+          if (!data && options.toggle && /show|hide/.test(option)) options.toggle = false
+          if (!data) $this.data('bs.collapse', (data = new Collapse(this, options)))
+          if (typeof option == 'string') data[option]()
+        })
+      }
+
+      var old = $.fn.collapse
+
+      $.fn.collapse             = Plugin
+      $.fn.collapse.Constructor = Collapse
+
+
+      // COLLAPSE NO CONFLICT
+      // ====================
+
+      $.fn.collapse.noConflict = function () {
+        $.fn.collapse = old
+        return this
+      }
+
+
+      // COLLAPSE DATA-API
+      // =================
+
+      $(document).on('click.bs.collapse.data-api', '[data-toggle="collapse"]', function (e) {
+        var $this   = $(this)
+
+        if (!$this.attr('data-target')) e.preventDefault()
+
+        var $target = getTargetFromTrigger($this)
+        var data    = $target.data('bs.collapse')
+        var option  = data ? 'toggle' : $this.data()
+
+        Plugin.call($target, option)
+      })
+
+    }(jQuery);
+    </script><script>
+    window.initializeCodeFolding = function(show) {
+
+      // handlers for show-all and hide all
+      $("#rmd-show-all-code").click(function() {
+        $('div.r-code-collapse').each(function() {
+          $(this).collapse('show');
+        });
+      });
+      $("#rmd-hide-all-code").click(function() {
+        $('div.r-code-collapse').each(function() {
+          $(this).collapse('hide');
+        });
+      });
+
+      // index for unique code element ids
+      var currentIndex = 1;
+
+      // select all R code blocks
+      var rCodeBlocks = $('pre.sourceCode, pre.r, pre.python, pre.bash, pre.sql, pre.cpp, pre.stan, pre.js');
+      rCodeBlocks.each(function() {
+
+        // create a collapsable div to wrap the code in
+        var div = $('<div class="collapse r-code-collapse"></div>');
+        if (show)
+          div.addClass('in');
+        var id = 'rcode-643E0F36' + currentIndex++;
+        div.attr('id', id);
+        $(this).before(div);
+        $(this).detach().appendTo(div);
+
+        // add a show code button right above
+        var showCodeText = $('<span>' + (show ? 'Hide' : 'Code') + '</span>');
+        var showCodeButton = $('<button type="button" class="btn btn-default btn-xs code-folding-btn pull-right"></button>');
+        showCodeButton.append(showCodeText);
+        showCodeButton
+            .attr('data-toggle', 'collapse')
+            .attr('data-target', '#' + id)
+            .attr('aria-expanded', show)
+            .attr('aria-controls', id);
+
+        var buttonRow = $('<div class="row"></div>');
+        var buttonCol = $('<div class="col-md-12"></div>');
+
+        buttonCol.append(showCodeButton);
+        buttonRow.append(buttonCol);
+
+        div.before(buttonRow);
+
+        // update state of button on show/hide
+        div.on('hidden.bs.collapse', function () {
+          showCodeText.text('Code');
+        });
+        div.on('show.bs.collapse', function () {
+          showCodeText.text('Hide');
+        });
+      });
+
+    }
+    </script><script>
+    /* ========================================================================
+     * Bootstrap: dropdown.js v3.3.7
+     * http://getbootstrap.com/javascript/#dropdowns
+     * ========================================================================
+     * Copyright 2011-2016 Twitter, Inc.
+     * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
+     * ======================================================================== */
+
+
+    +function ($) {
+      'use strict';
+
+      // DROPDOWN CLASS DEFINITION
+      // =========================
+
+      var backdrop = '.dropdown-backdrop'
+      var toggle   = '[data-toggle="dropdown"]'
+      var Dropdown = function (element) {
+        $(element).on('click.bs.dropdown', this.toggle)
+      }
+
+      Dropdown.VERSION = '3.3.7'
+
+      function getParent($this) {
+        var selector = $this.attr('data-target')
+
+        if (!selector) {
+          selector = $this.attr('href')
+          selector = selector && /#[A-Za-z]/.test(selector) && selector.replace(/.*(?=#[^\s]*$)/, '') // strip for ie7
+        }
+
+        var $parent = selector && $(selector)
+
+        return $parent && $parent.length ? $parent : $this.parent()
+      }
+
+      function clearMenus(e) {
+        if (e && e.which === 3) return
+        $(backdrop).remove()
+        $(toggle).each(function () {
+          var $this         = $(this)
+          var $parent       = getParent($this)
+          var relatedTarget = { relatedTarget: this }
+
+          if (!$parent.hasClass('open')) return
+
+          if (e && e.type == 'click' && /input|textarea/i.test(e.target.tagName) && $.contains($parent[0], e.target)) return
+
+          $parent.trigger(e = $.Event('hide.bs.dropdown', relatedTarget))
+
+          if (e.isDefaultPrevented()) return
+
+          $this.attr('aria-expanded', 'false')
+          $parent.removeClass('open').trigger($.Event('hidden.bs.dropdown', relatedTarget))
+        })
+      }
+
+      Dropdown.prototype.toggle = function (e) {
+        var $this = $(this)
+
+        if ($this.is('.disabled, :disabled')) return
+
+        var $parent  = getParent($this)
+        var isActive = $parent.hasClass('open')
+
+        clearMenus()
+
+        if (!isActive) {
+          if ('ontouchstart' in document.documentElement && !$parent.closest('.navbar-nav').length) {
+            // if mobile we use a backdrop because click events don't delegate
+            $(document.createElement('div'))
+              .addClass('dropdown-backdrop')
+              .insertAfter($(this))
+              .on('click', clearMenus)
+          }
+
+          var relatedTarget = { relatedTarget: this }
+          $parent.trigger(e = $.Event('show.bs.dropdown', relatedTarget))
+
+          if (e.isDefaultPrevented()) return
+
+          $this
+            .trigger('focus')
+            .attr('aria-expanded', 'true')
+
+          $parent
+            .toggleClass('open')
+            .trigger($.Event('shown.bs.dropdown', relatedTarget))
+        }
+
+        return false
+      }
+
+      Dropdown.prototype.keydown = function (e) {
+        if (!/(38|40|27|32)/.test(e.which) || /input|textarea/i.test(e.target.tagName)) return
+
+        var $this = $(this)
+
+        e.preventDefault()
+        e.stopPropagation()
+
+        if ($this.is('.disabled, :disabled')) return
+
+        var $parent  = getParent($this)
+        var isActive = $parent.hasClass('open')
+
+        if (!isActive && e.which != 27 || isActive && e.which == 27) {
+          if (e.which == 27) $parent.find(toggle).trigger('focus')
+          return $this.trigger('click')
+        }
+
+        var desc = ' li:not(.disabled):visible a'
+        var $items = $parent.find('.dropdown-menu' + desc)
+
+        if (!$items.length) return
+
+        var index = $items.index(e.target)
+
+        if (e.which == 38 && index > 0)                 index--         // up
+        if (e.which == 40 && index < $items.length - 1) index++         // down
+        if (!~index)                                    index = 0
+
+        $items.eq(index).trigger('focus')
+      }
+
+
+      // DROPDOWN PLUGIN DEFINITION
+      // ==========================
+
+      function Plugin(option) {
+        return this.each(function () {
+          var $this = $(this)
+          var data  = $this.data('bs.dropdown')
+
+          if (!data) $this.data('bs.dropdown', (data = new Dropdown(this)))
+          if (typeof option == 'string') data[option].call($this)
+        })
+      }
+
+      var old = $.fn.dropdown
+
+      $.fn.dropdown             = Plugin
+      $.fn.dropdown.Constructor = Dropdown
+
+
+      // DROPDOWN NO CONFLICT
+      // ====================
+
+      $.fn.dropdown.noConflict = function () {
+        $.fn.dropdown = old
+        return this
+      }
+
+
+      // APPLY TO STANDARD DROPDOWN ELEMENTS
+      // ===================================
+
+      $(document)
+        .on('click.bs.dropdown.data-api', clearMenus)
+        .on('click.bs.dropdown.data-api', '.dropdown form', function (e) { e.stopPropagation() })
+        .on('click.bs.dropdown.data-api', toggle, Dropdown.prototype.toggle)
+        .on('keydown.bs.dropdown.data-api', toggle, Dropdown.prototype.keydown)
+        .on('keydown.bs.dropdown.data-api', '.dropdown-menu', Dropdown.prototype.keydown)
+
+    }(jQuery);
+    </script><style type="text/css">
+    .code-folding-btn { margin-bottom: 4px; }
+    .row { display: flex; }
+    .collapse { display: none; }
+    .in { display:block }
+    .pull-right > .dropdown-menu {
+        right: 0;
+        left: auto;
+    }
+    .open > .dropdown-menu {
+        display: block;
+    }
+    .dropdown-menu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        z-index: 1000;
+        display: none;
+        float: left;
+        min-width: 160px;
+        padding: 5px 0;
+        margin: 2px 0 0;
+        font-size: 14px;
+        text-align: left;
+        list-style: none;
+        background-color: #fff;
+        -webkit-background-clip: padding-box;
+        background-clip: padding-box;
+        border: 1px solid #ccc;
+        border: 1px solid rgba(0,0,0,.15);
+        border-radius: 4px;
+        -webkit-box-shadow: 0 6px 12px rgba(0,0,0,.175);
+        box-shadow: 0 6px 12px rgba(0,0,0,.175);
+    }
+    </style>
+<script>
+    $(document).ready(function () {
+      window.initializeCodeFolding("show" === "show");
+    });
+    </script><script>
+    document.write('<div class="btn-group pull-right" style="position: absolute; top: 20%; right: 2%; z-index: 200"><button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" data-_extension-text-contrast=""><span>Code</span> <span class="caret"></span></button><ul class="dropdown-menu" style="min-width: 50px;"><li><a id="rmd-show-all-code" href="#">Show All Code</a></li><li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li></ul></div>')
+    </script><script src="https://cdnjs.cloudflare.com/ajax/libs/autocomplete.js/0.38.0/autocomplete.jquery.min.js" integrity="sha512-GU9ayf+66Xx2TmpxqJpliWbT5PiGYxpaG8rfnBEk1LL8l1KGkRShhngwdXK1UgqhAzWpZHSiYPc09/NwDQIGyg==" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mark.js/8.11.1/mark.min.js" integrity="sha512-5CYOlHXGh6QpOFA/TeTylKLWfB3ftPsde7AnmhuitiTX4K5SqCLBeKro6sPS8ilsz1Q4NRx3v8Ko2IBiszzdww==" crossorigin="anonymous"></script><!-- CSS --><style type="text/css">
+    
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  </style>
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-spy="scroll" data-target="#toc">
+
+<div class="container-fluid">
+<div class="row">
+  <header class="col-sm-12 col-lg-3 sidebar sidebar-book"><a class="sr-only sr-only-focusable" href="#content">Skip to main content</a>
+
+    <div class="d-flex align-items-start justify-content-between">
+      <h1>
+        <a href="index.html" title="">纵向与事件时间数据的联合模型及其在 R 中的应用</a>
+      </h1>
+      <button class="btn btn-outline-primary d-lg-none ml-2 mt-1" type="button" data-toggle="collapse" data-target="#main-nav" aria-expanded="true" aria-controls="main-nav"><i class="fas fa-bars"></i><span class="sr-only">Show table of contents</span></button>
+    </div>
+
+    <div id="main-nav" class="collapse-lg">
+      <form role="search">
+        <input id="search" class="form-control" type="search" placeholder="Search" aria-label="Search">
+</form>
+
+      <nav aria-label="Table of contents"><h2>Table of contents</h2>
+        <ul class="book-toc list-unstyled">
+<li><a class="" href="index.html">前言</a></li>
+<li><a class="" href="%E7%9B%AE%E5%BD%95.html">目录</a></li>
+<li class="book-part">正文</li>
+<li><a class="active" href="chap1.html"><span class="header-section-number">1</span> 介绍</a></li>
+<li><a class="" href="chap2.html"><span class="header-section-number">2</span> 纵向数据分析</a></li>
+<li><a class="" href="chap3.html"><span class="header-section-number">3</span> 事件时间数据分析</a></li>
+<li><a class="" href="chap4.html"><span class="header-section-number">4</span> 纵向与事件时间数据的联合模型</a></li>
+<li><a class="" href="chap5.html"><span class="header-section-number">5</span> 标准联合模型的扩展</a></li>
+<li><a class="" href="chap6.html"><span class="header-section-number">6</span> 联合模型诊断</a></li>
+<li><a class="" href="chap7.html"><span class="header-section-number">7</span> 联合模型的预测和准确性</a></li>
+<li class="book-part">附录</li>
+<li><a class="" href="A.html"><span class="header-section-number">A</span> R 的简要介绍</a></li>
+<li class="book-part">—</li>
+<li><a class="" href="bib.html">参考文献</a></li>
+</ul>
+
+        <div class="book-extra">
+          
+        </div>
+      </nav>
+</div>
+  </header><main class="col-sm-12 col-md-9 col-lg-7" id="content"><div id="chap1" class="section level1" number="1">
+<h1>
+<span class="header-section-number">第 1 章</span> 介绍<a class="anchor" aria-label="anchor" href="#chap1"><i class="fas fa-link"></i></a>
+</h1>
+<div id="sec1-1" class="section level2" number="1.1">
+<h2>
+<span class="header-section-number">1.1</span> 目标<a class="anchor" aria-label="anchor" href="#sec1-1"><i class="fas fa-link"></i></a>
+</h2>
+<p>在随访研究中，通常会为每个样本单元收集不同类型的结果，其中可能包括几个纵向测量的响应，以及发生特定关注事件之前的时间。这类研究中感兴趣的研究问题通常需要对记录的结果进行单独分析，但在许多情况下，兴趣也可能在于研究它们的关联结构。后一种情况的一个常见例子可以在有关生物标志物研究中找到，许多临床研究旨在确定对事件时间结果具有强大预后能力的生物标志物。标准例子包括人类免疫缺陷病毒 (HIV) 的研究，其中感兴趣的是 CD4 细胞计数或病毒载量与获得性免疫缺陷综合征 (AIDS) 患病时间之间的关联；肝硬化研究，其调查血清胆红素与死亡时间之间的关联；以及前列腺癌症研究，关注点在于前列腺特异性抗原 (PSA) 水平与前列腺癌症发展时间之间的关联。这些医学状况的一个重要固有特征是其动态性。也就是说，进展速度不仅因患者而异，而且同一患者的疾病进展速度也会随时间动态变化。因此，只有在分析中考虑对生物标志物的重复评估时，才能揭示生物标志物在描述疾病进展及其与生存关联方面的真正潜力。</p>
+<p>为了解决涉及重复测量与事件时间之间的关联结构的研究问题，已经开发了一类统计模型，称为<strong>纵向数据与事件时间数据的联合模型</strong> (joint models for longitudinal and time-to-event data)。目前，这些模型的研究构成了统计研究的一个活跃领域，近年来受到了广泛的关注。特别是，在 Self and Pawitan (1992) 以及 DeGruttola and Tu (1994) 将联合建模方法应用于艾滋病研究的早期工作，以及 Faucett and Thomas (1996) 以及 Wulfsohn and Tsiatis (1997) 提出了开创性论文之后，这一领域的发展呈爆炸式增长。许多论文提出了标准联合模型的几种扩展，其中包括纵向轨迹的灵活建模、纳入潜类别以考虑总体异质性、考虑多个纵向标志物、对多个失效时间进行建模以及动态预测和准确性度量的计算。</p>
+<p>本书的主要目标是全面介绍这种联合建模框架。具体来说，我们将重点关注联合模型试图回答的研究问题类型，以及这些模型适合回答这些问题的情况。我们将解释它们背后的关键假设，以及如何最佳利用这些假设从数据中提取相关信息。本书的另一个目的是促进这些模型在日常统计实践中的使用。为此，文本中涵盖几乎的所有理论材料都使用 <code>JM</code> 包 (Rizopoulos, 2012b, 2010) 在实际数据示例中进行了说明，<code>JM</code> 包是为统计计算和图形的 <code>R</code> 软件环境开发的 (R Development Core Team, 2012).</p>
+</div>
+<div id="sec1-2" class="section level2" number="1.2">
+<h2>
+<span class="header-section-number">1.2</span> 激励性研究<a class="anchor" aria-label="anchor" href="#sec1-2"><i class="fas fa-link"></i></a>
+</h2>
+<div id="sec1-2-1" class="section level3" number="1.2.1">
+<h3>
+<span class="header-section-number">1.2.1</span> 原发性胆汁性肝硬化 (PBC) 数据<a class="anchor" aria-label="anchor" href="#sec1-2-1"><i class="fas fa-link"></i></a>
+</h3>
+<p>原发性胆汁性肝硬化 (PBC) 是一种慢性、致命但罕见的肝病，其特征是肝脏内小胆管的炎症性破坏，最终导致肝硬化。我们在这里考虑的数据集来自 Mayo Clinic 1974 年至 1984 年进行的一项研究 (Murtaugh et al., 1994) ，该研究包括 312 名患者，其中 158 名患者随机分配至 D-青霉胺组，154 名患者分配至安慰剂组。主要关注的是患者的生存情况以及 D-青霉胺是否能延长生存期。此外，我们还获得了基线协变量（例如基线年龄、性别等）的信息，以及几种生物标志物的随访测量数据。这些生物标志物包括血清胆红素、蜘蛛痣（皮肤上的血管畸形）和肝肿大（肝脏肿大）等。</p>
+<p>在这里，我们将重点关注血清胆红素水平，它被认为是疾病进展的有力指标，我们尤其对该标志物与生存的关联感兴趣。这些患者最初的临床方案规定每六个月、一年以及此后每年进行一次随访。然而，由于死亡和删失，患者平均就诊 6.2 次（标准差 3.8），总共进行了 1945 次血清胆红素观测。到研究结束时，140 名患者死亡，29 名患者接受了移植，143 名患者仍然存活。图 1.1 显示了患者样本的血清胆红素对数的平滑纵向曲线，从中可以看出，许多曲线在时间上是非线性的。</p>
+<details><summary><font color="#B95953">图 1.1</font>
+</summary><img src="figure/figure%201.1.png#center" style="width:80.0%"></details>
+</div>
+<div id="sec1-2-2" class="section level3" number="1.2.2">
+<h3>
+<span class="header-section-number">1.2.2</span> 艾滋病数据<a class="anchor" aria-label="anchor" href="#sec1-2-2"><i class="fas fa-link"></i></a>
+</h3>
+<p>在我们考虑的艾滋病数据集中，有467名患者在接受抗逆转录病毒治疗期间感染了晚期人类免疫缺陷病毒，且齐多夫定治疗失败或不耐受。这项研究的主要目的是比较两种替代抗逆转录病毒药物——去羟肌苷 (ddI) 和扎西他滨 (ddC)——在死亡时间方面的疗效和安全性。患者被随机分配接受 ddI 或 ddC 治疗，并在研究开始时（即随机化发生时）以及随后的 2 个月、6 个月、12 个月和 18 个月记录 CD4 细胞计数。关于这项研究的更多设计细节，请参见 Abrams et al.(1994) 的研究。</p>
+<p>研究结束时，有 188 名患者死亡，导致约 59.7% 的数据删失。在计划的 2335 次测量中，实际记录了 1405 次，导致 39.8% 的响应缺失。图 1.2 展示了死亡时间的生存函数的 Kaplan-Meier 估计（关于 Kaplan-Meier 估计的更多细节，请参阅 <a href="chap3.html#sec3-2">3.2</a> 节），以及随机抽取的十名患者 CD4 细胞计数平方根的纵向轨迹。在我们的示例中，我们重点关注这项研究的次要目标之一，即研究这些晚期 HIV 感染患者的 CD4 计数与死亡风险之间的关联结构。其中，CD4 细胞是在脾脏、淋巴结和胸腺中产生的一种白细胞，是抗感染系统的一部分。CD4 计数测量的是血液中 CD4 细胞的数量，是免疫系统强度的重要标志物。因此，随着时间的推移，CD4 细胞计数的减少表明患者免疫系统的状况恶化，从而增加了感染的风险。</p>
+<details><summary><font color="#B95953">图 1.2</font>
+</summary><img src="figure/figure%201.2.png#center" style="width:80.0%"></details>
+</div>
+<div id="sec1-2-3" class="section level3" number="1.2.3">
+<h3>
+<span class="header-section-number">1.2.3</span> 肝硬化数据<a class="anchor" aria-label="anchor" href="#sec1-2-3"><i class="fas fa-link"></i></a>
+</h3>
+<p>肝硬化数据集包括 488 名经组织学证实的肝硬化患者，其中 237 名患者被随机分配到泼尼松治疗组，其余患者接受安慰剂治疗。肝硬化是一个一般术语，包括所有形式的慢性弥漫性肝病，其特征是肝细胞广泛损失以及肝小叶结构广泛破坏。这项研究于 1962 年至 1974 年在哥本哈根进行，其主要目的是评估泼尼松是否能延长肝硬化患者的生存期 (Andersen et al., 1993). 在随访结束时，泼尼松治疗组有 150 名 (63.3%) 患者死亡，安慰剂组有 142 名 (56.6%) 患者死亡。</p>
+<p>患者计划于 3 个月、6 个月和 12 个月后复诊，此后每年复诊，并记录几种临床和生化变量值。临床变量包括酒精摄入、营养状况、出血和腹水程度的信息，而最重要的生化变量包括白蛋白、胆红素、碱性磷酸酶和凝血酶原。尽管患者应在上述预定的就诊时间进行测量，但实际随访时间却与预定的就诊时间有很大差异。此外，如图 1.3 所示，死亡患者在死亡前不久接受了更多的就诊。</p>
+<details><summary><font color="#B95953">图 1.3</font>
+</summary><img src="figure/figure%201.3.png#center" style="width:80.0%"></details><p><br>
+在我们的说明中，我们将集中讨论凝血酶原指数与死亡风险之间的关系。该指数基于血液测试中肝脏产生的凝血因子 II, VII 和 X 的测量值。图 1.4 展示了每个治疗组特定于受试者的纵向轨迹。此外，我们还关注凝血酶原指数能否有效地区分两类人群：一类是在经过最近一次评估后，在一个与医学相关的特定时间段内去世的个体；另一类是生存时间超过这个特定时段的个体。举例来说，对于来自同一人群的未来患者，我们希望基于其基线协变量数据及现有的凝血酶原检测结果来计算其生存概率，并将此信息告知主治医师，以便为他们的后续诊疗决策提供支持。</p>
+<details><summary><font color="#B95953">图 1.4</font>
+</summary><img src="figure/figure%201.4.png#center" style="width:80.0%"></details>
+</div>
+<div id="sec1-2-4" class="section level3" number="1.2.4">
+<h3>
+<span class="header-section-number">1.2.4</span> 主动脉瓣数据<a class="anchor" aria-label="anchor" href="#sec1-2-4"><i class="fas fa-link"></i></a>
+</h3>
+<p>主动脉瓣数据集包括 289 名主动脉瓣狭窄 (AS) 患者，他们于 1992 年至 2005 年间在 Erasmus University Medical Center 接受了同种异体主动脉根部置换术 (RR) 或冠状动脉下植入术 (SI) (Takkenberg et al., 2002, 2006). 主动脉瓣狭窄是指位于心脏左心室和主动脉之间的主动脉瓣开口变窄，是最常见的瓣膜性心脏病之一。该数据集中的所有患者都通过年度电话访谈、访问他们的心脏病专家进行了前瞻性随访。Erasmus University Medical Center 在术后六个月、术后一年及之后每两年通过一系列标准化超声心动图进行超声心动图随访。研究结束时，有 61 名 (21.1%) 患者死亡，78 名 (27%) 患者接受了再次手术。</p>
+<p>我们关注主动脉射血速度（主动脉梯度）与死亡或再次手术风险之间的关联。由于主动脉梯度水平呈右偏分布，我们通常使用它们的平方根转换。图 1.5 显示了主动脉梯度平方根的简单线性回归中特异于受试者的截距和斜率的散点图，根据事件时间排序。</p>
+<details><summary><font color="#B95953">图 1.5</font>
+</summary><img src="figure/figure%201.5.png#center" style="width:80.0%"></details>
+</div>
+<div id="sec1-2-5" class="section level3" number="1.2.5">
+<h3>
+<span class="header-section-number">1.2.5</span> 其他应用<a class="anchor" aria-label="anchor" href="#sec1-2-5"><i class="fas fa-link"></i></a>
+</h3>
+<p>前几节主要关注人体研究的数据集，重点关注纵向生物标志物测量值与患者生存之间的关联。然而，纵向响应和事件时间之间的相互关系在许多其他学科中也很有趣。下面我们给出三个来自生物标志物研究以外领域的例子。</p>
+<ul>
+<li>例 1：在群居动物研究中，对畜群社会动态的纵向测量可能与其迁移到其他区域所需的时间有关联。</li>
+<li>例 2：在社会学和教育测试中，以及在一些流行病学研究中，将问卷调查受访者的表现与事件时间结果的联系通常是研究者关注的。例如，在痴呆症研究中，会使用问卷来衡量患者的认知情绪状态，以及记忆和沟通能力。由于痴呆症是一种渐进性疾病，患者会频繁接受此类问卷调查，而研究的重点在于患者在心理测试中的表现变化与临床病症发作之间的关系。</li>
+<li>例 3：在土木工程领域，常常关注研究建筑物无法继续使用的时间点。为此，会定期记录有关结构完整性的多个指标，旨在评估这些指标是否能有效预测相关结构失效的风险。</li>
+</ul>
+</div>
+</div>
+<div id="sec1-3" class="section level2" number="1.3">
+<h2>
+<span class="header-section-number">1.3</span> 纵向研究中的推断目标<a class="anchor" aria-label="anchor" href="#sec1-3"><i class="fas fa-link"></i></a>
+</h2>
+<p>从上一节可以明显看出，在纵向研究中，通常会为每个患者记录大量信息，而人们的兴趣往往在于这些不同信息之间的复杂关联。在更详细地讨论纵向研究中可能感兴趣的可能相互关系之前，我们将首先区分这些研究中记录的两种类型的结果。首先，我们将显式结果 (explicit outcomes) 称为研究方案中明确规定的在随访期间记录的结果。例如，在 PBC 研究中，显式结果包括患者的生存信息和生物标志物的纵向测量。第二种类型的结果，我们称之为隐式结果 (implicit outcomes)，是指那些虽然不是直接关注的重点，但可能会使显式结果的分析变得复杂的结果。一个典型的例子就是缺失数据。尤其是，根据方案，患者通常需要按照预定的时间前往研究中心提供信息，但在实践中很难实现。患者经常错过一些就诊，或者由于各种原因完全退出研究。例如，正如我们在艾滋病数据集中看到的那样，在 2335 次计划测量中，实际只记录了 1405 次，导致 39.8% 的响应缺失。与缺失数据密切相关的隐式结果的另一个例子是就诊过程，它是指生成纵向测量收集时间点的机制（随机的或确定的）(Lipsitz et al., 2002). 随机就诊时间 (random visit times) 常见于观察性研究中，在类研究中，纵向测量的时间点不是由设计确定的，而是由医生甚至患者自己确定的。然而，即使是预先由研究方案规定了就诊时间的随机化研究，也可能出现随机就诊时间。例如，在 PBC 数据集中，在随访的前两年里，血清胆红素的测量在基线、半年、一年和两年时进行，就诊时间差异较小，而在随后几年中，就诊时间的变异性显著增加。下面我们对纵向研究中可能提出的研究问题进行了分类 (Rizopoulos and Lesaffre, 2012).</p>
+<div id="sec1-3-1" class="section level3" number="1.3.1">
+<h3>
+<span class="header-section-number">1.3.1</span> 协变量对单一结果的效应<a class="anchor" aria-label="anchor" href="#sec1-3-1"><i class="fas fa-link"></i></a>
+</h3>
+<p>一般来说，医学研究中最常见的研究问题类型是估计或检验一组协变量对某些感兴趣结果的效应。例如，对于艾滋病患者，我们想知道 ddI 是否可以提高生存率，或者男性和女性之间 CD4 细胞计数的平均纵向分布是否存在差异。回答这些问题需要假设一种合适的统计模型，将协变量与感兴趣的结果联系起来。根据结果的性质，可以使用几种类型的统计模型。第 <a href="chap2.html#chap2">2</a> 章和第 <a href="chap3.html#chap3">3</a> 章分别回顾了纵向数据和事件时间数据的基本建模框架。</p>
+</div>
+<div id="sec1-3-2" class="section level3" number="1.3.2">
+<h3>
+<span class="header-section-number">1.3.2</span> 结果之间的关联<a class="anchor" aria-label="anchor" href="#sec1-3-2"><i class="fas fa-link"></i></a>
+</h3>
+<p>通常，探究结果之间的关联结构也具有重要意义。比如，在 PBC 数据集中，医生们关注的是当前血清胆红素水平与死亡风险之间关联的强度。一个类似的例子出现在哮喘研究中，其中哮喘发作的风险可能与空气污染程度相关。乍一看，这些研究问题在精神上与第 <a href="chap1.html#sec1-3-1">1.3.1</a> 节提出的问题相似，唯一的区别在于协变量过程现在是时依的 (time-dependent). 因此，人们可以简单地通过假设合适的模型将这两个关注的结果变量关联起来。这意味着可以通过构建模型来探索两个结果之间的动态关系。例如，我们可以简单地为死亡风险制定一个时依 Cox 模型，并将纵向 CD4 细胞计数测量作为时依协变量 (Andersen and Gill, 1982). 然而，我们需要仔细考虑的一个重要特征是，在这种模型中，结果变量同时扮演着响应和协变量的角色。为此，我们首先需要辨别协变量结果过程的类型，特别是协变量结果对于响应结果来说是内部的（或内生性的） (internal, endogenous) 还是外部的（或外源性的） (external, exogenous). 内生性的正式定义将在第 <a href="chap3.html#chap3">3</a> 章给出。然而，区分内部和外部协变量的一种更直观的方式是通过理解时依协变量过程的本质。简单地说，内部协变量是由患者自己产生的，因此需要患者的存在。回顾前两个例子，我们注意到 CD4 细胞计数和死亡风险是患者自身产生的随机过程，因此 CD4 细胞数构成了一个内部协变量过程。另一方面，空气污染是哮喘发作的外部协变量，因为患者对空气污染没有影响。当协变量结果对于响应结果是外部的，我们可以使用 <a href="chap1.html#sec1-3-1">1.3.1</a> 节提到的大多数标准模型，可能只需相对较小的修改。然而，正如我们将在后面看到的，带内部协变量的统计分析带来了几个额外的困难。</p>
+</div>
+<div id="sec1-3-3" class="section level3" number="1.3.3">
+<h3>
+<span class="header-section-number">1.3.3</span> 复杂的假设检验<a class="anchor" aria-label="anchor" href="#sec1-3-3"><i class="fas fa-link"></i></a>
+</h3>
+<p>前两节研究问题的组合也常常是研究者所关注的。一个典型的例子就是替代标志物的评估。特别是对于慢性疾病，如原发性胆汁性肝硬化 (PBC)，我们可能会想使用短期的纵向血清胆红素测量来评估治疗效应，而不是花费很长时间来确定的生存终点。Prentice 于 1989 年提出了替代性的三个条件：(I) 治疗必须对患者生存有影响；(II) 治疗必须对标志物（即血清胆红素）有影响；以及 (III) 治疗效应应通过标志物表现出来，即给定特定的标志 物轨迹，死亡风险应独立于治疗。显然，为了评估条件 (I) 和 (II)，我们需要分别为生存和纵向结果设定单独的模型，每个模型都包含治疗作为预测因子。然而，为了检验条件 (III)，则需要一个以治疗和血清胆红素为条件的生存结果模型。鉴于血清胆红素作为内生时依协变量的特性，如上所述，联合模型提供了一个灵活的建模框架，用于确定在考虑到血清胆红素后，治疗是否对生存有影响。</p>
+<p>当我们有兴趣同时检验基线协变量对几种结果的影响时，需要进行类似类型的分析。例如，继续考虑上面提到的例子，血清胆红素可能不是描述疾病进展的良好生物标志物，因此即使考虑了血清胆红素，治疗仍可能对患者的生存产生影响。在这种情况下，我们可以扩展我们的分析，纳入更多疾病进展的生物标志物，如蜘蛛痣和肝肿大等。研究兴趣可能在于同时检验治疗对所有标志物的影响，或者是校正其他标志物后，检验某一特定标志物与死亡风险之间的关联性。显然，为了进行此类检验，我们需要一种灵活的建模方法，能够捕捉这些结果之间的相互关系。</p>
+</div>
+<div id="sec1-3-4" class="section level3" number="1.3.4">
+<h3>
+<span class="header-section-number">1.3.4</span> 预测<a class="anchor" aria-label="anchor" href="#sec1-3-4"><i class="fas fa-link"></i></a>
+</h3>
+<p>统计模型也常用于提供与患者相关的预测结果。特别是在当前医学实践中趋向个性化医疗的趋势下，能够提供高质量个体化预测的模型显得尤为宝贵。实际上，在随访期间针对特定患者的具体时间点，医生希望能利用手头上所有的可用信息（包括基线信息和积累的生物标志物水平），以预测具有医学意义的结果，从而更好地理解疾病的动态发展，并最终作出当时最优的决策。当有新的信息记录时，医生会关注于对这些预测进行更新，因此采取一种随时间动态调整的方式进行处理。</p>
+<p>当对高质量预测感兴趣时，将患者所有可用信息结合起来考虑各个结果之间的生物学相互关系是很有用的。以 PBC 数据集为例，从生物标志物的定义可以看出，它们度量了肝功能的不同方面。因此，如果我们仅基于其中一个标志物进行预测并忽略其它标志物，将会丢弃有价值的信息。这不可避免地意味着，我们无法达到可能通过同时结合所有生物标志物所能达到的最大预测能力。因此，显然，将所有标志物结合到一个模型中的建模方法是有利的，因为它利用了所有可用的信息。Fieuws et al. (2008) 通过实证研究说明了结合标志物进行预测的额外价值，他们指出，在肾脏移植研究中，基于使用所有记录的肾功能生物标志物的联合模型对移植物衰竭进行的预测，其表现大大优于单独对每个标志物进行的分析。</p>
+</div>
+<div id="sec1-3-5" class="section level3" number="1.3.5">
+<h3>
+<span class="header-section-number">1.3.5</span> 隐式结果的统计分析<a class="anchor" aria-label="anchor" href="#sec1-3-5"><i class="fas fa-link"></i></a>
+</h3>
+<p>在上述所有类型的研究问题中，我们关注的都是显式结果。然而，如前所述，在纵向研究中，往往也会产生隐式结果，即使这些结果不是主要关注的结果，也需要对其进行适当的处理。特别是在存在隐式结果的情况下，在进行感兴趣的分析之前，必须仔细考虑描述生成隐式结果（缺失数据和/或就诊时间）的过程的概率机制的本质，因为它极大地决定了如何调整分析以获得有效的推断结论。</p>
+</div>
+</div>
+<div id="sec1-4" class="section level2" number="1.4">
+<h2>
+<span class="header-section-number">1.4</span> 概述<a class="anchor" aria-label="anchor" href="#sec1-4"><i class="fas fa-link"></i></a>
+</h2>
+<p>第 <a href="chap2.html#chap2">2</a> 章和第 <a href="chap3.html#chap3">3</a> 章旨在介绍联合模型的组成部分，即纵向数据的线性混合效应模型和生存数据的相对风险模型。具体来说，在第 <a href="chap2.html#chap2">2</a> 章中，我们讨论了纵向响应分析中出现的复杂性，并引入了线性混合效应模型作为处理相关数据的灵活建模框架。我们首先讨论估计与推断问题，然后重点关注纵向研究中经常遇到的缺失数据问题。我们定义了不同的缺失数据机制，并解释了在何种情况下线性混合模型能够提供有效的推断结论。</p>
+<p>第 <a href="chap3.html#chap3">3</a> 章首先解释了事件时间数据的特殊特征，如删失 (censoring) 和截尾 (truncation)，以及它们如何将对这些数据的分析变得复杂。接下来，我们介绍相对风险模型，特别是 Cox 模型。在第 <a href="chap2.html#chap2">2</a> 章中，我们简要地提到了偏似然和全似然下的估计和推断。在最后一节中，我们将重点讨论时依协变量。更具体地说，我们提供了内生性和外源性时依协变量的定义，并讨论了扩展（时依）Cox 模型在哪些情况下提供了有效的推断。</p>
+<p>第 <a href="chap4.html#chap4">4</a> 章介绍联合建模框架的基础知识。特别是，从第 <a href="chap3.html#chap3">3</a> 章末尾开始，我们首先从生存的角度出发，将联合模型作为处理内生时依协变量的建模框架。我们介绍标准联合模型，讨论其背后的假设，并给出了最大似然估计。接下来，我们与第 <a href="chap2.html#chap2">2</a> 章中提出的缺失数据框架建立联系，并进一步推动联合模型成为可处理非随机脱落 (nonrandom dropout) 的模型。</p>
+<p>在第 <a href="chap5.html#chap5">5</a> 章中，我们探讨了标准联合模型的几种扩展。生存部分的扩展包括纵向和生存结果之间的不同类型的参数化、分层相对风险模型、多个失效时间的处理以及加速失败时间模型的考虑。关于纵向部分，我们首先提出了具有分类纵向标志物的联合模型，然后我们扩展到具有多个纵向结果的多变量联合模型。最后，作为标准联合模型的替代模型，我们提出了潜类别联合模型 (latent class joint model)，该模型假设纵向和事件时间过程之间的关联是由于总体中存在潜在的异质性。</p>
+<p>在第 <a href="chap6.html#chap6">6</a> 章中，我们介绍了几种基于残差的诊断工具来评估联合模型背后的假设。我们分别关注生存部分和纵向部分的不同类型的残差，并特别关注这些残差如何受到事件发生引起的非随机脱落的影响。此外，我们还提及随机效应分布的错误指定并讨论其如何影响推断。</p>
+<p>第 <a href="chap7.html#chap7">7</a> 章重点介绍了预测和判别。更具体地说，我们说明了联合模型如何用于估计事件时间结果的生存概率以及纵向结果的预测，并说明如何随着为每个受试者收集更多信息而动态更新这些预测。接下来，我们将注意力转向纵向标志物的前瞻性准确性度量，并评估其在区分即将经历事件的受试者与风险低得多的受试者的能力。特别地，在预测规则的一般定义下，我们给出了灵敏度和特异度度量的适当定义，并使用受试者工作特征方法确定了纵向标志物的准确性。</p>
+<p>最后，附录 <a href="A.html#A">A</a> 简要介绍了 R 语言，以便对该软件包没有或几乎没有经验的读者能够获得所需的最少背景知识，使他们能够在自己的数据集中应用本书介绍的联合建模技术。</p>
+
+</div>
+</div>
+  <div class="chapter-nav">
+<div class="prev"><a href="%E7%9B%AE%E5%BD%95.html">目录</a></div>
+<div class="next"><a href="chap2.html"><span class="header-section-number">2</span> 纵向数据分析</a></div>
+</div></main><div class="col-md-3 col-lg-2 d-none d-md-block sidebar sidebar-chapter">
+    <nav id="toc" data-toggle="toc" aria-label="On this page"><h2>On this page</h2>
+      <ul class="nav navbar-nav">
+<li><a class="nav-link" href="#chap1"><span class="header-section-number">1</span> 介绍</a></li>
+<li><a class="nav-link" href="#sec1-1"><span class="header-section-number">1.1</span> 目标</a></li>
+<li>
+<a class="nav-link" href="#sec1-2"><span class="header-section-number">1.2</span> 激励性研究</a><ul class="nav navbar-nav">
+<li><a class="nav-link" href="#sec1-2-1"><span class="header-section-number">1.2.1</span> 原发性胆汁性肝硬化 (PBC) 数据</a></li>
+<li><a class="nav-link" href="#sec1-2-2"><span class="header-section-number">1.2.2</span> 艾滋病数据</a></li>
+<li><a class="nav-link" href="#sec1-2-3"><span class="header-section-number">1.2.3</span> 肝硬化数据</a></li>
+<li><a class="nav-link" href="#sec1-2-4"><span class="header-section-number">1.2.4</span> 主动脉瓣数据</a></li>
+<li><a class="nav-link" href="#sec1-2-5"><span class="header-section-number">1.2.5</span> 其他应用</a></li>
+</ul>
+</li>
+<li>
+<a class="nav-link" href="#sec1-3"><span class="header-section-number">1.3</span> 纵向研究中的推断目标</a><ul class="nav navbar-nav">
+<li><a class="nav-link" href="#sec1-3-1"><span class="header-section-number">1.3.1</span> 协变量对单一结果的效应</a></li>
+<li><a class="nav-link" href="#sec1-3-2"><span class="header-section-number">1.3.2</span> 结果之间的关联</a></li>
+<li><a class="nav-link" href="#sec1-3-3"><span class="header-section-number">1.3.3</span> 复杂的假设检验</a></li>
+<li><a class="nav-link" href="#sec1-3-4"><span class="header-section-number">1.3.4</span> 预测</a></li>
+<li><a class="nav-link" href="#sec1-3-5"><span class="header-section-number">1.3.5</span> 隐式结果的统计分析</a></li>
+</ul>
+</li>
+<li><a class="nav-link" href="#sec1-4"><span class="header-section-number">1.4</span> 概述</a></li>
+</ul>
+
+      <div class="book-extra">
+        <ul class="list-unstyled">
+          
+        </ul>
+</div>
+    </nav>
+</div>
+
+</div>
+</div> <!-- .container -->
+
+<footer class="bg-primary text-light mt-5"><div class="container"><div class="row">
+
+  <div class="col-12 col-md-6 mt-3">
+    <p>"<strong>纵向与事件时间数据的联合模型及其在 R 中的应用</strong>" was written by Wang Zhen. It was last built on 2024-04-19.</p>
+  </div>
+
+  <div class="col-12 col-md-6 mt-3">
+    <p>This book was built by the <a class="text-light" href="https://bookdown.org">bookdown</a> R package.</p>
+  </div>
+
+</div></div>
+</footer><!-- dynamically load mathjax for compatibility with self-contained --><script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    var src = "true";
+    if (src === "" || src === "true") src = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/latest.js?config=TeX-MML-AM_CHTML";
+    if (location.protocol !== "file:")
+      if (/^https?:/.test(src))
+        src = src.replace(/^https?:/, '');
+    script.src = src;
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script><script type="text/x-mathjax-config">const popovers = document.querySelectorAll('a.footnote-ref[data-toggle="popover"]');
+for (let popover of popovers) {
+  const div = document.createElement('div');
+  div.setAttribute('style', 'position: absolute; top: 0, left:0; width:0, height:0, overflow: hidden; visibility: hidden;');
+  div.innerHTML = popover.getAttribute('data-content');
+
+  var has_math = div.querySelector("span.math");
+  if (has_math) {
+    document.body.appendChild(div);
+    MathJax.Hub.Queue(["Typeset", MathJax.Hub, div]);
+    MathJax.Hub.Queue(function() {
+      popover.setAttribute('data-content', div.innerHTML);
+      document.body.removeChild(div);
+    })
+  }
+}
+</script>
+</body>
+</html>

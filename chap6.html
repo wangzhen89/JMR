@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>第 6 章 联合模型诊断 | 纵向与事件时间数据的联合模型及其在 R 中的应用</title>
+<meta name="author" content="Wang Zhen">
+<meta name="description" content="前几章重点介绍了联合模型的不同公式和几个扩展。然而，当涉及到在实践中使用这些模型时，先决条件是验证模型的假设。评估这些假设的标准工具是残差图。当对纵向和生存结果分别建模时，残差的性质和特征已在文献中进行了广泛研究。然而，这一主题在联合建模文献中没有得到太多关注，除了 Dobson and Henderson (2003) 的条件残差和 Rizopoulos et al. (2010)...">
+<meta name="generator" content="bookdown 0.38 with bs4_book()">
+<meta property="og:title" content="第 6 章 联合模型诊断 | 纵向与事件时间数据的联合模型及其在 R 中的应用">
+<meta property="og:type" content="book">
+<meta property="og:description" content="前几章重点介绍了联合模型的不同公式和几个扩展。然而，当涉及到在实践中使用这些模型时，先决条件是验证模型的假设。评估这些假设的标准工具是残差图。当对纵向和生存结果分别建模时，残差的性质和特征已在文献中进行了广泛研究。然而，这一主题在联合建模文献中没有得到太多关注，除了 Dobson and Henderson (2003) 的条件残差和 Rizopoulos et al. (2010)...">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="第 6 章 联合模型诊断 | 纵向与事件时间数据的联合模型及其在 R 中的应用">
+<meta name="twitter:description" content="前几章重点介绍了联合模型的不同公式和几个扩展。然而，当涉及到在实践中使用这些模型时，先决条件是验证模型的假设。评估这些假设的标准工具是残差图。当对纵向和生存结果分别建模时，残差的性质和特征已在文献中进行了广泛研究。然而，这一主题在联合建模文献中没有得到太多关注，除了 Dobson and Henderson (2003) 的条件残差和 Rizopoulos et al. (2010)...">
+<!-- JS --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.4.6/fuse.js" integrity="sha512-zv6Ywkjyktsohkbp9bb45V6tEMoWhzFzXis+LrMehmJZZSys19Yxf1dopHx7WzIKxr5tK2dVcYmaCk2uqdjF4A==" crossorigin="anonymous"></script><script src="https://kit.fontawesome.com/6ecbd6c532.js" crossorigin="anonymous"></script><script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link href="libs/bootstrap-4.6.0/bootstrap.min.css" rel="stylesheet">
+<script src="libs/bootstrap-4.6.0/bootstrap.bundle.min.js"></script><script src="libs/bs3compat-0.7.0/transition.js"></script><script src="libs/bs3compat-0.7.0/tabs.js"></script><script src="libs/bs3compat-0.7.0/bs3compat.js"></script><link href="libs/bs4_book-1.0.0/bs4_book.css" rel="stylesheet">
+<script src="libs/bs4_book-1.0.0/bs4_book.js"></script><script>
+    /* ========================================================================
+     * Bootstrap: transition.js v3.3.7
+     * http://getbootstrap.com/javascript/#transitions
+     * ========================================================================
+     * Copyright 2011-2016 Twitter, Inc.
+     * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
+     * ======================================================================== */
+
+
+    +function ($) {
+      'use strict';
+
+      // CSS TRANSITION SUPPORT (Shoutout: http://www.modernizr.com/)
+      // ============================================================
+
+      function transitionEnd() {
+        var el = document.createElement('bootstrap')
+
+        var transEndEventNames = {
+          WebkitTransition : 'webkitTransitionEnd',
+          MozTransition    : 'transitionend',
+          OTransition      : 'oTransitionEnd otransitionend',
+          transition       : 'transitionend'
+        }
+
+        for (var name in transEndEventNames) {
+          if (el.style[name] !== undefined) {
+            return { end: transEndEventNames[name] }
+          }
+        }
+
+        return false // explicit for ie8 (  ._.)
+      }
+
+      // http://blog.alexmaccaw.com/css-transitions
+      $.fn.emulateTransitionEnd = function (duration) {
+        var called = false
+        var $el = this
+        $(this).one('bsTransitionEnd', function () { called = true })
+        var callback = function () { if (!called) $($el).trigger($.support.transition.end) }
+        setTimeout(callback, duration)
+        return this
+      }
+
+      $(function () {
+        $.support.transition = transitionEnd()
+
+        if (!$.support.transition) return
+
+        $.event.special.bsTransitionEnd = {
+          bindType: $.support.transition.end,
+          delegateType: $.support.transition.end,
+          handle: function (e) {
+            if ($(e.target).is(this)) return e.handleObj.handler.apply(this, arguments)
+          }
+        }
+      })
+
+    }(jQuery);
+    </script><script>
+    /* ========================================================================
+     * Bootstrap: collapse.js v3.3.7
+     * http://getbootstrap.com/javascript/#collapse
+     * ========================================================================
+     * Copyright 2011-2016 Twitter, Inc.
+     * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
+     * ======================================================================== */
+
+    /* jshint latedef: false */
+
+    +function ($) {
+      'use strict';
+
+      // COLLAPSE PUBLIC CLASS DEFINITION
+      // ================================
+
+      var Collapse = function (element, options) {
+        this.$element      = $(element)
+        this.options       = $.extend({}, Collapse.DEFAULTS, options)
+        this.$trigger      = $('[data-toggle="collapse"][href="#' + element.id + '"],' +
+                               '[data-toggle="collapse"][data-target="#' + element.id + '"]')
+        this.transitioning = null
+
+        if (this.options.parent) {
+          this.$parent = this.getParent()
+        } else {
+          this.addAriaAndCollapsedClass(this.$element, this.$trigger)
+        }
+
+        if (this.options.toggle) this.toggle()
+      }
+
+      Collapse.VERSION  = '3.3.7'
+
+      Collapse.TRANSITION_DURATION = 350
+
+      Collapse.DEFAULTS = {
+        toggle: true
+      }
+
+      Collapse.prototype.dimension = function () {
+        var hasWidth = this.$element.hasClass('width')
+        return hasWidth ? 'width' : 'height'
+      }
+
+      Collapse.prototype.show = function () {
+        if (this.transitioning || this.$element.hasClass('in')) return
+
+        var activesData
+        var actives = this.$parent && this.$parent.children('.panel').children('.in, .collapsing')
+
+        if (actives && actives.length) {
+          activesData = actives.data('bs.collapse')
+          if (activesData && activesData.transitioning) return
+        }
+
+        var startEvent = $.Event('show.bs.collapse')
+        this.$element.trigger(startEvent)
+        if (startEvent.isDefaultPrevented()) return
+
+        if (actives && actives.length) {
+          Plugin.call(actives, 'hide')
+          activesData || actives.data('bs.collapse', null)
+        }
+
+        var dimension = this.dimension()
+
+        this.$element
+          .removeClass('collapse')
+          .addClass('collapsing')[dimension](0)
+          .attr('aria-expanded', true)
+
+        this.$trigger
+          .removeClass('collapsed')
+          .attr('aria-expanded', true)
+
+        this.transitioning = 1
+
+        var complete = function () {
+          this.$element
+            .removeClass('collapsing')
+            .addClass('collapse in')[dimension]('')
+          this.transitioning = 0
+          this.$element
+            .trigger('shown.bs.collapse')
+        }
+
+        if (!$.support.transition) return complete.call(this)
+
+        var scrollSize = $.camelCase(['scroll', dimension].join('-'))
+
+        this.$element
+          .one('bsTransitionEnd', $.proxy(complete, this))
+          .emulateTransitionEnd(Collapse.TRANSITION_DURATION)[dimension](this.$element[0][scrollSize])
+      }
+
+      Collapse.prototype.hide = function () {
+        if (this.transitioning || !this.$element.hasClass('in')) return
+
+        var startEvent = $.Event('hide.bs.collapse')
+        this.$element.trigger(startEvent)
+        if (startEvent.isDefaultPrevented()) return
+
+        var dimension = this.dimension()
+
+        this.$element[dimension](this.$element[dimension]())[0].offsetHeight
+
+        this.$element
+          .addClass('collapsing')
+          .removeClass('collapse in')
+          .attr('aria-expanded', false)
+
+        this.$trigger
+          .addClass('collapsed')
+          .attr('aria-expanded', false)
+
+        this.transitioning = 1
+
+        var complete = function () {
+          this.transitioning = 0
+          this.$element
+            .removeClass('collapsing')
+            .addClass('collapse')
+            .trigger('hidden.bs.collapse')
+        }
+
+        if (!$.support.transition) return complete.call(this)
+
+        this.$element
+          [dimension](0)
+          .one('bsTransitionEnd', $.proxy(complete, this))
+          .emulateTransitionEnd(Collapse.TRANSITION_DURATION)
+      }
+
+      Collapse.prototype.toggle = function () {
+        this[this.$element.hasClass('in') ? 'hide' : 'show']()
+      }
+
+      Collapse.prototype.getParent = function () {
+        return $(this.options.parent)
+          .find('[data-toggle="collapse"][data-parent="' + this.options.parent + '"]')
+          .each($.proxy(function (i, element) {
+            var $element = $(element)
+            this.addAriaAndCollapsedClass(getTargetFromTrigger($element), $element)
+          }, this))
+          .end()
+      }
+
+      Collapse.prototype.addAriaAndCollapsedClass = function ($element, $trigger) {
+        var isOpen = $element.hasClass('in')
+
+        $element.attr('aria-expanded', isOpen)
+        $trigger
+          .toggleClass('collapsed', !isOpen)
+          .attr('aria-expanded', isOpen)
+      }
+
+      function getTargetFromTrigger($trigger) {
+        var href
+        var target = $trigger.attr('data-target')
+          || (href = $trigger.attr('href')) && href.replace(/.*(?=#[^\s]+$)/, '') // strip for ie7
+
+        return $(target)
+      }
+
+
+      // COLLAPSE PLUGIN DEFINITION
+      // ==========================
+
+      function Plugin(option) {
+        return this.each(function () {
+          var $this   = $(this)
+          var data    = $this.data('bs.collapse')
+          var options = $.extend({}, Collapse.DEFAULTS, $this.data(), typeof option == 'object' && option)
+
+          if (!data && options.toggle && /show|hide/.test(option)) options.toggle = false
+          if (!data) $this.data('bs.collapse', (data = new Collapse(this, options)))
+          if (typeof option == 'string') data[option]()
+        })
+      }
+
+      var old = $.fn.collapse
+
+      $.fn.collapse             = Plugin
+      $.fn.collapse.Constructor = Collapse
+
+
+      // COLLAPSE NO CONFLICT
+      // ====================
+
+      $.fn.collapse.noConflict = function () {
+        $.fn.collapse = old
+        return this
+      }
+
+
+      // COLLAPSE DATA-API
+      // =================
+
+      $(document).on('click.bs.collapse.data-api', '[data-toggle="collapse"]', function (e) {
+        var $this   = $(this)
+
+        if (!$this.attr('data-target')) e.preventDefault()
+
+        var $target = getTargetFromTrigger($this)
+        var data    = $target.data('bs.collapse')
+        var option  = data ? 'toggle' : $this.data()
+
+        Plugin.call($target, option)
+      })
+
+    }(jQuery);
+    </script><script>
+    window.initializeCodeFolding = function(show) {
+
+      // handlers for show-all and hide all
+      $("#rmd-show-all-code").click(function() {
+        $('div.r-code-collapse').each(function() {
+          $(this).collapse('show');
+        });
+      });
+      $("#rmd-hide-all-code").click(function() {
+        $('div.r-code-collapse').each(function() {
+          $(this).collapse('hide');
+        });
+      });
+
+      // index for unique code element ids
+      var currentIndex = 1;
+
+      // select all R code blocks
+      var rCodeBlocks = $('pre.sourceCode, pre.r, pre.python, pre.bash, pre.sql, pre.cpp, pre.stan, pre.js');
+      rCodeBlocks.each(function() {
+
+        // create a collapsable div to wrap the code in
+        var div = $('<div class="collapse r-code-collapse"></div>');
+        if (show)
+          div.addClass('in');
+        var id = 'rcode-643E0F36' + currentIndex++;
+        div.attr('id', id);
+        $(this).before(div);
+        $(this).detach().appendTo(div);
+
+        // add a show code button right above
+        var showCodeText = $('<span>' + (show ? 'Hide' : 'Code') + '</span>');
+        var showCodeButton = $('<button type="button" class="btn btn-default btn-xs code-folding-btn pull-right"></button>');
+        showCodeButton.append(showCodeText);
+        showCodeButton
+            .attr('data-toggle', 'collapse')
+            .attr('data-target', '#' + id)
+            .attr('aria-expanded', show)
+            .attr('aria-controls', id);
+
+        var buttonRow = $('<div class="row"></div>');
+        var buttonCol = $('<div class="col-md-12"></div>');
+
+        buttonCol.append(showCodeButton);
+        buttonRow.append(buttonCol);
+
+        div.before(buttonRow);
+
+        // update state of button on show/hide
+        div.on('hidden.bs.collapse', function () {
+          showCodeText.text('Code');
+        });
+        div.on('show.bs.collapse', function () {
+          showCodeText.text('Hide');
+        });
+      });
+
+    }
+    </script><script>
+    /* ========================================================================
+     * Bootstrap: dropdown.js v3.3.7
+     * http://getbootstrap.com/javascript/#dropdowns
+     * ========================================================================
+     * Copyright 2011-2016 Twitter, Inc.
+     * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
+     * ======================================================================== */
+
+
+    +function ($) {
+      'use strict';
+
+      // DROPDOWN CLASS DEFINITION
+      // =========================
+
+      var backdrop = '.dropdown-backdrop'
+      var toggle   = '[data-toggle="dropdown"]'
+      var Dropdown = function (element) {
+        $(element).on('click.bs.dropdown', this.toggle)
+      }
+
+      Dropdown.VERSION = '3.3.7'
+
+      function getParent($this) {
+        var selector = $this.attr('data-target')
+
+        if (!selector) {
+          selector = $this.attr('href')
+          selector = selector && /#[A-Za-z]/.test(selector) && selector.replace(/.*(?=#[^\s]*$)/, '') // strip for ie7
+        }
+
+        var $parent = selector && $(selector)
+
+        return $parent && $parent.length ? $parent : $this.parent()
+      }
+
+      function clearMenus(e) {
+        if (e && e.which === 3) return
+        $(backdrop).remove()
+        $(toggle).each(function () {
+          var $this         = $(this)
+          var $parent       = getParent($this)
+          var relatedTarget = { relatedTarget: this }
+
+          if (!$parent.hasClass('open')) return
+
+          if (e && e.type == 'click' && /input|textarea/i.test(e.target.tagName) && $.contains($parent[0], e.target)) return
+
+          $parent.trigger(e = $.Event('hide.bs.dropdown', relatedTarget))
+
+          if (e.isDefaultPrevented()) return
+
+          $this.attr('aria-expanded', 'false')
+          $parent.removeClass('open').trigger($.Event('hidden.bs.dropdown', relatedTarget))
+        })
+      }
+
+      Dropdown.prototype.toggle = function (e) {
+        var $this = $(this)
+
+        if ($this.is('.disabled, :disabled')) return
+
+        var $parent  = getParent($this)
+        var isActive = $parent.hasClass('open')
+
+        clearMenus()
+
+        if (!isActive) {
+          if ('ontouchstart' in document.documentElement && !$parent.closest('.navbar-nav').length) {
+            // if mobile we use a backdrop because click events don't delegate
+            $(document.createElement('div'))
+              .addClass('dropdown-backdrop')
+              .insertAfter($(this))
+              .on('click', clearMenus)
+          }
+
+          var relatedTarget = { relatedTarget: this }
+          $parent.trigger(e = $.Event('show.bs.dropdown', relatedTarget))
+
+          if (e.isDefaultPrevented()) return
+
+          $this
+            .trigger('focus')
+            .attr('aria-expanded', 'true')
+
+          $parent
+            .toggleClass('open')
+            .trigger($.Event('shown.bs.dropdown', relatedTarget))
+        }
+
+        return false
+      }
+
+      Dropdown.prototype.keydown = function (e) {
+        if (!/(38|40|27|32)/.test(e.which) || /input|textarea/i.test(e.target.tagName)) return
+
+        var $this = $(this)
+
+        e.preventDefault()
+        e.stopPropagation()
+
+        if ($this.is('.disabled, :disabled')) return
+
+        var $parent  = getParent($this)
+        var isActive = $parent.hasClass('open')
+
+        if (!isActive && e.which != 27 || isActive && e.which == 27) {
+          if (e.which == 27) $parent.find(toggle).trigger('focus')
+          return $this.trigger('click')
+        }
+
+        var desc = ' li:not(.disabled):visible a'
+        var $items = $parent.find('.dropdown-menu' + desc)
+
+        if (!$items.length) return
+
+        var index = $items.index(e.target)
+
+        if (e.which == 38 && index > 0)                 index--         // up
+        if (e.which == 40 && index < $items.length - 1) index++         // down
+        if (!~index)                                    index = 0
+
+        $items.eq(index).trigger('focus')
+      }
+
+
+      // DROPDOWN PLUGIN DEFINITION
+      // ==========================
+
+      function Plugin(option) {
+        return this.each(function () {
+          var $this = $(this)
+          var data  = $this.data('bs.dropdown')
+
+          if (!data) $this.data('bs.dropdown', (data = new Dropdown(this)))
+          if (typeof option == 'string') data[option].call($this)
+        })
+      }
+
+      var old = $.fn.dropdown
+
+      $.fn.dropdown             = Plugin
+      $.fn.dropdown.Constructor = Dropdown
+
+
+      // DROPDOWN NO CONFLICT
+      // ====================
+
+      $.fn.dropdown.noConflict = function () {
+        $.fn.dropdown = old
+        return this
+      }
+
+
+      // APPLY TO STANDARD DROPDOWN ELEMENTS
+      // ===================================
+
+      $(document)
+        .on('click.bs.dropdown.data-api', clearMenus)
+        .on('click.bs.dropdown.data-api', '.dropdown form', function (e) { e.stopPropagation() })
+        .on('click.bs.dropdown.data-api', toggle, Dropdown.prototype.toggle)
+        .on('keydown.bs.dropdown.data-api', toggle, Dropdown.prototype.keydown)
+        .on('keydown.bs.dropdown.data-api', '.dropdown-menu', Dropdown.prototype.keydown)
+
+    }(jQuery);
+    </script><style type="text/css">
+    .code-folding-btn { margin-bottom: 4px; }
+    .row { display: flex; }
+    .collapse { display: none; }
+    .in { display:block }
+    .pull-right > .dropdown-menu {
+        right: 0;
+        left: auto;
+    }
+    .open > .dropdown-menu {
+        display: block;
+    }
+    .dropdown-menu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        z-index: 1000;
+        display: none;
+        float: left;
+        min-width: 160px;
+        padding: 5px 0;
+        margin: 2px 0 0;
+        font-size: 14px;
+        text-align: left;
+        list-style: none;
+        background-color: #fff;
+        -webkit-background-clip: padding-box;
+        background-clip: padding-box;
+        border: 1px solid #ccc;
+        border: 1px solid rgba(0,0,0,.15);
+        border-radius: 4px;
+        -webkit-box-shadow: 0 6px 12px rgba(0,0,0,.175);
+        box-shadow: 0 6px 12px rgba(0,0,0,.175);
+    }
+    </style>
+<script>
+    $(document).ready(function () {
+      window.initializeCodeFolding("show" === "show");
+    });
+    </script><script>
+    document.write('<div class="btn-group pull-right" style="position: absolute; top: 20%; right: 2%; z-index: 200"><button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" data-_extension-text-contrast=""><span>Code</span> <span class="caret"></span></button><ul class="dropdown-menu" style="min-width: 50px;"><li><a id="rmd-show-all-code" href="#">Show All Code</a></li><li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li></ul></div>')
+    </script><script src="https://cdnjs.cloudflare.com/ajax/libs/autocomplete.js/0.38.0/autocomplete.jquery.min.js" integrity="sha512-GU9ayf+66Xx2TmpxqJpliWbT5PiGYxpaG8rfnBEk1LL8l1KGkRShhngwdXK1UgqhAzWpZHSiYPc09/NwDQIGyg==" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mark.js/8.11.1/mark.min.js" integrity="sha512-5CYOlHXGh6QpOFA/TeTylKLWfB3ftPsde7AnmhuitiTX4K5SqCLBeKro6sPS8ilsz1Q4NRx3v8Ko2IBiszzdww==" crossorigin="anonymous"></script><!-- CSS --><style type="text/css">
+    
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  </style>
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-spy="scroll" data-target="#toc">
+
+<div class="container-fluid">
+<div class="row">
+  <header class="col-sm-12 col-lg-3 sidebar sidebar-book"><a class="sr-only sr-only-focusable" href="#content">Skip to main content</a>
+
+    <div class="d-flex align-items-start justify-content-between">
+      <h1>
+        <a href="index.html" title="">纵向与事件时间数据的联合模型及其在 R 中的应用</a>
+      </h1>
+      <button class="btn btn-outline-primary d-lg-none ml-2 mt-1" type="button" data-toggle="collapse" data-target="#main-nav" aria-expanded="true" aria-controls="main-nav"><i class="fas fa-bars"></i><span class="sr-only">Show table of contents</span></button>
+    </div>
+
+    <div id="main-nav" class="collapse-lg">
+      <form role="search">
+        <input id="search" class="form-control" type="search" placeholder="Search" aria-label="Search">
+</form>
+
+      <nav aria-label="Table of contents"><h2>Table of contents</h2>
+        <ul class="book-toc list-unstyled">
+<li><a class="" href="index.html">前言</a></li>
+<li><a class="" href="%E7%9B%AE%E5%BD%95.html">目录</a></li>
+<li class="book-part">正文</li>
+<li><a class="" href="chap1.html"><span class="header-section-number">1</span> 介绍</a></li>
+<li><a class="" href="chap2.html"><span class="header-section-number">2</span> 纵向数据分析</a></li>
+<li><a class="" href="chap3.html"><span class="header-section-number">3</span> 事件时间数据分析</a></li>
+<li><a class="" href="chap4.html"><span class="header-section-number">4</span> 纵向与事件时间数据的联合模型</a></li>
+<li><a class="" href="chap5.html"><span class="header-section-number">5</span> 标准联合模型的扩展</a></li>
+<li><a class="active" href="chap6.html"><span class="header-section-number">6</span> 联合模型诊断</a></li>
+<li><a class="" href="chap7.html"><span class="header-section-number">7</span> 联合模型的预测和准确性</a></li>
+<li class="book-part">附录</li>
+<li><a class="" href="A.html"><span class="header-section-number">A</span> R 的简要介绍</a></li>
+<li class="book-part">—</li>
+<li><a class="" href="bib.html">参考文献</a></li>
+</ul>
+
+        <div class="book-extra">
+          
+        </div>
+      </nav>
+</div>
+  </header><main class="col-sm-12 col-md-9 col-lg-7" id="content"><div id="chap6" class="section level1" number="6">
+<h1>
+<span class="header-section-number">第 6 章</span> 联合模型诊断<a class="anchor" aria-label="anchor" href="#chap6"><i class="fas fa-link"></i></a>
+</h1>
+<p>前几章重点介绍了联合模型的不同公式和几个扩展。然而，当涉及到在实践中使用这些模型时，先决条件是验证模型的假设。评估这些假设的标准工具是残差图。当对纵向和生存结果分别建模时，残差的性质和特征已在文献中进行了广泛研究。然而，这一主题在联合建模文献中没有得到太多关注，除了 Dobson and Henderson (2003) 的条件残差和 Rizopoulos et al. (2010) 的多重插补残差。在本章中，我们提出了纵向和事件时间结果的不同类型的残差，并对事件发生引起的非随机脱落的影响进行了深入的讨论。</p>
+<div id="sec6-1" class="section level2" number="6.1">
+<h2>
+<span class="header-section-number">6.1</span> 联合模型的残差<a class="anchor" aria-label="anchor" href="#sec6-1"><i class="fas fa-link"></i></a>
+</h2>
+<div id="sec6-1-1" class="section level3" number="6.1.1">
+<h3>
+<span class="header-section-number">6.1.1</span> 纵向部分的残差<a class="anchor" aria-label="anchor" href="#sec6-1-1"><i class="fas fa-link"></i></a>
+</h3>
+<p>在标准线性混合效应模型中，经常使用两种类型的残差，即特定于受试者的（条件）残差和边际（总体平均）残差（参见 Nobre and Singer, 2007; Verbeke and Molenberghs, 2000). 特定于受试者的残差旨在验证模型分层版本的假设，即</p>
+<p><span class="math display" id="eq:6-1">\[\begin{align}
+\left\{\begin{array}{rcl}y_i&amp;=&amp;X_i\beta+Z_ib_i+\varepsilon_i,\\b_i&amp;\sim&amp;\mathcal{N}(0,D),\quad\varepsilon_i\sim\mathcal{N}(0,\sigma^2),\end{array}\right.
+\tag{6.1}
+\end{align}\]</span></p>
+<p>定义为</p>
+<p><span class="math display" id="eq:6-2">\[\begin{align}
+r_i^{ys}(t)=\{y_i(t)-x_i^\top(t)\hat{\beta}-z_i^\top(t)\hat{b}_i\}
+\tag{6.2}
+\end{align}\]</span></p>
+<p>有相应的标准化版本</p>
+<p><span class="math display">\[r_i^{yss}(t)=\{y_i(t)-x_i^\top(t)\hat{\beta}-z_i^\top(t)\hat{b}_i\}/\hat{\sigma}\]</span></p>
+<p>其中，如前所述，<span class="math inline">\(\hat\beta\)</span> 和 <span class="math inline">\(\hat\sigma\)</span> 表示最大似然估计，而 <span class="math inline">\(\hat b_i\)</span> 表示随机效应的经验贝叶斯估计。这些残差预测了条件误差 <span class="math inline">\(\varepsilon_i(t)\)</span>，可用于检验等方差和正态性假设。另一方面，边际残差关注分层表示中隐含的 <span class="math inline">\(y_i\)</span> 边际模型，即</p>
+<p><span class="math display" id="eq:6-3">\[\begin{align}
+\left\{\begin{array}{rcl}y_i&amp;=&amp;X_i\beta+\varepsilon_i^*,\\\varepsilon_i^*&amp;\sim&amp;\mathcal{N}(0,Z_iDZ_i^\top+\sigma^2\text{I}_{n_i}),\end{array}\right.
+\tag{6.3}
+\end{align}\]</span></p>
+<p>并定义为</p>
+<p><span class="math display" id="eq:6-4">\[\begin{align}
+r_i^{ym}=y_i-X_i\hat{\beta}
+\tag{6.4}
+\end{align}\]</span></p>
+<p>有相应的标准化版本</p>
+<p><span class="math display">\[r_i^{ysm}=\widehat{V}_i^{-1/2}(y_i-X_i\hat{\beta})\]</span></p>
+<p>其中 <span class="math inline">\(\widehat{V}_i=Z_i\widehat{D}Z_i^\top+\hat{\sigma}^2\mathrm{I}_{n_i}\)</span> 表示 <span class="math inline">\(y_i\)</span> 的边际协方差阵估计。这些边际残差 <span class="math inline">\(r_i^{ym}\)</span> 预测了边际误差 <span class="math inline">\(y_i − X_i\beta = Z_ib_i+\varepsilon_i\)</span> ，并可用于研究平均结构 <span class="math inline">\(X_i\beta\)</span> 的错误指定以及验证受试者内协方差结构 <span class="math inline">\(V\)</span> 的假设。</p>
+<p>两种类型的残差也可用于检查联合模型纵向部分的假设。作为说明，我们为 <a href="chap4.html#sec4-2">4.2</a> 节中拟合 AIDS 数据集的简单联合模型生成了残差图。具体来说，在纵向部分，我们假定 CD4 细胞计数平方根随时间表现为特定于受试者的线性演变，而在生存部分，我们控制治疗和真实 CD4 细胞计数的效应，并且假定分段常数基线风险函数。拟合模型对应的 <code>R</code> 代码是</p>
+<div class="sourceCode" id="cb89"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb89-1"><a href="chap6.html#cb89-1" tabindex="-1"></a><span class="sc">&gt;</span> lmeFit.aids <span class="ot">&lt;-</span> <span class="fu">lme</span>(CD4 <span class="sc">~</span> obstime <span class="sc">+</span> obstime<span class="sc">:</span>drug,</span>
+<span id="cb89-2"><a href="chap6.html#cb89-2" tabindex="-1"></a>                     <span class="at">random =</span> <span class="sc">~</span> obstime <span class="sc">|</span> patient, <span class="at">data =</span> aids)</span>
+<span id="cb89-3"><a href="chap6.html#cb89-3" tabindex="-1"></a><span class="sc">&gt;</span> coxFit.aids <span class="ot">&lt;-</span> <span class="fu">coxph</span>(<span class="fu">Surv</span>(Time, death) <span class="sc">~</span> drug, <span class="at">data =</span> aids.id,</span>
+<span id="cb89-4"><a href="chap6.html#cb89-4" tabindex="-1"></a>                       <span class="at">x =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb89-5"><a href="chap6.html#cb89-5" tabindex="-1"></a><span class="sc">&gt;</span> jointFit.aids <span class="ot">&lt;-</span> <span class="fu">jointModel</span>(lmeFit.aids, coxFit.aids,</span>
+<span id="cb89-6"><a href="chap6.html#cb89-6" tabindex="-1"></a>                              <span class="at">timeVar =</span> <span class="st">"obstime"</span>, <span class="at">method =</span> <span class="st">"piecewise-PH-aGH"</span>)</span></code></pre></div>
+<p>通过调用 <code>jointModel</code> 对象的 <code><a href="https://rdrr.io/r/graphics/plot.default.html">plot()</a></code> 方法可直接获得一些基本的残差诊断图；对于我们的拟合联合模型，如图 6.1 所示，包括特定于受试者的残差与相应拟合值的图、特定于受试者的残差的 Q-Q 图以及事件过程的边际生存和累积风险函数。</p>
+<div class="sourceCode" id="cb90"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb90-1"><a href="chap6.html#cb90-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">2</span>))</span>
+<span id="cb90-2"><a href="chap6.html#cb90-2" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">plot</span>(jointFit.aids)</span></code></pre></div>
+<details><summary><font color="#B95953">图 6.1</font>
+</summary><img src="figure/figure%206.1.png#center" style="width:80.0%"></details><p><br>
+边际生存函数是使用如下近似公式估计的</p>
+<p><span class="math display">\[\mathcal{S}(t)=\int\mathcal{S}_i(t\mid b_i;\hat{\theta})p(b_i;\hat{\theta})db_i\approx n^{-1}\sum_i\mathcal{S}_i(t\mid\hat{b}_i;\hat{\theta})\]</span></p>
+<p>边际累积风险函数简单计算为 <span class="math inline">\(H(t)=-\log\mathcal S(t)\)</span>。通过首先计算感兴趣的特定类型的残差，然后根据相应的拟合值或协变量绘制残差，可以很容易地生成额外的残差图。作为 R 的标准操作，残差和拟合值可分别使用泛型函数 <code><a href="https://rdrr.io/r/stats/residuals.html">residuals()</a></code> 和 <code><a href="https://rdrr.io/r/stats/fitted.values.html">fitted()</a></code> 从拟合模型中提取。额外的参数 <code>process</code> 和 <code>type</code> 指定了我们想要计算残差的子模型（即纵向或生存），以及残差的类型（即特定于受试者、边际或标准化版本）。例如，下面的代码计算标准化边际残差 <span class="math inline">\(r^{ysm}_i\)</span> 和边际拟合值 <span class="math inline">\(X_i\hat\beta\)</span>。</p>
+<div class="sourceCode" id="cb91"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb91-1"><a href="chap6.html#cb91-1" tabindex="-1"></a><span class="sc">&gt;</span> resMargY.aids <span class="ot">&lt;-</span> <span class="fu">residuals</span>(jointFit.aids, <span class="at">process =</span> <span class="st">"Longitudinal"</span>,</span>
+<span id="cb91-2"><a href="chap6.html#cb91-2" tabindex="-1"></a>                             <span class="at">type =</span> <span class="st">"Marginal"</span>)</span>
+<span id="cb91-3"><a href="chap6.html#cb91-3" tabindex="-1"></a><span class="sc">&gt;</span> fitMargY.aids <span class="ot">&lt;-</span> <span class="fu">fitted</span>(jointFit.aids, <span class="at">process =</span> <span class="st">"Longitudinal"</span>,</span>
+<span id="cb91-4"><a href="chap6.html#cb91-4" tabindex="-1"></a>                          <span class="at">type =</span> <span class="st">"Marginal"</span>)</span></code></pre></div>
+<p>相应的散点图可以通过调用 R 的标准函数 <code><a href="https://rdrr.io/r/graphics/plot.default.html">plot()</a></code> 来生成；但这里我们使用以下包装函数</p>
+<div class="sourceCode" id="cb92"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb92-1"><a href="chap6.html#cb92-1" tabindex="-1"></a><span class="sc">&gt;</span> plotResid <span class="ot">&lt;-</span> <span class="cf">function</span> (x, y, <span class="at">col.loess =</span> <span class="st">"black"</span>, ...) {</span>
+<span id="cb92-2"><a href="chap6.html#cb92-2" tabindex="-1"></a>  <span class="fu">plot</span>(x, y, ...)</span>
+<span id="cb92-3"><a href="chap6.html#cb92-3" tabindex="-1"></a>  <span class="fu">lines</span>(<span class="fu">lowess</span>(x, y), <span class="at">col =</span> col.loess, <span class="at">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb92-4"><a href="chap6.html#cb92-4" tabindex="-1"></a>  <span class="fu">abline</span>(<span class="at">h =</span> <span class="dv">0</span>, <span class="at">lty =</span> <span class="dv">3</span>, <span class="at">col =</span> <span class="st">"grey"</span>, <span class="at">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb92-5"><a href="chap6.html#cb92-5" tabindex="-1"></a>}</span></code></pre></div>
+<p>其中还包括了散点图的 loess 平滑以帮助我们轻松定位潜在的问题。</p>
+<div class="sourceCode" id="cb93"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb93-1"><a href="chap6.html#cb93-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">plotResid</span>(fitMargY.aids, resMargY.aids, <span class="at">xlab =</span> <span class="st">"Fitted Values"</span>,</span>
+<span id="cb93-2"><a href="chap6.html#cb93-2" tabindex="-1"></a>            <span class="at">ylab =</span> <span class="st">"Marginal Residuals"</span>)</span></code></pre></div>
+<p>结果图如图 6.2 所示。我们观察到，标准化边际残差关于拟合值的图形中，拟合的 loess 曲线显示出系统性趋势，较小的拟合值具有更多的正残差。这可能表明固定效应 <span class="math inline">\(X\)</span> 的设计矩阵的形式不合适。我们将在 <a href="chap6.html#sec6-2">6.2</a> 节回到这个问题。</p>
+<details><summary><font color="#B95953">图 6.2</font>
+</summary><img src="figure/figure%206.2.png#center" style="width:80.0%"></details>
+</div>
+<div id="sec6-1-2" class="section level3" number="6.1.2">
+<h3>
+<span class="header-section-number">6.1.2</span> 生存部分的残差<a class="anchor" aria-label="anchor" href="#sec6-1-2"><i class="fas fa-link"></i></a>
+</h3>
+<p>联合模型的相对风险子模型的标准残差类型是鞅残差 (martingale residuals). 他们基于事件时间数据的计数过程表示法（<a href="chap3.html#sec3-5">3.5</a> 节简要介绍了），特别是特定于受试者的计数过程鞅，对于第 <span class="math inline">\(i\)</span> 个受试者定义为</p>
+<p><span class="math display" id="eq:6-5">\[\begin{align}
+r_i^{tm}(t)&amp; =\quad N_i(t)-\int_0^tR_i(s)h_i(s\mid\hat{\mathcal{M}}_i(s);\hat{\theta})ds  \\
+&amp;=\quad N_i(t)-\int_0^tR_i(s)\hat{h}_0(s)\exp\{\hat{\gamma}^\top w_i+\hat{\alpha}\hat{m}_i(s)\}ds
+\tag{6.5}
+\end{align}\]</span></p>
+<p>其中 <span class="math inline">\(N_i(t)\)</span> 是计数过程，表示在时间 <span class="math inline">\(t\)</span> 时受试者 <span class="math inline">\(i\)</span> 的事件数，<span class="math inline">\(R_i(t)\)</span> 是左连续风险过程，如果受试者 <span class="math inline">\(i\)</span> 在时间 <span class="math inline">\(t\)</span> 处于风险中，则 <span class="math inline">\(R_i(t) = 1\)</span> 否则 <span class="math inline">\(R_i(t) = 0\)</span>。<span class="math inline">\(\hat{m}_i(t)=x_i^\top(t)\hat{\beta}+z_i^\top(t)\hat{b}_i\)</span> 表示基线风险函数估计。这些残差背后的思想基于计数过程的 Doob-Meyer 分解，即将计数过程分解为补偿器 (compensator) 加上鞅过程，因此，鞅过程可看作是标准统计分解中残差项的等价物。简单来说，残差 <span class="math inline">\(r^{tm}_i(t)\)</span> 可视为第 <span class="math inline">\(i\)</span> 个受试者在时间 <span class="math inline">\(t\)</span> 时的观测事件数与基于拟合模型的同一时间的预期事件数之差。Barlow and Prentice (1988) 以及 Therneau et al. (1990) 提供了使用鞅研究相对风险模型拟合度的理论框架。这些残差的主要用途是直接识别超额事件 (excess events)（即揭示模型拟合不佳的受试者）以及评估模型中是否使用了协变量的适当函数形式。</p>
+<p>与鞅残差相关的生存模型残差的另一种类型是 Cox-Snell 残差 (Cox and Snell, 1968). 对于每个受试者，这些计算为在观测事件时间 <span class="math inline">\(T_i\)</span> 处计算的累积风险函数估计，即</p>
+<p><span class="math display" id="eq:6-6">\[\begin{align}
+r_i^{tcs}&amp;=\quad\int_0^{T_i}h_i(s\mid\hat{\mathcal{M}}_i(s);\hat{\theta})ds\\&amp;=\quad\int_0^{T_i}\hat{h}_0(s)\exp\{\hat{\gamma}^\top w_i+\hat{\alpha}\hat{m}_i(s)\}ds
+\tag{6.6}
+\end{align}\]</span></p>
+<p>因此 <span class="math inline">\(r_i^{tcs}=N_i(T_i)-r_i^{tm}(T_i)\)</span>。根据概率积分变换，当假定的模型很好地拟合数据时，我们期望时间 <span class="math inline">\(t\)</span> 之后的失效概率，即 <span class="math inline">\(\mathcal{S}(t)=\Pr(T_i^*&gt;t)\)</span> 将在 <span class="math inline">\([0, 1]\)</span> 中均匀分布，因此定义为 <span class="math inline">\(H(t) = − \log \mathcal S(t)\)</span> 的累积风险将具有单位指数分布。该等式意味着我们可以通过检查 Cox-Snell 残差 <span class="math inline">\(r^{tcs}_i\)</span> 是否呈单位指数分布来检查相对风险子模型的整体拟合优度。然而，这些残差在实际使用中的复杂性在于它们是在观测事件时间 <span class="math inline">\(T_i\)</span> 处评估的，因此当 <span class="math inline">\(T_i\)</span> 删失时，<span class="math inline">\(r^{tcs}_i\)</span> 也将删失。因此，为了检查模型的拟合度，同时考虑到 <span class="math inline">\(r^{tcs}_i\)</span> 实际上是单位指数分布的删失样本，我们比较单位指数分布的生存函数 <span class="math inline">\(\mathcal S_{exp}(t) = \exp(−t)\)</span>，使用 <span class="math inline">\(r^{tcs}_i\)</span> 的生存函数的 Kaplan-Meier 估计。</p>
+<p>我们通过继续对拟合到 AIDS 数据集的联合模型进行残差分析（如 <a href="chap6.html#sec6-1-1">6.1.1</a> 节所示）来说明 R 中的鞅和 Cox-Snell 残差的使用，并验证生存部分的拟合。与纵向过程残差的计算类似，生存子模型的两种类型的残差都是使用泛型函数 <code><a href="https://rdrr.io/r/stats/residuals.html">residuals()</a></code> 提取的。我们首先检查时依标志物所选择的函数形式。在上一节定义的相对风险子模型中，我们假定标志物的当前值与死亡风险相关，即</p>
+<p><span class="math display">\[\begin{aligned}h_i(t)=h_0(t)\exp\{\gamma\mathtt{ddI}_i+\alpha m_i(t)\}\end{aligned}\]</span></p>
+<p>然而，正如我们在第 <a href="chap5.html#sec5-1">5.1</a> 节中看到的，有几种替代参数化可用于描述事件风险与标志物之间的关系，这可能更合适。正如我们在该节看到的，这些参数化通常可表示为</p>
+<p><span class="math display">\[h_i(t)=h_0(t)\exp[\gamma\mathtt{ddI}_i+\alpha f\{m_i(t)\}]\]</span></p>
+<p>其中 <span class="math inline">\(f(\cdot)\)</span> 表示一个未知函数，我们的目的是探究默认的选择 <span class="math inline">\(f(x) = x\)</span> 是否合适。 Therneau et al. (1990) 表明，在某些条件下，零模型的鞅残差与感兴趣的预测变量的散点图可以揭示 <span class="math inline">\(f(\cdot)\)</span> 函数的真实形式。在我们的示例中，我们已经假定以当前值的项 <span class="math inline">\(m_i(t)\)</span> 拟合了相对风险模型，我们可以检查鞅残差 <span class="math inline">\(r^{tm}_i(t)\)</span> 与 <span class="math inline">\(m_i(t)\)</span> 的散点图以了解系统性趋势。这些残差是使用调用 <code><a href="https://rdrr.io/r/stats/residuals.html">residuals()</a></code> 中的选项 <code>process ="Event"</code> 从拟合的联合模型计算出来的</p>
+<div class="sourceCode" id="cb94"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb94-1"><a href="chap6.html#cb94-1" tabindex="-1"></a><span class="sc">&gt;</span> martRes <span class="ot">&lt;-</span> <span class="fu">residuals</span>(jointFit.aids, <span class="at">process =</span> <span class="st">"Event"</span>)</span>
+<span id="cb94-2"><a href="chap6.html#cb94-2" tabindex="-1"></a><span class="sc">&gt;</span> mi.t <span class="ot">&lt;-</span> <span class="fu">fitted</span>(jointFit.aids, <span class="at">process =</span> <span class="st">"Longitudinal"</span>,</span>
+<span id="cb94-3"><a href="chap6.html#cb94-3" tabindex="-1"></a>                 <span class="at">type =</span> <span class="st">"EventTime"</span>)</span></code></pre></div>
+<p>函数 <code><a href="https://rdrr.io/r/stats/residuals.html">residuals()</a></code> 用于计算所有时间点上的鞅残差，在这些时间点上，我们拥有关于患者失效状态的信息。其中包括在时间 <span class="math inline">\(\{t_{ij} , j = 1, \ldots,n_i\}\)</span> 记录纵向响应<a class="footnote-ref" tabindex="0" data-toggle="popover" data-content='&lt;p&gt;&lt;span class="math inline"&gt;\(t=0\)&lt;/span&gt; 时的基线测量被排除在 &lt;span class="math inline"&gt;\(r^{tm}_i(t)\)&lt;/span&gt; 的计算之外，因为这些测量的鞅残差总是为零。&lt;/p&gt;'><sup>20</sup></a> 以及观测事件时间 <span class="math inline">\(T_i\)</span>。为了计算同一时间点的当前值的项 <span class="math inline">\(m_i(t)\)</span>，我们在调用 <code>fitting()</code> 泛型函数时使用选项 <code>type = "EventTime"</code>。图 6.3 显示了叠加了 loess 曲线的相应散点图，这是使用 <a href="chap6.html#sec6-1-1">6.1.1</a> 节中定义的函数 <code>plotResid()</code> 生成的</p>
+<div class="sourceCode" id="cb95"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb95-1"><a href="chap6.html#cb95-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">plotResid</span>(mi.t, martRes, <span class="at">col.loess =</span> <span class="st">"grey62"</span>,</span>
+<span id="cb95-2"><a href="chap6.html#cb95-2" tabindex="-1"></a>            <span class="at">ylab =</span> <span class="st">"Martingale Residuals"</span>,</span>
+<span id="cb95-3"><a href="chap6.html#cb95-3" tabindex="-1"></a>            <span class="at">xlab =</span> <span class="st">"Subject-Specific Fitted Values Longitudinal Outcome"</span>)</span></code></pre></div>
+<details><summary><font color="#B95953">图 6.3</font>
+</summary><img src="figure/figure%206.3.png#center" style="width:80.0%"></details><p><br>
+我们可以观察到，对于较小的拟合值，loess 平滑与零有轻微的偏差。为了进一步研究 CD4 细胞计数所选函数形式的适当性，建议以其他基线协变量为条件，额外检查鞅残差的系统性趋势。作为一个例子，我们取条件于治疗生成了图 6.3 的更新版本。ddI 和 ddC 组的散点图可以使用 <code>lattice</code> 中的函数 <code>xyplot()</code> 生成</p>
+<div class="sourceCode" id="cb96"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb96-1"><a href="chap6.html#cb96-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">xyplot</span>(martRes <span class="sc">~</span> mi.t <span class="sc">|</span> drug, <span class="at">data =</span> aids, <span class="at">type =</span> <span class="fu">c</span>(<span class="st">"p"</span>, <span class="st">"smooth"</span>),</span>
+<span id="cb96-2"><a href="chap6.html#cb96-2" tabindex="-1"></a>         <span class="at">col =</span> <span class="st">"black"</span>, <span class="at">lwd =</span> <span class="dv">3</span>, <span class="at">ylab =</span> <span class="st">"Martingale Residuals"</span>,</span>
+<span id="cb96-3"><a href="chap6.html#cb96-3" tabindex="-1"></a>         <span class="at">xlab =</span> <span class="st">"Subject-Specific Fitted Values Longitudinal Outcome"</span>)</span></code></pre></div>
+<p>调用 <code>xyplot()</code> 中的选项 <code>type=c("p", "smooth")</code> 指定我们要绘制散点以及 loess 平滑器拟合。如图 6.4 所示。我们再次观察到两种治疗方法与零水平线的一些轻度偏差，但 ddI 组的偏差较小。</p>
+<details><summary><font color="#B95953">图 6.4</font>
+</summary><img src="figure/figure%206.4.png#center" style="width:80.0%"></details><p><br>
+我们通过使用 Cox-Snell 残差评估生存子模型的总体拟合度来对生存结果进行残差分析。使用 <code>residual()</code> 函数在 R 中再次计算这些值，但现在使用选项 <code>type="CoxSnell"</code>：</p>
+<div class="sourceCode" id="cb97"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb97-1"><a href="chap6.html#cb97-1" tabindex="-1"></a><span class="sc">&gt;</span> resCST <span class="ot">&lt;-</span> <span class="fu">residuals</span>(jointFit.aids, <span class="at">process =</span> <span class="st">"Event"</span>,</span>
+<span id="cb97-2"><a href="chap6.html#cb97-2" tabindex="-1"></a>                      <span class="at">type =</span> <span class="st">"CoxSnell"</span>)</span></code></pre></div>
+<p>为计算 CoxSnell 残差的生存函数的 Kaplan-Meier 估计，我们使用 <code>survival</code> 包中的函数 <code>survfit()</code>。该函数的语法与目前用于拟合 Cox 模型的 <code>coxph()</code> 语法非常相似。具体来说，它接受 R 公式作为主要参数，该公式在左侧使用函数 <code>Surv()</code> 提供删失响应和相应的事件指示符，在右侧它可能包括潜在的分层因素。请注意，在这里，删失响应不是患者的观测失效时间，而是 Cox-Snell 残差。相应的事件指示符是从 <code>data</code> 参数中提供的 <code>ids.id</code> 数据框中提取的。Kaplan-Meier 估计的图形是通过调用 <code><a href="https://rdrr.io/r/graphics/plot.default.html">plot()</a></code> 函数生成的，如图 6.5 所示。</p>
+<div class="sourceCode" id="cb98"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb98-1"><a href="chap6.html#cb98-1" tabindex="-1"></a><span class="sc">&gt;</span> sfit <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(resCST, death) <span class="sc">~</span> <span class="dv">1</span>, <span class="at">data =</span> aids.id)</span>
+<span id="cb98-2"><a href="chap6.html#cb98-2" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">plot</span>(sfit, <span class="at">mark.time =</span> <span class="cn">FALSE</span>, <span class="at">conf.int =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb98-3"><a href="chap6.html#cb98-3" tabindex="-1"></a>       <span class="at">xlab =</span> <span class="st">"Cox-Snell Residuals"</span>, <span class="at">ylab =</span> <span class="st">"Survival Probability"</span>,</span>
+<span id="cb98-4"><a href="chap6.html#cb98-4" tabindex="-1"></a>       <span class="at">main =</span> <span class="st">"Survival Function of Cox-Snell Residuals"</span>)</span>
+<span id="cb98-5"><a href="chap6.html#cb98-5" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">curve</span>(<span class="fu">exp</span>(<span class="sc">-</span>x), <span class="at">from =</span> <span class="dv">0</span>, <span class="at">to =</span> <span class="fu">max</span>(aids.id<span class="sc">$</span>Time), <span class="at">add =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb98-6"><a href="chap6.html#cb98-6" tabindex="-1"></a>        <span class="at">col =</span> <span class="st">"grey62"</span>, <span class="at">lwd =</span> <span class="dv">2</span>)</span></code></pre></div>
+<details><summary><font color="#B95953">图 6.5</font>
+</summary><img src="figure/figure%206.5.png#center" style="width:80.0%"></details><p><br><code><a href="https://rdrr.io/r/graphics/curve.html">curve()</a></code> 函数用于叠加单位指数分布的生存函数，即 <span class="math inline">\(\mathcal S_{exp}(t) = \exp(−t)\)</span>。将 Kaplan-Meier 估计的拟合与预期的渐近分布进行比较，我们观察到一些差异，特别是对于大于 0.8 的残差（尽管严格来说，单位指数分布的生存函数位于 95% 逐点置信区间内）的 Kaplan-Meier 估计，但在 1 附近除外）。为了进一步检查模型的拟合，我们利用治疗对残差进行分层，并绘制单独的生存函数估计；对应的 R 代码是</p>
+<div class="sourceCode" id="cb99"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb99-1"><a href="chap6.html#cb99-1" tabindex="-1"></a><span class="sc">&gt;</span> sfit <span class="ot">&lt;-</span> <span class="fu">survfit</span>(<span class="fu">Surv</span>(resCST, death) <span class="sc">~</span> drug, <span class="at">data =</span> aids.id)</span>
+<span id="cb99-2"><a href="chap6.html#cb99-2" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">plot</span>(sfit, <span class="at">mark.time =</span> <span class="cn">FALSE</span>, <span class="at">xlab =</span> <span class="st">"Cox-Snell Residuals"</span>,</span>
+<span id="cb99-3"><a href="chap6.html#cb99-3" tabindex="-1"></a>       <span class="at">ylab =</span> <span class="st">"Survival Probability"</span>,</span>
+<span id="cb99-4"><a href="chap6.html#cb99-4" tabindex="-1"></a>       <span class="at">main =</span> <span class="st">"Survival Function of Cox-Snell Residuals"</span>)</span>
+<span id="cb99-5"><a href="chap6.html#cb99-5" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">curve</span>(<span class="fu">exp</span>(<span class="sc">-</span>x), <span class="at">from =</span> <span class="dv">0</span>, <span class="at">to =</span> <span class="fu">max</span>(aids.id<span class="sc">$</span>Time), <span class="at">add =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb99-6"><a href="chap6.html#cb99-6" tabindex="-1"></a>        <span class="at">col =</span> <span class="st">"grey62"</span>, <span class="at">lwd =</span> <span class="dv">2</span>)</span></code></pre></div>
+<p>当模型很好地拟合数据时，我们期望每个层的生存函数估计徘徊在单位指数分布附近。图 6.6 显示了两个治疗组的 Cox-Snell 残差的 Kaplan-Meier 估计，从中我们可以再次观察到大于 1 的残差值存在一些欠拟合，尽管其程度比图 6.5 中的要小。</p>
+<details><summary><font color="#B95953">图 6.6</font>
+</summary><img src="figure/figure%206.6.png#center" style="width:80.0%"></details>
+</div>
+</div>
+<div id="sec6-2" class="section level2" number="6.2">
+<h2>
+<span class="header-section-number">6.2</span> 脱落和残差<a class="anchor" aria-label="anchor" href="#sec6-2"><i class="fas fa-link"></i></a>
+</h2>
+<p>上一节介绍了残差图的基本类型，当分别拟合混合模型和相对风险模型时，残差图通常用于验证这些模型背后的假设。尽管可以很容易地构建相同类型的诊断图来检查联合模型的拟合，但问题是纵向过程残差的参考分布会受到事件发生引起的脱落的影响。具体来说，正如我们在 <a href="chap4.html#sec4-6">4.6</a> 节中所讨论的，当患者经历感兴趣的事件时，这对应于纵向信息收集的中断。因为在这种情况下，后续的测量数据要么无法再被收集，要么在事件发生后其分布发生了变化，因此视为不重要的，从而不再进行收集。正如我们在 <a href="chap4.html#sec4-6">4.6</a> 节中所看到的，联合模型所暗示的脱落机制具有非随机性质，也就是说，它对应于缺失的非随机机制（见 <a href="chap2.html#sec2-3-1">2.3.1</a> 节）。脱落机制的非随机性意味着，用于计算残差的观测并不构成目标人群的随机样本 (Verbeke et al., 2008; Fitzmaurice et al., 2004, Section 14.2). 这反过来意味着仅基于观测的残差图可能会产生误导，因为不应期望这些残差表现出标准性质，例如零均值和独立性。例如，在图 6.2 中，我们观察到，对于较小的拟合值，我们的正残差多于负残差。然而，较小的拟合值对应于较低水平的 CD4 细胞计数平方根，这反过来又对应于患者病情的恶化，因此脱落的概率较大。因此，与较小拟合值对应的残差仅基于健康状况“良好”的患者。因此，由于脱落，我们无法辨别图 6.2 中看到的系统性趋势是否真正归因于固定效应的设计矩阵 <span class="math inline">\(X\)</span> 的错误指定。</p>
+<p>为了进一步说明非随机脱落如何影响仅基于观测数据的残差的使用，我们在图 6.7 中显示了标准化边际残差和标准化特定于受试者的残差与 PBC 数据集相应拟合值的关系图。这些基于一个联合模型，该模型假定对数血清胆红素的特定于受试者的线性演变，以及事件发生时间（死亡或移植）的相对风险模型，该模型控制治疗和肝肿大，并假定分段恒定的基线风险函数。拟合模型的 R 语法是</p>
+<div class="sourceCode" id="cb100"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb100-1"><a href="chap6.html#cb100-1" tabindex="-1"></a><span class="sc">&gt;</span> lmeFit2.pbc <span class="ot">&lt;-</span> <span class="fu">lme</span>(<span class="fu">log</span>(serBilir) <span class="sc">~</span> year <span class="sc">*</span> drug,</span>
+<span id="cb100-2"><a href="chap6.html#cb100-2" tabindex="-1"></a>                     <span class="at">random =</span> <span class="sc">~</span> year <span class="sc">|</span> id, <span class="at">data =</span> pbc2)</span>
+<span id="cb100-3"><a href="chap6.html#cb100-3" tabindex="-1"></a><span class="sc">&gt;</span> coxFit.pbc <span class="ot">&lt;-</span> <span class="fu">coxph</span>(<span class="fu">Surv</span>(years, status2) <span class="sc">~</span> drug <span class="sc">+</span> hepatomegaly,</span>
+<span id="cb100-4"><a href="chap6.html#cb100-4" tabindex="-1"></a>                      <span class="at">data =</span> pbc2.id, <span class="at">x =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb100-5"><a href="chap6.html#cb100-5" tabindex="-1"></a><span class="sc">&gt;</span> jointFit2.pbc <span class="ot">&lt;-</span> <span class="fu">jointModel</span>(lmeFit2.pbc, coxFit.pbc, <span class="at">timeVar =</span> <span class="st">"year"</span>,</span>
+<span id="cb100-6"><a href="chap6.html#cb100-6" tabindex="-1"></a>                              <span class="at">method =</span> <span class="st">"piecewise-PH-aGH"</span>)</span></code></pre></div>
+<p>对于 <a href="chap6.html#sec6-1">6.1</a> 节中的 AIDS 数据集，我们分别使用对泛型函数 <code><a href="https://rdrr.io/r/stats/residuals.html">residuals()</a></code> 和 <code>fitting()</code> 的适当调用来计算残差和拟合值</p>
+<div class="sourceCode" id="cb101"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb101-1"><a href="chap6.html#cb101-1" tabindex="-1"></a><span class="sc">&gt;</span> resSubY.pbc <span class="ot">&lt;-</span> <span class="fu">residuals</span>(jointFit2.pbc, <span class="at">process =</span> <span class="st">"Longitudinal"</span>,</span>
+<span id="cb101-2"><a href="chap6.html#cb101-2" tabindex="-1"></a>                           <span class="at">type =</span> <span class="st">"stand-Subject"</span>)</span>
+<span id="cb101-3"><a href="chap6.html#cb101-3" tabindex="-1"></a><span class="sc">&gt;</span> fitSubY.pbc <span class="ot">&lt;-</span> <span class="fu">fitted</span>(jointFit2.pbc, <span class="at">process =</span> <span class="st">"Longitudinal"</span>,</span>
+<span id="cb101-4"><a href="chap6.html#cb101-4" tabindex="-1"></a>                        <span class="at">type =</span> <span class="st">"Subject"</span>)</span>
+<span id="cb101-5"><a href="chap6.html#cb101-5" tabindex="-1"></a><span class="sc">&gt;</span> resMargY.pbc <span class="ot">&lt;-</span> <span class="fu">residuals</span>(jointFit2.pbc, <span class="at">process =</span> <span class="st">"Longitudinal"</span>,</span>
+<span id="cb101-6"><a href="chap6.html#cb101-6" tabindex="-1"></a>                            <span class="at">type =</span> <span class="st">"stand-Marginal"</span>)</span>
+<span id="cb101-7"><a href="chap6.html#cb101-7" tabindex="-1"></a><span class="sc">&gt;</span> fitMargY.pbc <span class="ot">&lt;-</span> <span class="fu">fitted</span>(jointFit2.pbc, <span class="at">process =</span> <span class="st">"Longitudinal"</span>,</span>
+<span id="cb101-8"><a href="chap6.html#cb101-8" tabindex="-1"></a>                         <span class="at">type =</span> <span class="st">"Marginal"</span>)</span></code></pre></div>
+<p>然后用如下代码生成图 6.7</p>
+<div class="sourceCode" id="cb102"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb102-1"><a href="chap6.html#cb102-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">2</span>))</span>
+<span id="cb102-2"><a href="chap6.html#cb102-2" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">plotResid</span>(fitSubY.pbc, resSubY.pbc, <span class="at">xlab =</span> <span class="st">"Fitted Values"</span>,</span>
+<span id="cb102-3"><a href="chap6.html#cb102-3" tabindex="-1"></a>            <span class="at">ylab =</span> <span class="st">"Subject-Specific Residuals"</span>)</span>
+<span id="cb102-4"><a href="chap6.html#cb102-4" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">plotResid</span>(fitMargY.pbc, resMargY.pbc, <span class="at">xlab =</span> <span class="st">"Fitted Values"</span>,</span>
+<span id="cb102-5"><a href="chap6.html#cb102-5" tabindex="-1"></a>            <span class="at">ylab =</span> <span class="st">"Marginal Residuals"</span>)</span></code></pre></div>
+<details><summary><font color="#B95953">图 6.7</font>
+</summary><img src="figure/figure%206.7.png#center" style="width:80.0%"></details><p><br>
+我们再次观察到标准化边际残差与拟合值图中的拟合 loess 曲线显示出系统性趋势。但请注意，高水平的血清胆红素表明患者病情恶化，导致更高的死亡率（即中途脱落）。与图 6.2 类似，我们不能从该图中明确得出结论，认为欠拟合是由于 <span class="math inline">\(X\)</span> 的错误指定造成的。因此，艾滋病和 PBC 数据示例都表明，在验证联合模型的假设时，仅基于观测数据的残差图可能是具有误导性的。</p>
+</div>
+<div id="sec6-3" class="section level2" number="6.3">
+<h2>
+<span class="header-section-number">6.3</span> 多重插补残差<a class="anchor" aria-label="anchor" href="#sec6-3"><i class="fas fa-link"></i></a>
+</h2>
+<div id="sec6-3-1" class="section level3" number="6.3.1">
+<h3>
+<span class="header-section-number">6.3.1</span> 固定就诊时间<a class="anchor" aria-label="anchor" href="#sec6-3-1"><i class="fas fa-link"></i></a>
+</h3>
+<p>为了解决由非随机脱落引起的问题，并生成可用于诊断图的纵向过程残差，Rizopoulos et al. (2010) 提出，在完全数据模型下，通过随机插补缺失的纵向响应来扩充观测数据，这些插补响应对应于如果患者未脱落本应观察到的纵向结果。然后利用这些扩充后的纵向响应，针对完全数据计算残差，并采用多重插补方法来适当解释由于缺失数据而导致的插补值中的不确定性 (Gelman et al., 2005).</p>
+<p>为呈现该想法，我们将借用 <a href="chap4.html#sec4-6">4.6</a> 节的符号，并用 <span class="math inline">\(y_i^o=\{y_i(t_{ij}):t_{ij}&lt;T_i,j=1,\ldots,n_i\}\)</span> 表示纵向响应向量的观测部分，包含第 <span class="math inline">\(i\)</span> 个受试者在观测事件时间之前的所有观测纵向测量值，用 <span class="math inline">\(y_i^m=\{y_i(t_{ij}):t_{ij}\geq T_i,j=1,\ldots,n'_i\)</span> 表示纵向测量的缺失部分，如果事件没有发生，这些测量在研究结束前将一直进行。我们还假定联合模型已拟合到手头上的数据集，并且我们已获得了最大似然估计 <span class="math inline">\(\hat\theta\)</span> 及其渐近协方差阵 <span class="math inline">\(\text{v}\hat{\mathrm{a}}\text{r}(\hat{\theta})\)</span> 的估计。此外，我们假定纵向测量计划在一组预先指定的时间点 <span class="math inline">\(t_0,t_1,\ldots,t_\max\)</span> 进行，并且对于第 <span class="math inline">\(i\)</span> 个受试者，测量结果可追溯到早于 <span class="math inline">\(T_i\)</span> 的最后一个预先指定的就诊时间。为了提出想法，我们采用了联合模型的贝叶斯公式，因为多重插补具有贝叶斯基础 (Little and Rubin, 2002, Chapter 10). 具体来说，多重插补方法是基于给定观测数据的 <span class="math inline">\(y^m_i\)</span> 后验分布的重复抽样，对参数的后验分布进行平均。在联合模型 <a href="chap4.html#eq:4-9">(4.9)</a> 和脱落机制 <a href="chap4.html#eq:4-20">(4.20)</a> 下，该分布的密度可表示为</p>
+<p><span class="math display" id="eq:6-7">\[\begin{align}
+p(y_i^m\mid y_i^o,T_i,\delta_i)=\int p(y_i^m\mid y_i^o,T_i,\delta_i;\theta)p(\theta\mid y_i^o,T_i,\delta_i)d\theta
+\tag{6.7}
+\end{align}\]</span></p>
+<p>上式中的被积函数的第一部分可以从 <a href="chap4.html#eq:4-20">(4.20)</a> 中导出，同时考虑条件独立性假设 <a href="chap4.html#eq:4-7">(4.7)</a> 和 <a href="chap4.html#eq:4-8">(4.8)</a>，即：</p>
+<p><span class="math display" id="eq:6-8">\[\begin{align}
+p(y_i^m\mid y_i^o,T_i,\delta_i;\theta)\quad&amp;=\quad\int p(y_i^m\mid b_i,y_i^o,T_i,\delta_i;\theta)p(b_i\mid y_i^o,T_i,\delta_i;\theta)db_i\\&amp;=\quad\int p(y_i^m\mid b_i;\theta)p(b_i\mid y_i^o,T_i,\delta_i;\theta)db_i
+\tag{6.8}
+\end{align}\]</span></p>
+<p>对于第二部分，即给定观测数据的参数的后验分布，我们使用标准渐近贝叶斯理论的论点 (Cox and Hinkley, 1974, Section 10.6)，并假定样本量 <span class="math inline">\(n\)</span> 足够大，使得 <span class="math inline">\(\{\theta\mid y_i^o,T_i,\delta_i\}\)</span> 可以很好地近似为 <span class="math inline">\(\mathcal{N}\{\hat{\theta},\text{v}\hat{\mathrm{a}}\text{r}(\hat{\theta})\}\)</span>。该假定与 <a href="chap4.html#eq:4-7">(4.7)</a> 和 <a href="chap4.html#eq:4-8">(4.8)</a> 相结合，提出了以下模拟方案</p>
+<div class="rmdnote">
+<ul>
+<li>步骤 1：抽取 <span class="math inline">\(\theta^{(l)}\sim\mathcal{N}\{\hat{\theta},\text{v}\hat{\mathrm{a}}\text{r}(\hat{\theta})\}\)</span>
+</li>
+<li>步骤 2：抽取 <span class="math inline">\(b_i^{(l)}\sim\{b_i\mid y_i^o,T_i,\delta_i,\theta^{(l)}\}\)</span>
+</li>
+<li>步骤 3：对于第 <span class="math inline">\(i\)</span> 个受试者未观测的预先指定的就诊时间 <span class="math inline">\(t_{ij}\geq T_i,j=1,\ldots,n'_i\)</span> 抽取 <span class="math inline">\(y_i^{m(l)}(t_{ij})\sim\mathcal{N}\Big\{\hat{m}_i^{(l)}(t_{ij}),\hat{\sigma}^{2,(l)}\Big\}\)</span>，其中 <span class="math inline">\(\hat{m}_i^{(l)}(t_{ij})=x_i^\top(t_{ij})\hat{\beta}^{(l)}+z_i^\top(t_{ij})\hat{b}_i^{(l)}\)</span>
+</li>
+</ul>
+</div>
+<p>对每个受试者重复以上步骤 <span class="math inline">\(l=1,\ldots,L\)</span> 次，其中 <span class="math inline">\(L\)</span> 表示插补次数。步骤 1 和步骤 2 分别考虑参数和经验贝叶斯估计的不确定性，而步骤 3 则对缺失的纵向响应进行插补。步骤 1 和 3 执行起来很简单，因为它们需要从多元正态分布中采样；相反，给定步骤 2 中的观测数据，随机效应的后验分布是非标准形式，因此需要更复杂的方法从中进行抽样。Rizopoulos et al. (2010) 提出使用 Metropolis-Hastings 算法，该算法具有来自以经验贝叶斯估计的多元 <span class="math inline">\(t\)</span> 分布的独立建议 (proposals)，该分布以 <span class="math inline">\(\hat b_i\)</span> 为中心，尺度矩阵为 <span class="math inline">\(\text{v}\hat{\mathrm{a}}\text{r}(\hat{b}_i)\)</span> 并具有四个自由度。Booth and Hobert (1999) 使用类似的方法来模拟广义线性混合模型中随机效应的后验分布。在联合建模框架中，采用多元 <span class="math inline">\(t\)</span> 建议的理由有两个。首先，Rizopoulos et al. (2008) 已经表明，随着 <span class="math inline">\(n_i\)</span> 的增加，随机效应的对数后验分布的首项是线性混合模型密度的对数 <span class="math inline">\(\log p(y_i|b_i;\theta^{(l)})=\sum_j\log p\{y_i(t_{ij})|b_i;\theta^{(l)}\}\)</span>，它在 <span class="math inline">\(b_i\)</span> 中是二次的，将类似于多元正态分布的形状；其次，对于较小的 <span class="math inline">\(n_i\)</span>，<span class="math inline">\(t\)</span> 分布的较重的尾部将确保足够的覆盖范围。模拟的 <span class="math inline">\(y_i^{m(l)}(t_{ij})\)</span> 值与 <span class="math inline">\(y^o_i\)</span> 现在可用于根据 <a href="chap6.html#eq:6-2">(6.2)</a> 或 <a href="chap6.html#eq:6-4">(6.4)</a> 计算残差。多重插补残差的一个关键优点是它们继承了完全数据模型的性质。这有利于常见的图形模型检查，而不需要正式推导观测数据残差的参考分布。然而，我们应该注意，在一些终止事件是死亡的临床研究中，例如在 AIDS 和 PBC 数据集中，考虑事件时间后纵向结果的潜在值在概念上可能不合理；参见 Kurland and Heagerty (2005). 尽管如此，多重插补残差仅用作帮助我们研究模型拟合度的机制，我们实际上对事件时间之后的推断并不感兴趣。</p>
+<p>上述模拟方案可在 <code><a href="https://rdrr.io/r/stats/residuals.html">residuals()</a></code> 方法中使用，并且可以使用逻辑参数 <code>MI</code> 进行调用。作为说明，我们计算 AIDS 数据集的多重插补标准化边际残差</p>
+<div class="sourceCode" id="cb103"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb103-1"><a href="chap6.html#cb103-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">set.seed</span>(<span class="dv">123</span>) <span class="co"># we set the seed for reproducibility</span></span>
+<span id="cb103-2"><a href="chap6.html#cb103-2" tabindex="-1"></a><span class="sc">&gt;</span> resMI.aids <span class="ot">&lt;-</span> <span class="fu">residuals</span>(jointFit.aids, <span class="at">process =</span> <span class="st">"Longitudinal"</span>,</span>
+<span id="cb103-3"><a href="chap6.html#cb103-3" tabindex="-1"></a>                          <span class="at">type =</span> <span class="st">"Marginal"</span>, <span class="at">MI =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb103-4"><a href="chap6.html#cb103-4" tabindex="-1"></a><span class="sc">&gt;</span> fitMargYmiss.aids <span class="ot">&lt;-</span> resMI.aids<span class="sc">$</span>fitted.valsM</span>
+<span id="cb103-5"><a href="chap6.html#cb103-5" tabindex="-1"></a><span class="sc">&gt;</span> resMargYmiss.aids <span class="ot">&lt;-</span> resMI.aids<span class="sc">$</span>resid.valsM</span></code></pre></div>
+<p>与标准调用 <code><a href="https://rdrr.io/r/stats/residuals.html">residuals()</a></code> 返回一个残差数值向量（如之前所示）不同，将 <code>MI</code> 设置为 <code>TRUE</code> 会返回一个包含多个组件的列表，这些组件在进一步处理多重插补残差时非常有用。我们在这里提取的两个组件是拟合值和对应于 <span class="math inline">\(y^m_i\)</span> 的多重插补标准化边际残差，如 <a href="chap6.html#sec6-1-1">6.1.1</a> 节所述。对象 <code>fitMargY.miss</code> 是一个数值向量，而 <code>resMargY.miss</code> 是一个数值矩阵，其列表示基于 <span class="math inline">\(y^m_i\)</span> 的多重插补得到的残差实现（默认为 50 次多重插补；这由函数 <code><a href="https://rdrr.io/r/stats/residuals.html">residuals()</a></code> 的参数 <code>M</code> 控制）。以下代码生成了图 6.8，该图描述了多重插补残差以及观测残差与相应拟合值的关系</p>
+<div class="sourceCode" id="cb104"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb104-1"><a href="chap6.html#cb104-1" tabindex="-1"></a><span class="sc">&gt;</span> M <span class="ot">&lt;-</span> <span class="fu">ncol</span>(resMargYmiss.aids) <span class="co"># number of imputations</span></span>
+<span id="cb104-2"><a href="chap6.html#cb104-2" tabindex="-1"></a><span class="sc">&gt;</span> resMargYmi.aids <span class="ot">&lt;-</span> <span class="fu">c</span>(resMargY.aids, resMargYmiss.aids)</span>
+<span id="cb104-3"><a href="chap6.html#cb104-3" tabindex="-1"></a><span class="sc">&gt;</span> fitMargYmi.aids <span class="ot">&lt;-</span> <span class="fu">c</span>(fitMargY.aids, <span class="fu">rep</span>(fitMargYmiss.aids, M))</span>
+<span id="cb104-4"><a href="chap6.html#cb104-4" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">plot</span>(<span class="fu">range</span>(fitMargYmi.aids), <span class="fu">range</span>(resMargYmi.aids), <span class="at">type =</span> <span class="st">"n"</span>,</span>
+<span id="cb104-5"><a href="chap6.html#cb104-5" tabindex="-1"></a>       <span class="at">xlab =</span> <span class="st">"Fitted Values"</span>,</span>
+<span id="cb104-6"><a href="chap6.html#cb104-6" tabindex="-1"></a>       <span class="at">ylab =</span> <span class="st">"MI Standardized Marginal Residuals"</span>)</span>
+<span id="cb104-7"><a href="chap6.html#cb104-7" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">abline</span>(<span class="at">h =</span> <span class="dv">0</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb104-8"><a href="chap6.html#cb104-8" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">points</span>(<span class="fu">rep</span>(fitMargYmiss.aids, M), resMargYmiss.aids, <span class="at">cex =</span> <span class="fl">0.5</span>,</span>
+<span id="cb104-9"><a href="chap6.html#cb104-9" tabindex="-1"></a>         <span class="at">col =</span> <span class="st">"grey"</span>)</span>
+<span id="cb104-10"><a href="chap6.html#cb104-10" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">points</span>(fitMargY.aids, resMargY.aids)</span></code></pre></div>
+<details><summary><font color="#B95953">图 6.8</font>
+</summary><img src="figure/figure%206.8.png#center" style="width:80.0%"></details><p><br>
+图 6.8 中的 loess 曲线实际上与图 6.2 中的曲线相同，由如下代码生成：</p>
+<div class="sourceCode" id="cb105"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb105-1"><a href="chap6.html#cb105-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">lines</span>(<span class="fu">lowess</span>(fitMargY.aids, resMargY.aids), <span class="at">lwd =</span> <span class="dv">2</span>)</span></code></pre></div>
+<p>然而，为了生成描述完全残差（即多重插补残差与观测残差）与其相应拟合值之间关系的 loess 曲线，需要一些额外的步骤。具体来说，我们需要考虑到，对于第 <span class="math inline">\(i\)</span> 个受试者没有出现在研究中心的每个时间点，我们有 <span class="math inline">\(M = 50\)</span> 个多重插补残差，而对于实际出现的时间我们只有一个残差。因此，在 loess 曲线的计算中，我们将使用案例权重：观测残差值为 1，而多重插补残差值为 <span class="math inline">\(1/M = 1/50 = 0.02\)</span>，即</p>
+<div class="sourceCode" id="cb106"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb106-1"><a href="chap6.html#cb106-1" tabindex="-1"></a><span class="sc">&gt;</span> datResid <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb106-2"><a href="chap6.html#cb106-2" tabindex="-1"></a>  <span class="at">resid =</span> resMargYmi.aids,</span>
+<span id="cb106-3"><a href="chap6.html#cb106-3" tabindex="-1"></a>                         <span class="at">fitted =</span> fitMargYmi.aids,</span>
+<span id="cb106-4"><a href="chap6.html#cb106-4" tabindex="-1"></a>                         <span class="at">weight =</span> <span class="fu">c</span>(<span class="fu">rep</span>(<span class="dv">1</span>, <span class="fu">length</span>(resMargY.aids)),</span>
+<span id="cb106-5"><a href="chap6.html#cb106-5" tabindex="-1"></a>                                    <span class="fu">rep</span>(<span class="dv">1</span><span class="sc">/</span>M, <span class="fu">length</span>(resMargYmiss.aids)))</span>
+<span id="cb106-6"><a href="chap6.html#cb106-6" tabindex="-1"></a>)</span>
+<span id="cb106-7"><a href="chap6.html#cb106-7" tabindex="-1"></a><span class="sc">&gt;</span> fitLoess.aids <span class="ot">&lt;-</span> <span class="fu">loess</span>(resid <span class="sc">~</span> fitted, <span class="at">data =</span> datResid,</span>
+<span id="cb106-8"><a href="chap6.html#cb106-8" tabindex="-1"></a>                         <span class="at">weights =</span> weight)</span>
+<span id="cb106-9"><a href="chap6.html#cb106-9" tabindex="-1"></a><span class="sc">&gt;</span> nd.aids <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">fitted =</span> <span class="fu">seq</span>(<span class="fu">min</span>(fitMargYmi.aids),</span>
+<span id="cb106-10"><a href="chap6.html#cb106-10" tabindex="-1"></a>                                     <span class="fu">max</span>(fitMargYmi.aids), <span class="at">length.out =</span> <span class="dv">100</span>))</span>
+<span id="cb106-11"><a href="chap6.html#cb106-11" tabindex="-1"></a><span class="sc">&gt;</span> prdLoess.aids <span class="ot">&lt;-</span> <span class="fu">predict</span>(fitLoess.aids, nd.aids)</span>
+<span id="cb106-12"><a href="chap6.html#cb106-12" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">lines</span>(nd.aids<span class="sc">$</span>fit, prdLoess.aids, <span class="at">lwd =</span> <span class="dv">2</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span></code></pre></div>
+<p>两种 loess 平滑器之间的比较表明，实际上，仅基于观测数据的残差图中出现的系统性趋势主要归因于非随机脱落，而不是模型的欠拟合。</p>
+</div>
+<div id="sec6-3-2" class="section level3" number="6.3.2">
+<h3>
+<span class="header-section-number">6.3.2</span> 随机就诊时间<a class="anchor" aria-label="anchor" href="#sec6-3-2"><i class="fas fa-link"></i></a>
+</h3>
+<p><a href="chap6.html#sec6-3-1">6.3.1</a> 节中提出的多重插补方案假定就诊时间由方案预先指定，并且所有患者都遵守这些时间。然而，在观察性研究中，进行纵向测量的时间点并非由研究设计固定的，而是由医生甚至患者自己决定的。这甚至可能发生在随机研究中，根据方案，这些研究有预先指定的就诊时间。例如，对于 PBC 数据集和前两年的随访，在基线、0.5 年、1 年和 2 年测量血清胆红素，变异性很小，但在后几年，就诊时间的变异性显著增加。在 <a href="chap4.html#sec4-3-2">4.3.2</a> 节中提到的非信息性假设下，只要联合模型被正确指定，就诊过程可以忽略，而不会影响最大似然估计的渐近性质。</p>
+<p>然而，如 <a href="chap6.html#sec6-3-1">6.3.1</a> 节所述，随机就诊时间会使多重插补残差的计算变得复杂。具体来说，我们无法获得第<span class="math inline">\(i\)</span> 个受试者在观测事件时间 <span class="math inline">\(T_i\)</span> 之后应该提供测量值时间点的测量，因此，对于设计矩阵 <span class="math inline">\(X_i\)</span> 和 <span class="math inline">\(Z_i\)</span> 中对应行 <span class="math inline">\(x_i(t_{ij})\)</span> 和 <span class="math inline">\(z_i(t_{ij})\)</span>（其中 <span class="math inline">\(t_{ij} \ge T_i\)</span>）无法指定。这个问题不能通过在任意指定的固定时间点插补 <span class="math inline">\(y^m_i\)</span> 的简单方法来解决，因为它可能会在观测很少的特定数据范围内产生太多或太少的正残差，从而污染残差图。另一种方法是为就诊过程拟合合适的模型，并用它来模拟每个人未来的就诊时间。正式地，我们不失一般性地假定，所有受试者都至少有一个测量，我们令 <span class="math inline">\(u_{ik} (k = 2, ..., n_i)\)</span> 表示第 <span class="math inline">\(i\)</span> 个受试者第 <span class="math inline">\(k -1\)</span> 和第 <span class="math inline">\(k\)</span> 次就诊之间经过的时间。并令 <span class="math inline">\(Y^*_i\)</span> 表示完全纵向响应向量，即如果受试者 <span class="math inline">\(i\)</span> 没有脱落，在时间 <span class="math inline">\(t\)</span> 之前的所有观测纵向响应。根据这些定义，就诊过程的非信息性假设可以表达为</p>
+<p><span class="math display" id="eq:6-9">\[\begin{align}
+p(u_{ik}&amp;\mid u_{i2},\dots,u_{i,k-1},Y_i^*;\theta_\upsilon)\\&amp;=p\{u_{ik}\mid u_{i2},\dots,u_{i,k-1},y_i(t_1),\dots,y_i(t_{k-1});\theta_v\}
+\tag{6.9}
+\end{align}\]</span></p>
+<p>其中 <span class="math inline">\(\theta_v\)</span> 是将就诊过程的密度参数化的向量，并且 <span class="math inline">\(\{\theta,\theta_v\}\)</span> 具有不相交的参数空间。为了建立就诊过程的模型，我们需要考虑到每个受试者的就诊时间 <span class="math inline">\(u_i^\top=(u_{i2},\ldots,u_{in_i})\)</span> 是相关的。对于多元生存数据，主要有两类模型，即边际模型和条件/脆弱性模型 (Hougaard, 2000; Therneau and Grambsch, 2000). 边际模型基于与 Liang and Zeger (1986) 的广义估计方程方法类似的思想，该方法需要将普通 Cox 模型拟合到多元数据，将其视为独立的（即忽略相关性），然后使用三明治型估计调整估计的标准误。另一方面，条件模型使用潜变量显式地对相关性进行建模。与混合模型类似，我们做出了一个条件独立性假设，即在给定脆弱项的情况下，多元生存响应是独立的。因此，脆弱模型需要指定以脆弱项为条件的多元生存响应的模型，以及脆弱项本身的适当分布假定 (Duchateau and Janssen, 2008).</p>
+<p>出于我们的目的，并且因为我们想模拟每个受试者的就诊时间，我们需要提供一个完整的指定——条件分布 <span class="math inline">\(p\{u_{ik}~|~u_{i2},\ldots,u_{i,k-1},y_i(t_1),\ldots,y_i(t_{k-1});\theta_v\}\)</span>，因此条件模型更合适。具体来说，我们使用具有乘性 Gamma 脆弱性的 Weibull 模型，定义为</p>
+<p><span class="math display" id="eq:6-10">\[\begin{align}
+\lambda(u_{ik}\mid x_{vi},\omega_i)&amp;=\lambda_0(u_{ik})\omega_i\exp(x_{vi}^\top\gamma_v),&amp;\omega_i&amp;\sim\text{Gamma}(\sigma_\omega,\sigma_\omega)
+\tag{6.10}
+\end{align}\]</span></p>
+<p>其中 <span class="math inline">\(\lambda(\cdot)\)</span> 是以脆弱项 <span class="math inline">\(\omega_i\)</span> 为条件的风险函数，<span class="math inline">\(x_{vi}\)</span> 表示协变量向量，其可能包含观测纵向响应 <span class="math inline">\(y_i(t_{i1}),\ldots,y_i(t_{i,k-1})\)</span> 的函数形式，<span class="math inline">\(\gamma_v\)</span> 是回归系数向量，<span class="math inline">\(\sigma^{−1}_\omega\)</span> 是 <span class="math inline">\(\omega_i\)</span> 的未知方差。Weibull 基线风险函数由 <span class="math inline">\(\lambda_0(u_{ik})=\phi\psi u_{ik}^{\psi-1}\)</span> 给出，其中 <span class="math inline">\(\psi,\phi&gt;0\)</span>。我们之所以选择该模型，不仅是因为它的灵活性和简单性，而且是因为在给定观测数据的情况下，脆弱项的后验分布有标准形式 (Sahu et al., 1997)，如下所示，这有助于模拟。</p>
+<p>类似于 <a href="chap6.html#sec6-3-1">6.3.1</a> 节，我们假定联合模型和就诊过程模型 <a href="chap6.html#eq:6-10">(6.10)</a> 都已拟合到手头的数据，并已分别获得了最大似然估计 <span class="math inline">\(\hat\theta\)</span> 和 <span class="math inline">\(\hat\theta_v\)</span> 以及它们响应的渐近协方差阵 <span class="math inline">\(\operatorname{v\hat{a}r}(\hat{\theta})\)</span> 和 <span class="math inline">\(\operatorname{v\hat{a}r}(\hat{\theta}_v)\)</span>。还令 <span class="math inline">\(t_\max\)</span> 表示研究的结束，并且 <span class="math inline">\(\delta_{v,ik}\)</span> 表示对应于 <span class="math inline">\(u_{1k}\)</span> 的事件指示符。此外，考虑到非信息性假设 <a href="chap6.html#eq:6-9">(6.9)</a>，未来就诊的经历的时间 <span class="math inline">\(u_{i,n_i+1}\)</span> 可独立于 <span class="math inline">\(y_i^m(t_{i,n_i+1})\)</span> 来模拟。因此，在随机就诊时间设定下的模拟方案采用如下形式</p>
+<div class="rmdnote">
+<ul>
+<li>步骤 1：参数值
+<ol style="list-style-type: lower-alpha">
+<li>抽取 <span class="math inline">\(\theta_v^{(l)}\sim\mathcal{N}\{\hat{\theta}_v,\text{v}\hat{\mathrm{a}}\text{r}(\hat{\theta}_v)\}\)</span>
+</li>
+<li>抽取 <span class="math inline">\(\theta^{(l)}\sim\mathcal{N}\{\hat{\theta},\text{v}\hat{\mathrm{a}}\text{r}(\hat{\theta})\}\)</span>
+</li>
+</ol>
+</li>
+<li>步骤 2：脆弱项和随机效应
+<ol style="list-style-type: lower-alpha">
+<li>对于大于一次就诊的受试者，抽取 <span class="math inline">\(\omega_i^{(l)}\sim\mathrm{Gamma}(A,B)\)</span>，其中 <span class="math inline">\(A=\sigma_\omega^{(l)}+\sum_{k=2}^{n_i}\delta_{v,ik}\)</span> 且 <span class="math inline">\(B=\sigma_\omega^{(l)}+\phi^{(l)}\sum_{k=2}^{n_i}u_{ik}^{\psi^{(l)}}\exp\bigl(x_{vi}^\top\gamma_v^{(l)}\bigr)\)</span>；对于只有一次就诊的受试者，抽取 <span class="math inline">\(\omega_i^{(l)}\sim\mathrm{Gamma}(\sigma_\omega^{(l)},\sigma_\omega^{(l)})\)</span>
+</li>
+<li>抽取 <span class="math inline">\(b_i^{(l)}\sim\{b_i\mid y_i^o,T_i,\delta_i,\theta^{(l)}\}\)</span>
+</li>
+</ol>
+</li>
+<li>步骤 3：结果
+<ol style="list-style-type: lower-alpha">
+<li>抽取 <span class="math inline">\(u_i^{(l)}\sim\text{Weibull}\Big\{\psi^{(l)},\phi^{(l)}\omega_i^{(l)}\exp(x_{vi}^\top\gamma_v^{(l)})\Big\}\)</span>
+</li>
+<li>令 <span class="math inline">\(\tilde{t}_i=u_i^{(l)}+t_{in}\)</span>，其中 <span class="math inline">\(t_{in}\)</span> 表示第 <span class="math inline">\(i\)</span> 个受试者末次就诊时间。若 <span class="math inline">\(\tilde{t}_i&gt;t_{max}\)</span>，则对于该受试者没有 <span class="math inline">\(y_i^m\)</span> 需要插补；否则抽取 <span class="math inline">\(y_i^{m(l)}(\tilde{t}_i)\sim\mathcal{N}\bigg\{\hat{m}_i^{(l)}(\tilde{t}_i),\hat{\sigma}^{2,(l)}\bigg\}\)</span>，其中 <span class="math inline">\(\hat{m}_i^{(l)}(\tilde{t}_i)=x_i^\top(\tilde{t}_i)\hat{\beta}^{(l)}+z_i^\top(\tilde{t}_i)\hat{b}_i^{(l)}\)</span>
+</li>
+<li>令 <span class="math inline">\(t_{in_i}=\tilde{t}_i\)</span> 并对于所有 <span class="math inline">\(i\)</span> 重复 a-b 直到 <span class="math inline">\(t_{in_i}&gt;t_{max}\)</span>
+</li>
+</ol>
+</li>
+</ul>
+</div>
+<p>重复以上步骤 <span class="math inline">\(l=1,\ldots,L\)</span> 次。与 <a href="chap6.html#sec6-3-1">6.3.1</a> 节一样，步骤 1-3 同时考虑了联合过程模型和就诊过程模型中的不确定性。此外，请注意，只有一项纵向测量的受试者不会向就诊过程模型提供任何信息。对于这些情况，在步骤 3a 中，我们只能使用 Gamma 先验分布（步骤 2a）中的模拟脆弱值来模拟未来的就诊时间。</p>
+<p>应用上述模拟方案的一个重要方面是就诊过程模型的线性预测器的形式。更具体地说，我们应该注意到，假设 <a href="chap6.html#eq:6-9">(6.9)</a> 是最弱的假设，在该假设下，即使忽略就诊过程，联合模型也能提供有效的推断，但满足 <a href="chap6.html#eq:6-9">(6.9)</a> 的模型涉及许多参数，因此可能是不稳定的。一组更有力但可能更合理的假设是</p>
+<p><span class="math display" id="eq:6-11">\[\begin{align}
+p(u_{ik}&amp;\mid u_{i2},\ldots,u_{i,k-1},Y_i^*;\theta_v)\\&amp;=\quad p\{u_{ik}\mid u_{i2},\ldots,u_{i,k-1},y_i(t_{k-1});\theta_v\}
+\tag{6.11}
+\end{align}\]</span></p>
+<p>以及</p>
+<p><span class="math display" id="eq:6-12">\[\begin{align}
+p(u_{ik}\mid u_{i2},\ldots,u_{i,k-1},Y_i^*;\theta_v)=p\{u_{ik}\mid y_i(t_{k-1});\theta_v\}
+\tag{6.12}
+\end{align}\]</span></p>
+<p>式 <a href="chap6.html#eq:6-11">(6.11)</a> 假定就诊 <span class="math inline">\(k−1\)</span> 和就诊 <span class="math inline">\(k\)</span> 之间的时间取决于之前的时间和最后一次观测纵向测量值，而在 <a href="chap6.html#eq:6-12">(6.12)</a> 中，它仅取决于最后一次观测纵向测量值。这些假设描述了医生根据最后的观测结果以及可能的过去的就诊模式来决定患者未来就诊的情况。</p>
+<p>在 <a href="chap6.html#sec6-2">6.2</a> 节中，我们展示了多重插补方法在实际中的应用，该方法用于扩增将联合模型拟合到 PBC 数据集时纵向过程的标准化残差。作为第一步，我们需要指定就诊过程模型。为了说明，我们假定一个简单的模型，该模型假设在第 <span class="math inline">\(k-1\)</span> 次和 <span class="math inline">\(k\)</span> 次就诊之间经历的时间 <span class="math inline">\(u_{ik}\)</span> 取决于之前的就诊时间以及当前血清胆红素的值。该模型对应于假设 <a href="chap6.html#eq:6-11">(6.11)</a>，其形式如下：</p>
+<p><span class="math display">\[\lambda(u_{ik}\mid y_i^*(t),\omega_i)=\lambda_0(u_{ik})\omega_i\exp\{\gamma_vy_i(t_{k-1})\},\omega_i\sim\text{Gamma}(\sigma_\omega,\sigma_\omega)\]</span></p>
+<p>为拟合该模型，我们首先需要从 <code>pbc2</code> 数据框中提取每个受试者就诊之间的时间 <span class="math inline">\(\{u_{ik},k=2,\ldots,n_i\}\)</span> 以及滞后响应向量 <span class="math inline">\(\{y_i(t_k−1),k=2,\ldots,n_i\}\)</span>。这是通过以下代码实现的</p>
+<div class="sourceCode" id="cb107"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb107-1"><a href="chap6.html#cb107-1" tabindex="-1"></a><span class="sc">&gt;</span> diff.time <span class="ot">&lt;-</span> <span class="fu">with</span>(pbc2, <span class="fu">tapply</span>(year, id, diff))</span>
+<span id="cb107-2"><a href="chap6.html#cb107-2" tabindex="-1"></a><span class="sc">&gt;</span> prev.y <span class="ot">&lt;-</span> <span class="fu">with</span>(pbc2, <span class="fu">tapply</span>(<span class="fu">log</span>(serBilir), id, head, <span class="sc">-</span><span class="dv">1</span>))</span>
+<span id="cb107-3"><a href="chap6.html#cb107-3" tabindex="-1"></a><span class="sc">&gt;</span> one.visit <span class="ot">&lt;-</span> <span class="fu">sapply</span>(diff.time, length) <span class="sc">==</span> <span class="dv">0</span></span>
+<span id="cb107-4"><a href="chap6.html#cb107-4" tabindex="-1"></a><span class="sc">&gt;</span> diff.time[one.visit] <span class="ot">&lt;-</span> prev.y[one.visit] <span class="ot">&lt;-</span> <span class="cn">NA</span></span></code></pre></div>
+<p>具体来说，对象 <code>diff.time</code> 是每个患者两次就诊之间经历时间的列表，对象 <code>prev.y</code> 是每个患者上一次就诊时间 <span class="math inline">\(y_i(t_k−1)\)</span> 的对数血清胆红素水平列表。代码的最后一行将 <code>diff.time</code> 和 <code>prev.y</code> 设置为 <code>NA</code>，对应于只有单次血清胆红素测量的患者。接下来，我们构建包含就诊过程的所有患者信息的数据框</p>
+<div class="sourceCode" id="cb108"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb108-1"><a href="chap6.html#cb108-1" tabindex="-1"></a><span class="sc">&gt;</span> dataVT <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb108-2"><a href="chap6.html#cb108-2" tabindex="-1"></a>  <span class="st">"id"</span> <span class="ot">=</span> <span class="fu">rep</span>(<span class="fu">names</span>(prev.y), <span class="fu">sapply</span>(prev.y, length)),</span>
+<span id="cb108-3"><a href="chap6.html#cb108-3" tabindex="-1"></a>                       <span class="st">"diff.Times"</span> <span class="ot">=</span> <span class="fu">unlist</span>(diff.time),</span>
+<span id="cb108-4"><a href="chap6.html#cb108-4" tabindex="-1"></a>                       <span class="st">"prev.y"</span> <span class="ot">=</span> <span class="fu">unlist</span>(prev.y),</span>
+<span id="cb108-5"><a href="chap6.html#cb108-5" tabindex="-1"></a>                       <span class="st">"event"</span> <span class="ot">=</span> <span class="dv">1</span>)</span></code></pre></div>
+<p>模型 <a href="chap6.html#eq:6-10">(6.10)</a> 可以使用 <code>JM</code> 包中的函数 <code>weibull.frailty()</code> 拟合到 R 中。该函数的语法与 Survival 包中的 <code>coxph()</code> 非常相似，具体来说，它的主要参数是指定模型的生存信息和线性预测器的参数公式、提供包含所有变量的数据框的参数 <code>data</code> 以及参数 <code>id</code> 用于指定数据中与患者标识符变量对应的变量的名称。</p>
+<div class="sourceCode" id="cb109"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb109-1"><a href="chap6.html#cb109-1" tabindex="-1"></a><span class="sc">&gt;</span> WeibFrl <span class="ot">&lt;-</span> <span class="fu">weibull.frailty</span>(<span class="fu">Surv</span>(diff.Times, event) <span class="sc">~</span> prev.y,</span>
+<span id="cb109-2"><a href="chap6.html#cb109-2" tabindex="-1"></a>                             <span class="at">id =</span> <span class="st">"id"</span>, <span class="at">data =</span> dataVT)</span>
+<span id="cb109-3"><a href="chap6.html#cb109-3" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">summary</span>(WeibFrl)</span>
+<span id="cb109-4"><a href="chap6.html#cb109-4" tabindex="-1"></a></span>
+<span id="cb109-5"><a href="chap6.html#cb109-5" tabindex="-1"></a>        Weibull Relative Risk Model with Gamma Frailty</span>
+<span id="cb109-6"><a href="chap6.html#cb109-6" tabindex="-1"></a>        </span>
+<span id="cb109-7"><a href="chap6.html#cb109-7" tabindex="-1"></a>Call<span class="sc">:</span></span>
+<span id="cb109-8"><a href="chap6.html#cb109-8" tabindex="-1"></a><span class="fu">weibull.frailty</span>(<span class="at">formula =</span> <span class="fu">Surv</span>(diff.Times, event) <span class="sc">~</span> prev.y, <span class="at">data =</span> dataVT,</span>
+<span id="cb109-9"><a href="chap6.html#cb109-9" tabindex="-1"></a>                <span class="at">id =</span> <span class="st">"id"</span>)</span>
+<span id="cb109-10"><a href="chap6.html#cb109-10" tabindex="-1"></a>Data Descriptives<span class="sc">:</span></span>
+<span id="cb109-11"><a href="chap6.html#cb109-11" tabindex="-1"></a>Number of groups<span class="sc">:</span> <span class="dv">285</span></span>
+<span id="cb109-12"><a href="chap6.html#cb109-12" tabindex="-1"></a>Number of observations<span class="sc">:</span> <span class="dv">1633</span></span>
+<span id="cb109-13"><a href="chap6.html#cb109-13" tabindex="-1"></a>Total Number of Events<span class="sc">:</span> <span class="dv">1633</span></span>
+<span id="cb109-14"><a href="chap6.html#cb109-14" tabindex="-1"></a></span>
+<span id="cb109-15"><a href="chap6.html#cb109-15" tabindex="-1"></a>Model Summary<span class="sc">:</span></span>
+<span id="cb109-16"><a href="chap6.html#cb109-16" tabindex="-1"></a>  log.Lik      AIC      BIC</span>
+<span id="cb109-17"><a href="chap6.html#cb109-17" tabindex="-1"></a> <span class="sc">-</span><span class="fl">665.254</span> <span class="fl">1338.508</span> <span class="fl">1353.118</span></span>
+<span id="cb109-18"><a href="chap6.html#cb109-18" tabindex="-1"></a></span>
+<span id="cb109-19"><a href="chap6.html#cb109-19" tabindex="-1"></a>Coefficients<span class="sc">:</span></span>
+<span id="cb109-20"><a href="chap6.html#cb109-20" tabindex="-1"></a>         value std.err z<span class="sc">-</span>value p<span class="sc">-</span>value</span>
+<span id="cb109-21"><a href="chap6.html#cb109-21" tabindex="-1"></a>prev.y <span class="sc">-</span><span class="fl">0.5084</span>  <span class="fl">0.0616</span>  <span class="sc">-</span><span class="fl">8.249</span> <span class="sc">&lt;</span><span class="fl">0.0001</span></span>
+<span id="cb109-22"><a href="chap6.html#cb109-22" tabindex="-1"></a></span>
+<span id="cb109-23"><a href="chap6.html#cb109-23" tabindex="-1"></a>Shape<span class="sc">:</span> <span class="fl">3.7618</span></span>
+<span id="cb109-24"><a href="chap6.html#cb109-24" tabindex="-1"></a>Scale<span class="sc">:</span> <span class="fl">7.2209</span></span>
+<span id="cb109-25"><a href="chap6.html#cb109-25" tabindex="-1"></a>Frailty variance<span class="sc">:</span> <span class="fl">2.7283</span></span></code></pre></div>
+<p><code><a href="https://rdrr.io/r/base/summary.html">summary()</a></code> 方法提供的详细输出表明，下次就诊的时间与当前血清胆红素值密切相关，并且患者的就诊模式存在相当大的异质性（即，较大的脆弱性方差）。</p>
+<p>接下来的步骤与 <a href="chap6.html#sec6-3-1">6.3.1</a> 节中的步骤非常相似。具体来说，在对 <code>residual()</code> 的调用中将参数 <code>MI</code> 设置为 <code>TRUE</code> 可实现上述随机就诊时间的多重插补模拟方案。为了让 <code><a href="https://rdrr.io/r/stats/residuals.html">residuals()</a></code> 模拟脱落患者的未来就诊时间，我们需要提供拟合的 Weibull 脆弱模型作为参数 <code>time.points</code>。此外，对于一些内部计算，需要将对应于 <span class="math inline">\(y_i(t_k−1)\)</span> 的变量名称作为额外属性添加到 <code>WeibFrl</code> 中，在我们的例子中是 <code>prev.y</code>；这是通过如下代码实现的</p>
+<div class="sourceCode" id="cb110"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb110-1"><a href="chap6.html#cb110-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">attr</span>(WeibFrl, <span class="st">"prev.y"</span>) <span class="ot">&lt;-</span> <span class="st">"prev.y"</span></span></code></pre></div>
+<p>然后，对 <code><a href="https://rdrr.io/r/stats/residuals.html">residuals()</a></code> 的调用为</p>
+<div class="sourceCode" id="cb111"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb111-1"><a href="chap6.html#cb111-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">set.seed</span>(<span class="dv">123</span>) <span class="co"># we set the seed for reproducibility</span></span>
+<span id="cb111-2"><a href="chap6.html#cb111-2" tabindex="-1"></a><span class="sc">&gt;</span> resMI.pbc <span class="ot">&lt;-</span> <span class="fu">residuals</span>(jointFit2.pbc, <span class="at">type =</span> <span class="st">"stand-Marginal"</span>,</span>
+<span id="cb111-3"><a href="chap6.html#cb111-3" tabindex="-1"></a>                         <span class="at">MI =</span> <span class="cn">TRUE</span>, <span class="at">M =</span> <span class="dv">10</span>, <span class="at">time.points =</span> WeibFrl)</span></code></pre></div>
+<p>如 <a href="chap6.html#sec6-3-1">6.3.1</a> 节所示，我们首先提取多重插补响应的标准化边际残差和相应的拟合值，然后构建包含完整数据（分别为多重插补残差和观测残差以及拟合值）的数据框。</p>
+<div class="sourceCode" id="cb112"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb112-1"><a href="chap6.html#cb112-1" tabindex="-1"></a><span class="sc">&gt;</span> fitMargYmiss.pbc <span class="ot">&lt;-</span> <span class="fu">unlist</span>(resMI.pbc<span class="sc">$</span>fitted.valsM)</span>
+<span id="cb112-2"><a href="chap6.html#cb112-2" tabindex="-1"></a><span class="sc">&gt;</span> resMargYmiss.pbc <span class="ot">&lt;-</span> <span class="fu">unlist</span>(resMI.pbc<span class="sc">$</span>resid.valsM)</span>
+<span id="cb112-3"><a href="chap6.html#cb112-3" tabindex="-1"></a><span class="sc">&gt;</span> M <span class="ot">&lt;-</span> <span class="fu">length</span>(resMI.pbc<span class="sc">$</span>fitted.valsM)</span>
+<span id="cb112-4"><a href="chap6.html#cb112-4" tabindex="-1"></a><span class="sc">&gt;</span> datResid <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb112-5"><a href="chap6.html#cb112-5" tabindex="-1"></a>  <span class="at">resid =</span> <span class="fu">c</span>(resMargY.pbc, resMargYmiss.pbc),</span>
+<span id="cb112-6"><a href="chap6.html#cb112-6" tabindex="-1"></a>                         <span class="at">fitted =</span> <span class="fu">c</span>(fitMargY.pbc, fitMargYmiss.pbc),</span>
+<span id="cb112-7"><a href="chap6.html#cb112-7" tabindex="-1"></a>                         <span class="at">weight =</span> <span class="fu">c</span>(<span class="fu">rep</span>(<span class="dv">1</span>, <span class="fu">length</span>(resMargY.pbc)),</span>
+<span id="cb112-8"><a href="chap6.html#cb112-8" tabindex="-1"></a>                         <span class="fu">rep</span>(<span class="dv">1</span><span class="sc">/</span>M, <span class="fu">length</span>(resMargYmiss.pbc))))</span>
+<span id="cb112-9"><a href="chap6.html#cb112-9" tabindex="-1"></a><span class="sc">&gt;</span> datResid <span class="ot">&lt;-</span> datResid[<span class="fu">complete.cases</span>(datResid), ]</span></code></pre></div>
+<p>为了帮助我们发现残差与拟合值散点图中的任何系统趋势，我们计算 loess 平滑器。同样，完全数据的 loess 平滑器 需要考虑到脱落时间之后的残差被过度表示的事实。如 <a href="chap6.html#sec6-3-1">6.3.1</a> 节所示，我们使用加权 loess 平滑器实现这一点，其中脱落后的残差权重为 <span class="math inline">\(1/L = 1/10 = 0.1\)</span>。对应的代码是</p>
+<div class="sourceCode" id="cb113"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb113-1"><a href="chap6.html#cb113-1" tabindex="-1"></a><span class="sc">&gt;</span> fitLoess.pbc <span class="ot">&lt;-</span> <span class="fu">loess</span>(resid <span class="sc">~</span> fitted, <span class="at">data =</span> datResid,</span>
+<span id="cb113-2"><a href="chap6.html#cb113-2" tabindex="-1"></a>                        <span class="at">weights =</span> weight)</span>
+<span id="cb113-3"><a href="chap6.html#cb113-3" tabindex="-1"></a><span class="sc">&gt;</span> nd.pbc <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">fitted =</span> <span class="fu">seq</span>(<span class="fu">min</span>(datResid<span class="sc">$</span>fitted, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb113-4"><a href="chap6.html#cb113-4" tabindex="-1"></a>                                    <span class="fu">max</span>(datResid<span class="sc">$</span>fitted, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="at">len =</span> <span class="dv">100</span>))</span>
+<span id="cb113-5"><a href="chap6.html#cb113-5" tabindex="-1"></a><span class="sc">&gt;</span> prdLoess.pbc <span class="ot">&lt;-</span> <span class="fu">predict</span>(fitLoess.pbc, nd.pbc)</span></code></pre></div>
+<p>最后，使用如下代码生成残差与拟合值的散点图，包括两个 loess 平滑器（一个仅基于观测数据，另一个基于完全数据）：</p>
+<div class="sourceCode" id="cb114"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb114-1"><a href="chap6.html#cb114-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">plot</span>(<span class="fu">range</span>(fitMargYmiss.pbc, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb114-2"><a href="chap6.html#cb114-2" tabindex="-1"></a>       <span class="fu">range</span>(resMargYmiss.pbc, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb114-3"><a href="chap6.html#cb114-3" tabindex="-1"></a>       <span class="at">type =</span> <span class="st">"n"</span>, <span class="at">xlab =</span> <span class="st">"Fitted Values"</span>,</span>
+<span id="cb114-4"><a href="chap6.html#cb114-4" tabindex="-1"></a>       <span class="at">ylab =</span> <span class="st">"Standardized Marginal Residuals"</span>)</span>
+<span id="cb114-5"><a href="chap6.html#cb114-5" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">abline</span>(<span class="at">h =</span> <span class="dv">0</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span>
+<span id="cb114-6"><a href="chap6.html#cb114-6" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">points</span>(fitMargY.pbc, resMargY.pbc)</span>
+<span id="cb114-7"><a href="chap6.html#cb114-7" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">points</span>(fitMargYmiss.pbc, resMargYmiss.pbc, <span class="at">col =</span> <span class="st">"grey"</span>)</span>
+<span id="cb114-8"><a href="chap6.html#cb114-8" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">lines</span>(<span class="fu">lowess</span>(fitMargY.pbc, resMargY.pbc), <span class="at">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb114-9"><a href="chap6.html#cb114-9" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">lines</span>(nd.pbc<span class="sc">$</span>fit, prdLoess.pbc, <span class="at">lwd =</span> <span class="dv">2</span>, <span class="at">lty =</span> <span class="dv">2</span>)</span></code></pre></div>
+<p>正如艾滋病数据集的情况一样，我们从图 6.9 中观察到，基于完全数据的加权 loess 并没有表现出仅基于观测数据的 loess 曲线中清晰可见的系统性趋势。这有力地表明，这种系统性趋势主要是由于脱落，而不是模型的欠拟合。</p>
+<details><summary><font color="#B95953">图 6.9</font>
+</summary><img src="figure/figure%206.9.png#center" style="width:80.0%"></details>
+</div>
+</div>
+<div id="sec6-4" class="section level2" number="6.4">
+<h2>
+<span class="header-section-number">6.4</span> 随机效应分布<a class="anchor" aria-label="anchor" href="#sec6-4"><i class="fas fa-link"></i></a>
+</h2>
+<p>我们对联合模型进行分布假定的最后一个组成部分是随机效应。正如我们已经看到的，在混合模型中，通常情况下，标准的选择是假定正态分布随机效应，均值为零和协方差阵为 <span class="math inline">\(D\)</span>，尽管很多时候，这种选择实际上并不是基于计算目的。检验正态分布适当性的主要问题是，随机效应是不利于直接构建残差的潜在量，即观测量减去预期/拟合量。尽管如此，在标准混合模型文献中，已经表明线性混合效应模型对这种分布的错误指定相对稳健 (Verbeke and Lesaffre, 1997). 然而，在广义线性混合模型中，这一主题存在更多的模糊性，一些作者报告了导出的推断对随机效应分布的敏感性 (Heagerty and Kurland, 2001; Agresti et al., 2004; Litiere et al., 2007, 2008)，而其他一些作者报告了稳健性 (Neuhaus et al., 1992, 1994, 2011).</p>
+<p>在联合模型中，主要出于两个原因，人们更加关注随机效应分布的潜在错误指定可能会在多大程度上影响导出的推断。首先，随机效应在联合模型中具有更突出的作用，因为它们用于捕获纵向结果中重复测量之间的相关性，并用于建立纵向过程和事件时间过程之间的关联。其次，正如我们在 <a href="chap6.html#sec6-2">6.2</a> 节中已经解释的那样，因事件发生引起的非随机脱落使问题变得复杂，因为在缺失数据文献中，众所周知，非随机脱落设定中的推断可能对建模假设高度敏感 (Copas and Li, 1997; Molenberghs
+et al., 2008).</p>
+<p>由于这些特征，基于 Gallant and Nychka (1987) 以及 Tsiatis and Davidian (2001) 所研究的平滑密度类别的灵活模型，Song et al. (2002) 提出一种半参数估计方程方法，该方法能在不指定随机效应分布的情况下进行有效推断。这些作者的模拟结果表明，参数估计和标准误对模型的错误指定具有较强的稳健性。这一特征随后得到了 Rizopoulos et al.(2008) 和 Huang et al. (2009) 的理论证实，他们表明，随着每个受试者的重复测量次数 <span class="math inline">\(n_i\)</span> 的增加，随机效应分布的错误指定对模型参数估计和标准误的影响微乎其微。</p>
+
+</div>
+</div>
+
+  <div class="chapter-nav">
+<div class="prev"><a href="chap5.html"><span class="header-section-number">5</span> 标准联合模型的扩展</a></div>
+<div class="next"><a href="chap7.html"><span class="header-section-number">7</span> 联合模型的预测和准确性</a></div>
+</div></main><div class="col-md-3 col-lg-2 d-none d-md-block sidebar sidebar-chapter">
+    <nav id="toc" data-toggle="toc" aria-label="On this page"><h2>On this page</h2>
+      <ul class="nav navbar-nav">
+<li><a class="nav-link" href="#chap6"><span class="header-section-number">6</span> 联合模型诊断</a></li>
+<li>
+<a class="nav-link" href="#sec6-1"><span class="header-section-number">6.1</span> 联合模型的残差</a><ul class="nav navbar-nav">
+<li><a class="nav-link" href="#sec6-1-1"><span class="header-section-number">6.1.1</span> 纵向部分的残差</a></li>
+<li><a class="nav-link" href="#sec6-1-2"><span class="header-section-number">6.1.2</span> 生存部分的残差</a></li>
+</ul>
+</li>
+<li><a class="nav-link" href="#sec6-2"><span class="header-section-number">6.2</span> 脱落和残差</a></li>
+<li>
+<a class="nav-link" href="#sec6-3"><span class="header-section-number">6.3</span> 多重插补残差</a><ul class="nav navbar-nav">
+<li><a class="nav-link" href="#sec6-3-1"><span class="header-section-number">6.3.1</span> 固定就诊时间</a></li>
+<li><a class="nav-link" href="#sec6-3-2"><span class="header-section-number">6.3.2</span> 随机就诊时间</a></li>
+</ul>
+</li>
+<li><a class="nav-link" href="#sec6-4"><span class="header-section-number">6.4</span> 随机效应分布</a></li>
+</ul>
+
+      <div class="book-extra">
+        <ul class="list-unstyled">
+          
+        </ul>
+</div>
+    </nav>
+</div>
+
+</div>
+</div> <!-- .container -->
+
+<footer class="bg-primary text-light mt-5"><div class="container"><div class="row">
+
+  <div class="col-12 col-md-6 mt-3">
+    <p>"<strong>纵向与事件时间数据的联合模型及其在 R 中的应用</strong>" was written by Wang Zhen. It was last built on 2024-04-19.</p>
+  </div>
+
+  <div class="col-12 col-md-6 mt-3">
+    <p>This book was built by the <a class="text-light" href="https://bookdown.org">bookdown</a> R package.</p>
+  </div>
+
+</div></div>
+</footer><!-- dynamically load mathjax for compatibility with self-contained --><script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    var src = "true";
+    if (src === "" || src === "true") src = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/latest.js?config=TeX-MML-AM_CHTML";
+    if (location.protocol !== "file:")
+      if (/^https?:/.test(src))
+        src = src.replace(/^https?:/, '');
+    script.src = src;
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script><script type="text/x-mathjax-config">const popovers = document.querySelectorAll('a.footnote-ref[data-toggle="popover"]');
+for (let popover of popovers) {
+  const div = document.createElement('div');
+  div.setAttribute('style', 'position: absolute; top: 0, left:0; width:0, height:0, overflow: hidden; visibility: hidden;');
+  div.innerHTML = popover.getAttribute('data-content');
+
+  var has_math = div.querySelector("span.math");
+  if (has_math) {
+    document.body.appendChild(div);
+    MathJax.Hub.Queue(["Typeset", MathJax.Hub, div]);
+    MathJax.Hub.Queue(function() {
+      popover.setAttribute('data-content', div.innerHTML);
+      document.body.removeChild(div);
+    })
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>第 2 章 纵向数据分析 | 纵向与事件时间数据的联合模型及其在 R 中的应用</title>
+<meta name="author" content="Wang Zhen">
+<meta name="description" content="本章介绍了用于分析连续纵向响应的线性混合效应模型，该模型构成了纵向和事件时间数据联合模型的第一个组成部分。特别关注经常遇到的数据缺失问题。特别是，我们提出了描述纵向响应和缺失过程之间关联结构的不同类型的机制，并解释了在什么情况下需要对两个结果进行联合建模分析。  2.1 纵向数据的特征 相关数据 (correlated data) 在定量研究的许多领域都很常见。按照 Verbeke and...">
+<meta name="generator" content="bookdown 0.38 with bs4_book()">
+<meta property="og:title" content="第 2 章 纵向数据分析 | 纵向与事件时间数据的联合模型及其在 R 中的应用">
+<meta property="og:type" content="book">
+<meta property="og:description" content="本章介绍了用于分析连续纵向响应的线性混合效应模型，该模型构成了纵向和事件时间数据联合模型的第一个组成部分。特别关注经常遇到的数据缺失问题。特别是，我们提出了描述纵向响应和缺失过程之间关联结构的不同类型的机制，并解释了在什么情况下需要对两个结果进行联合建模分析。  2.1 纵向数据的特征 相关数据 (correlated data) 在定量研究的许多领域都很常见。按照 Verbeke and...">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="第 2 章 纵向数据分析 | 纵向与事件时间数据的联合模型及其在 R 中的应用">
+<meta name="twitter:description" content="本章介绍了用于分析连续纵向响应的线性混合效应模型，该模型构成了纵向和事件时间数据联合模型的第一个组成部分。特别关注经常遇到的数据缺失问题。特别是，我们提出了描述纵向响应和缺失过程之间关联结构的不同类型的机制，并解释了在什么情况下需要对两个结果进行联合建模分析。  2.1 纵向数据的特征 相关数据 (correlated data) 在定量研究的许多领域都很常见。按照 Verbeke and...">
+<!-- JS --><script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js" integrity="sha256-inc5kl9MA1hkeYUt+EC3BhlIgyp/2jDIyBLS6k3UxPI=" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.4.6/fuse.js" integrity="sha512-zv6Ywkjyktsohkbp9bb45V6tEMoWhzFzXis+LrMehmJZZSys19Yxf1dopHx7WzIKxr5tK2dVcYmaCk2uqdjF4A==" crossorigin="anonymous"></script><script src="https://kit.fontawesome.com/6ecbd6c532.js" crossorigin="anonymous"></script><script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link href="libs/bootstrap-4.6.0/bootstrap.min.css" rel="stylesheet">
+<script src="libs/bootstrap-4.6.0/bootstrap.bundle.min.js"></script><script src="libs/bs3compat-0.7.0/transition.js"></script><script src="libs/bs3compat-0.7.0/tabs.js"></script><script src="libs/bs3compat-0.7.0/bs3compat.js"></script><link href="libs/bs4_book-1.0.0/bs4_book.css" rel="stylesheet">
+<script src="libs/bs4_book-1.0.0/bs4_book.js"></script><script>
+    /* ========================================================================
+     * Bootstrap: transition.js v3.3.7
+     * http://getbootstrap.com/javascript/#transitions
+     * ========================================================================
+     * Copyright 2011-2016 Twitter, Inc.
+     * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
+     * ======================================================================== */
+
+
+    +function ($) {
+      'use strict';
+
+      // CSS TRANSITION SUPPORT (Shoutout: http://www.modernizr.com/)
+      // ============================================================
+
+      function transitionEnd() {
+        var el = document.createElement('bootstrap')
+
+        var transEndEventNames = {
+          WebkitTransition : 'webkitTransitionEnd',
+          MozTransition    : 'transitionend',
+          OTransition      : 'oTransitionEnd otransitionend',
+          transition       : 'transitionend'
+        }
+
+        for (var name in transEndEventNames) {
+          if (el.style[name] !== undefined) {
+            return { end: transEndEventNames[name] }
+          }
+        }
+
+        return false // explicit for ie8 (  ._.)
+      }
+
+      // http://blog.alexmaccaw.com/css-transitions
+      $.fn.emulateTransitionEnd = function (duration) {
+        var called = false
+        var $el = this
+        $(this).one('bsTransitionEnd', function () { called = true })
+        var callback = function () { if (!called) $($el).trigger($.support.transition.end) }
+        setTimeout(callback, duration)
+        return this
+      }
+
+      $(function () {
+        $.support.transition = transitionEnd()
+
+        if (!$.support.transition) return
+
+        $.event.special.bsTransitionEnd = {
+          bindType: $.support.transition.end,
+          delegateType: $.support.transition.end,
+          handle: function (e) {
+            if ($(e.target).is(this)) return e.handleObj.handler.apply(this, arguments)
+          }
+        }
+      })
+
+    }(jQuery);
+    </script><script>
+    /* ========================================================================
+     * Bootstrap: collapse.js v3.3.7
+     * http://getbootstrap.com/javascript/#collapse
+     * ========================================================================
+     * Copyright 2011-2016 Twitter, Inc.
+     * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
+     * ======================================================================== */
+
+    /* jshint latedef: false */
+
+    +function ($) {
+      'use strict';
+
+      // COLLAPSE PUBLIC CLASS DEFINITION
+      // ================================
+
+      var Collapse = function (element, options) {
+        this.$element      = $(element)
+        this.options       = $.extend({}, Collapse.DEFAULTS, options)
+        this.$trigger      = $('[data-toggle="collapse"][href="#' + element.id + '"],' +
+                               '[data-toggle="collapse"][data-target="#' + element.id + '"]')
+        this.transitioning = null
+
+        if (this.options.parent) {
+          this.$parent = this.getParent()
+        } else {
+          this.addAriaAndCollapsedClass(this.$element, this.$trigger)
+        }
+
+        if (this.options.toggle) this.toggle()
+      }
+
+      Collapse.VERSION  = '3.3.7'
+
+      Collapse.TRANSITION_DURATION = 350
+
+      Collapse.DEFAULTS = {
+        toggle: true
+      }
+
+      Collapse.prototype.dimension = function () {
+        var hasWidth = this.$element.hasClass('width')
+        return hasWidth ? 'width' : 'height'
+      }
+
+      Collapse.prototype.show = function () {
+        if (this.transitioning || this.$element.hasClass('in')) return
+
+        var activesData
+        var actives = this.$parent && this.$parent.children('.panel').children('.in, .collapsing')
+
+        if (actives && actives.length) {
+          activesData = actives.data('bs.collapse')
+          if (activesData && activesData.transitioning) return
+        }
+
+        var startEvent = $.Event('show.bs.collapse')
+        this.$element.trigger(startEvent)
+        if (startEvent.isDefaultPrevented()) return
+
+        if (actives && actives.length) {
+          Plugin.call(actives, 'hide')
+          activesData || actives.data('bs.collapse', null)
+        }
+
+        var dimension = this.dimension()
+
+        this.$element
+          .removeClass('collapse')
+          .addClass('collapsing')[dimension](0)
+          .attr('aria-expanded', true)
+
+        this.$trigger
+          .removeClass('collapsed')
+          .attr('aria-expanded', true)
+
+        this.transitioning = 1
+
+        var complete = function () {
+          this.$element
+            .removeClass('collapsing')
+            .addClass('collapse in')[dimension]('')
+          this.transitioning = 0
+          this.$element
+            .trigger('shown.bs.collapse')
+        }
+
+        if (!$.support.transition) return complete.call(this)
+
+        var scrollSize = $.camelCase(['scroll', dimension].join('-'))
+
+        this.$element
+          .one('bsTransitionEnd', $.proxy(complete, this))
+          .emulateTransitionEnd(Collapse.TRANSITION_DURATION)[dimension](this.$element[0][scrollSize])
+      }
+
+      Collapse.prototype.hide = function () {
+        if (this.transitioning || !this.$element.hasClass('in')) return
+
+        var startEvent = $.Event('hide.bs.collapse')
+        this.$element.trigger(startEvent)
+        if (startEvent.isDefaultPrevented()) return
+
+        var dimension = this.dimension()
+
+        this.$element[dimension](this.$element[dimension]())[0].offsetHeight
+
+        this.$element
+          .addClass('collapsing')
+          .removeClass('collapse in')
+          .attr('aria-expanded', false)
+
+        this.$trigger
+          .addClass('collapsed')
+          .attr('aria-expanded', false)
+
+        this.transitioning = 1
+
+        var complete = function () {
+          this.transitioning = 0
+          this.$element
+            .removeClass('collapsing')
+            .addClass('collapse')
+            .trigger('hidden.bs.collapse')
+        }
+
+        if (!$.support.transition) return complete.call(this)
+
+        this.$element
+          [dimension](0)
+          .one('bsTransitionEnd', $.proxy(complete, this))
+          .emulateTransitionEnd(Collapse.TRANSITION_DURATION)
+      }
+
+      Collapse.prototype.toggle = function () {
+        this[this.$element.hasClass('in') ? 'hide' : 'show']()
+      }
+
+      Collapse.prototype.getParent = function () {
+        return $(this.options.parent)
+          .find('[data-toggle="collapse"][data-parent="' + this.options.parent + '"]')
+          .each($.proxy(function (i, element) {
+            var $element = $(element)
+            this.addAriaAndCollapsedClass(getTargetFromTrigger($element), $element)
+          }, this))
+          .end()
+      }
+
+      Collapse.prototype.addAriaAndCollapsedClass = function ($element, $trigger) {
+        var isOpen = $element.hasClass('in')
+
+        $element.attr('aria-expanded', isOpen)
+        $trigger
+          .toggleClass('collapsed', !isOpen)
+          .attr('aria-expanded', isOpen)
+      }
+
+      function getTargetFromTrigger($trigger) {
+        var href
+        var target = $trigger.attr('data-target')
+          || (href = $trigger.attr('href')) && href.replace(/.*(?=#[^\s]+$)/, '') // strip for ie7
+
+        return $(target)
+      }
+
+
+      // COLLAPSE PLUGIN DEFINITION
+      // ==========================
+
+      function Plugin(option) {
+        return this.each(function () {
+          var $this   = $(this)
+          var data    = $this.data('bs.collapse')
+          var options = $.extend({}, Collapse.DEFAULTS, $this.data(), typeof option == 'object' && option)
+
+          if (!data && options.toggle && /show|hide/.test(option)) options.toggle = false
+          if (!data) $this.data('bs.collapse', (data = new Collapse(this, options)))
+          if (typeof option == 'string') data[option]()
+        })
+      }
+
+      var old = $.fn.collapse
+
+      $.fn.collapse             = Plugin
+      $.fn.collapse.Constructor = Collapse
+
+
+      // COLLAPSE NO CONFLICT
+      // ====================
+
+      $.fn.collapse.noConflict = function () {
+        $.fn.collapse = old
+        return this
+      }
+
+
+      // COLLAPSE DATA-API
+      // =================
+
+      $(document).on('click.bs.collapse.data-api', '[data-toggle="collapse"]', function (e) {
+        var $this   = $(this)
+
+        if (!$this.attr('data-target')) e.preventDefault()
+
+        var $target = getTargetFromTrigger($this)
+        var data    = $target.data('bs.collapse')
+        var option  = data ? 'toggle' : $this.data()
+
+        Plugin.call($target, option)
+      })
+
+    }(jQuery);
+    </script><script>
+    window.initializeCodeFolding = function(show) {
+
+      // handlers for show-all and hide all
+      $("#rmd-show-all-code").click(function() {
+        $('div.r-code-collapse').each(function() {
+          $(this).collapse('show');
+        });
+      });
+      $("#rmd-hide-all-code").click(function() {
+        $('div.r-code-collapse').each(function() {
+          $(this).collapse('hide');
+        });
+      });
+
+      // index for unique code element ids
+      var currentIndex = 1;
+
+      // select all R code blocks
+      var rCodeBlocks = $('pre.sourceCode, pre.r, pre.python, pre.bash, pre.sql, pre.cpp, pre.stan, pre.js');
+      rCodeBlocks.each(function() {
+
+        // create a collapsable div to wrap the code in
+        var div = $('<div class="collapse r-code-collapse"></div>');
+        if (show)
+          div.addClass('in');
+        var id = 'rcode-643E0F36' + currentIndex++;
+        div.attr('id', id);
+        $(this).before(div);
+        $(this).detach().appendTo(div);
+
+        // add a show code button right above
+        var showCodeText = $('<span>' + (show ? 'Hide' : 'Code') + '</span>');
+        var showCodeButton = $('<button type="button" class="btn btn-default btn-xs code-folding-btn pull-right"></button>');
+        showCodeButton.append(showCodeText);
+        showCodeButton
+            .attr('data-toggle', 'collapse')
+            .attr('data-target', '#' + id)
+            .attr('aria-expanded', show)
+            .attr('aria-controls', id);
+
+        var buttonRow = $('<div class="row"></div>');
+        var buttonCol = $('<div class="col-md-12"></div>');
+
+        buttonCol.append(showCodeButton);
+        buttonRow.append(buttonCol);
+
+        div.before(buttonRow);
+
+        // update state of button on show/hide
+        div.on('hidden.bs.collapse', function () {
+          showCodeText.text('Code');
+        });
+        div.on('show.bs.collapse', function () {
+          showCodeText.text('Hide');
+        });
+      });
+
+    }
+    </script><script>
+    /* ========================================================================
+     * Bootstrap: dropdown.js v3.3.7
+     * http://getbootstrap.com/javascript/#dropdowns
+     * ========================================================================
+     * Copyright 2011-2016 Twitter, Inc.
+     * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
+     * ======================================================================== */
+
+
+    +function ($) {
+      'use strict';
+
+      // DROPDOWN CLASS DEFINITION
+      // =========================
+
+      var backdrop = '.dropdown-backdrop'
+      var toggle   = '[data-toggle="dropdown"]'
+      var Dropdown = function (element) {
+        $(element).on('click.bs.dropdown', this.toggle)
+      }
+
+      Dropdown.VERSION = '3.3.7'
+
+      function getParent($this) {
+        var selector = $this.attr('data-target')
+
+        if (!selector) {
+          selector = $this.attr('href')
+          selector = selector && /#[A-Za-z]/.test(selector) && selector.replace(/.*(?=#[^\s]*$)/, '') // strip for ie7
+        }
+
+        var $parent = selector && $(selector)
+
+        return $parent && $parent.length ? $parent : $this.parent()
+      }
+
+      function clearMenus(e) {
+        if (e && e.which === 3) return
+        $(backdrop).remove()
+        $(toggle).each(function () {
+          var $this         = $(this)
+          var $parent       = getParent($this)
+          var relatedTarget = { relatedTarget: this }
+
+          if (!$parent.hasClass('open')) return
+
+          if (e && e.type == 'click' && /input|textarea/i.test(e.target.tagName) && $.contains($parent[0], e.target)) return
+
+          $parent.trigger(e = $.Event('hide.bs.dropdown', relatedTarget))
+
+          if (e.isDefaultPrevented()) return
+
+          $this.attr('aria-expanded', 'false')
+          $parent.removeClass('open').trigger($.Event('hidden.bs.dropdown', relatedTarget))
+        })
+      }
+
+      Dropdown.prototype.toggle = function (e) {
+        var $this = $(this)
+
+        if ($this.is('.disabled, :disabled')) return
+
+        var $parent  = getParent($this)
+        var isActive = $parent.hasClass('open')
+
+        clearMenus()
+
+        if (!isActive) {
+          if ('ontouchstart' in document.documentElement && !$parent.closest('.navbar-nav').length) {
+            // if mobile we use a backdrop because click events don't delegate
+            $(document.createElement('div'))
+              .addClass('dropdown-backdrop')
+              .insertAfter($(this))
+              .on('click', clearMenus)
+          }
+
+          var relatedTarget = { relatedTarget: this }
+          $parent.trigger(e = $.Event('show.bs.dropdown', relatedTarget))
+
+          if (e.isDefaultPrevented()) return
+
+          $this
+            .trigger('focus')
+            .attr('aria-expanded', 'true')
+
+          $parent
+            .toggleClass('open')
+            .trigger($.Event('shown.bs.dropdown', relatedTarget))
+        }
+
+        return false
+      }
+
+      Dropdown.prototype.keydown = function (e) {
+        if (!/(38|40|27|32)/.test(e.which) || /input|textarea/i.test(e.target.tagName)) return
+
+        var $this = $(this)
+
+        e.preventDefault()
+        e.stopPropagation()
+
+        if ($this.is('.disabled, :disabled')) return
+
+        var $parent  = getParent($this)
+        var isActive = $parent.hasClass('open')
+
+        if (!isActive && e.which != 27 || isActive && e.which == 27) {
+          if (e.which == 27) $parent.find(toggle).trigger('focus')
+          return $this.trigger('click')
+        }
+
+        var desc = ' li:not(.disabled):visible a'
+        var $items = $parent.find('.dropdown-menu' + desc)
+
+        if (!$items.length) return
+
+        var index = $items.index(e.target)
+
+        if (e.which == 38 && index > 0)                 index--         // up
+        if (e.which == 40 && index < $items.length - 1) index++         // down
+        if (!~index)                                    index = 0
+
+        $items.eq(index).trigger('focus')
+      }
+
+
+      // DROPDOWN PLUGIN DEFINITION
+      // ==========================
+
+      function Plugin(option) {
+        return this.each(function () {
+          var $this = $(this)
+          var data  = $this.data('bs.dropdown')
+
+          if (!data) $this.data('bs.dropdown', (data = new Dropdown(this)))
+          if (typeof option == 'string') data[option].call($this)
+        })
+      }
+
+      var old = $.fn.dropdown
+
+      $.fn.dropdown             = Plugin
+      $.fn.dropdown.Constructor = Dropdown
+
+
+      // DROPDOWN NO CONFLICT
+      // ====================
+
+      $.fn.dropdown.noConflict = function () {
+        $.fn.dropdown = old
+        return this
+      }
+
+
+      // APPLY TO STANDARD DROPDOWN ELEMENTS
+      // ===================================
+
+      $(document)
+        .on('click.bs.dropdown.data-api', clearMenus)
+        .on('click.bs.dropdown.data-api', '.dropdown form', function (e) { e.stopPropagation() })
+        .on('click.bs.dropdown.data-api', toggle, Dropdown.prototype.toggle)
+        .on('keydown.bs.dropdown.data-api', toggle, Dropdown.prototype.keydown)
+        .on('keydown.bs.dropdown.data-api', '.dropdown-menu', Dropdown.prototype.keydown)
+
+    }(jQuery);
+    </script><style type="text/css">
+    .code-folding-btn { margin-bottom: 4px; }
+    .row { display: flex; }
+    .collapse { display: none; }
+    .in { display:block }
+    .pull-right > .dropdown-menu {
+        right: 0;
+        left: auto;
+    }
+    .open > .dropdown-menu {
+        display: block;
+    }
+    .dropdown-menu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        z-index: 1000;
+        display: none;
+        float: left;
+        min-width: 160px;
+        padding: 5px 0;
+        margin: 2px 0 0;
+        font-size: 14px;
+        text-align: left;
+        list-style: none;
+        background-color: #fff;
+        -webkit-background-clip: padding-box;
+        background-clip: padding-box;
+        border: 1px solid #ccc;
+        border: 1px solid rgba(0,0,0,.15);
+        border-radius: 4px;
+        -webkit-box-shadow: 0 6px 12px rgba(0,0,0,.175);
+        box-shadow: 0 6px 12px rgba(0,0,0,.175);
+    }
+    </style>
+<script>
+    $(document).ready(function () {
+      window.initializeCodeFolding("show" === "show");
+    });
+    </script><script>
+    document.write('<div class="btn-group pull-right" style="position: absolute; top: 20%; right: 2%; z-index: 200"><button type="button" class="btn btn-default btn-xs dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" data-_extension-text-contrast=""><span>Code</span> <span class="caret"></span></button><ul class="dropdown-menu" style="min-width: 50px;"><li><a id="rmd-show-all-code" href="#">Show All Code</a></li><li><a id="rmd-hide-all-code" href="#">Hide All Code</a></li></ul></div>')
+    </script><script src="https://cdnjs.cloudflare.com/ajax/libs/autocomplete.js/0.38.0/autocomplete.jquery.min.js" integrity="sha512-GU9ayf+66Xx2TmpxqJpliWbT5PiGYxpaG8rfnBEk1LL8l1KGkRShhngwdXK1UgqhAzWpZHSiYPc09/NwDQIGyg==" crossorigin="anonymous"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/mark.js/8.11.1/mark.min.js" integrity="sha512-5CYOlHXGh6QpOFA/TeTylKLWfB3ftPsde7AnmhuitiTX4K5SqCLBeKro6sPS8ilsz1Q4NRx3v8Ko2IBiszzdww==" crossorigin="anonymous"></script><!-- CSS --><style type="text/css">
+    
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  </style>
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-spy="scroll" data-target="#toc">
+
+<div class="container-fluid">
+<div class="row">
+  <header class="col-sm-12 col-lg-3 sidebar sidebar-book"><a class="sr-only sr-only-focusable" href="#content">Skip to main content</a>
+
+    <div class="d-flex align-items-start justify-content-between">
+      <h1>
+        <a href="index.html" title="">纵向与事件时间数据的联合模型及其在 R 中的应用</a>
+      </h1>
+      <button class="btn btn-outline-primary d-lg-none ml-2 mt-1" type="button" data-toggle="collapse" data-target="#main-nav" aria-expanded="true" aria-controls="main-nav"><i class="fas fa-bars"></i><span class="sr-only">Show table of contents</span></button>
+    </div>
+
+    <div id="main-nav" class="collapse-lg">
+      <form role="search">
+        <input id="search" class="form-control" type="search" placeholder="Search" aria-label="Search">
+</form>
+
+      <nav aria-label="Table of contents"><h2>Table of contents</h2>
+        <ul class="book-toc list-unstyled">
+<li><a class="" href="index.html">前言</a></li>
+<li><a class="" href="%E7%9B%AE%E5%BD%95.html">目录</a></li>
+<li class="book-part">正文</li>
+<li><a class="" href="chap1.html"><span class="header-section-number">1</span> 介绍</a></li>
+<li><a class="active" href="chap2.html"><span class="header-section-number">2</span> 纵向数据分析</a></li>
+<li><a class="" href="chap3.html"><span class="header-section-number">3</span> 事件时间数据分析</a></li>
+<li><a class="" href="chap4.html"><span class="header-section-number">4</span> 纵向与事件时间数据的联合模型</a></li>
+<li><a class="" href="chap5.html"><span class="header-section-number">5</span> 标准联合模型的扩展</a></li>
+<li><a class="" href="chap6.html"><span class="header-section-number">6</span> 联合模型诊断</a></li>
+<li><a class="" href="chap7.html"><span class="header-section-number">7</span> 联合模型的预测和准确性</a></li>
+<li class="book-part">附录</li>
+<li><a class="" href="A.html"><span class="header-section-number">A</span> R 的简要介绍</a></li>
+<li class="book-part">—</li>
+<li><a class="" href="bib.html">参考文献</a></li>
+</ul>
+
+        <div class="book-extra">
+          
+        </div>
+      </nav>
+</div>
+  </header><main class="col-sm-12 col-md-9 col-lg-7" id="content"><div id="chap2" class="section level1" number="2">
+<h1>
+<span class="header-section-number">第 2 章</span> 纵向数据分析<a class="anchor" aria-label="anchor" href="#chap2"><i class="fas fa-link"></i></a>
+</h1>
+<p>本章介绍了用于分析连续纵向响应的线性混合效应模型，该模型构成了纵向和事件时间数据联合模型的第一个组成部分。特别关注经常遇到的数据缺失问题。特别是，我们提出了描述纵向响应和缺失过程之间关联结构的不同类型的机制，并解释了在什么情况下需要对两个结果进行联合建模分析。</p>
+<div id="sec2-1" class="section level2" number="2.1">
+<h2>
+<span class="header-section-number">2.1</span> 纵向数据的特征<a class="anchor" aria-label="anchor" href="#sec2-1"><i class="fas fa-link"></i></a>
+</h2>
+<p><strong>相关数据</strong> (correlated data) 在定量研究的许多领域都很常见。按照 Verbeke and Molenberghs (2000) 和 Molenbberghs and Verbeke (2005) 的观点，相关数据这一一般术语涵盖了多种多元数据结构，例如聚类数据 (clustered data)、重复测量 (repeated measures)、纵向数据 (longitudinal data) 和空间相关数据 (spatial correlated data). 本章的重点是纵向数据，纵向数据可以广义地定义为通过对受试者（例如人类、动物或实验室样本）随时间进行重复测量而得到的数据。此类数据在健康科学中经常出现，其中纵向研究在增进我们对疾病发展和持续性的理解方面发挥着重要作用。纵向研究的显著特点是，它们允许通过在整个研究期间对受试者进行重复测量，直接评估响应变量随时间的变化。例如，在一项纵向研究中，患者被（随机）分配在研究开始时接受不同的治疗，并随时间进行随访，我们可以同时研究</p>
+<ol style="list-style-type: decimal">
+<li>评估不同治疗方案在特定时间点（例如研究结束时）的效应差异（即横断面效应）</li>
+<li>治疗方案或治疗方案之间的差异如何随时间变化（纵向效应）</li>
+</ol>
+<p>从以上描述中可以明显看出，在纵向研究中，我们期望对同一受试者进行的重复测量显示出正相关。这一特征意味着，假定独立观测的标准统计工具，如 <span class="math inline">\(t\)</span> 检验和简单线性回归，不适用于纵向数据分析。</p>
+</div>
+<div id="sec2-2" class="section level2" number="2.2">
+<h2>
+<span class="header-section-number">2.2</span> 线性混合效应模型<a class="anchor" aria-label="anchor" href="#sec2-2"><i class="fas fa-link"></i></a>
+</h2>
+<p>纵向数据分析的直观方法基于这样一种观点，总体中的每个个体都有自己的随时间变化的平均响应曲线 (mean response profile)，该曲线具有特定的函数形式。图 2.1 以图形的方式展示了这一理念，图中展示了两个假想受试者的纵向响应（点），以及它们对应的线性平均轨迹（虚线）。所有受试者的平均变化用实线表示。为了正式引入这种纵向数据的表示方法，我们令 <span class="math inline">\(y_{ij}\)</span> 表示受试者 <span class="math inline">\(i\)</span> 在时间 <span class="math inline">\(t_{ij}\)</span> 的响应，其中 <span class="math inline">\(i = 1, ..., n\)</span>，<span class="math inline">\(j = 1, ..., n_i\)</span>。图 2.1 表明，一个简单的带有截距和线性时间效应的回归模型似乎足以分别刻画每个受试者的数据。然而，不同的受试者往往具有不同的截距和斜率。因此，对于观测响应 <span class="math inline">\(y_{ij}\)</span>，一个合理的模型是</p>
+<p><span class="math display">\[y_{ij}=\tilde{\beta}_{i0}+\tilde{\beta}_{i1}t_{ij}+\varepsilon_{ij}\]</span></p>
+<details><summary><font color="#B95953">图 2.1</font>
+</summary><img src="figure/figure%202.1.png#center" style="width:80.0%"></details><p><br></p>
+<p>其中假定误差项 <span class="math inline">\(\epsilon_{ij}\)</span> 来自均值为零且方差为 <span class="math inline">\(\sigma^2\)</span> 的正态分布。由于受试者是从受试者总体中随机抽取的，因此可以合理地定价特定于受试者的回归系数 <span class="math inline">\(\tilde\beta_{i0}\)</span> 和 <span class="math inline">\(\tilde\beta_{i1}\)</span> 也是从相应的回归系数总体中随机抽取的。通常假定总体中回归系数的分布是二元正态分布，其中均值向量为<a class="footnote-ref" tabindex="0" data-toggle="popover" data-content="&lt;p&gt;原著中所有向量、矩阵均未大写。&lt;/p&gt;"><sup>1</sup></a> <span class="math inline">\(\beta= (\beta_0, \beta_1)^\top\)</span> 以及方差-协方差阵为 <span class="math inline">\(D\)</span>。在此设定下，我们可以将模型重新表述为</p>
+<p><span class="math display">\[\begin{aligned}y_{ij}=(\beta_0+b_{i0})+(\beta_1+b_{i1})t_{ij}+\varepsilon_{ij}\end{aligned}\]</span></p>
+<p>其中 <span class="math inline">\(\tilde{\beta}_{i0}=\beta_0+b_{i0},\tilde{\beta}_{i1}=\beta_1+b_{i1}\)</span>，项 <span class="math inline">\(b_i = (b_{i0}, b_{i1})^\top\)</span> 称为<strong>随机效应</strong> (random effect)，具有均值为零以及协方差阵为 <span class="math inline">\(D\)</span> 的二元正态分布。参数 <span class="math inline">\(\beta_0\)</span> 和 <span class="math inline">\(\beta_1\)</span> 描述总体中的平均纵向变化（即，对受试者进行平均），称为<strong>固定效应</strong> (fixed effects).</p>
+<p>上述模型的推广，即，允许额外的预测因子和额外的回归系数随机变化的模型，称为<strong>线性混合效应模型</strong> (linear mixed-effects model) (Laird, Ware, 1982; Harville, 1977; Verbeke and Molenberghs, 2000)，是分析纵向响应最常用的模型之一。一般线性混合模型具有以下形式</p>
+<p><span class="math display" id="eq:2-1">\[\begin{align}
+\left\{\begin{array}{rcl}y_i&amp;=&amp;X_i\beta+Z_ib_i+\varepsilon_i,\\ b_i&amp;\sim&amp;\mathcal{N}( 0, D),\\\varepsilon_i&amp;\sim&amp;\mathcal{N}(0,\sigma^2 \text{I}_{n_i}),\end{array}\right.
+\tag{2.1}
+\end{align}\]</span></p>
+<p>其中 <span class="math inline">\(X_i\)</span> 和 <span class="math inline">\(Z_i\)</span> 分别是固定效应回归系数 <span class="math inline">\(\beta\)</span> 和随机效应回归系数 <span class="math inline">\(b_i\)</span> 的已知设计矩阵，<span class="math inline">\({{I}}_{n_i}\)</span> 表示 <span class="math inline">\(n_i\)</span> 维单位矩阵。假定随机效应呈正态分布，均值为零，方差-协方差阵为 <span class="math inline">\(D\)</span>，并假定与误差项 <span class="math inline">\(\varepsilon_i\)</span> 无关，即 <span class="math inline">\(\text{cov}( b_i, \varepsilon_i) = 0\)</span>。固定效应 <span class="math inline">\(\beta\)</span> 的解释与简单线性回归模型中的解释完全相同，即，假定设计矩阵 <span class="math inline">\(X_i\)</span> 有 <span class="math inline">\(p\)</span> 个协变量，则系数 <span class="math inline">\(\beta_j , j = 1, \ldots, p\)</span> 表示当相应的协变量 <span class="math inline">\(x_j\)</span> 增加一个单位时 <span class="math inline">\(y_i\)</span> 平均的变化，其中所有其他预测变量保持不变。同样，随机效应 <span class="math inline">\(b_i\)</span> 可以解释为第 <span class="math inline">\(i\)</span> 个受试者的回归参数集合相对于总体参数的偏离情况。</p>
+<p>混合模型的一个优点在于，它不仅可以估计那些可用于描述目标总体平均响应如何变化的参数，还可以预测个体响应轨迹随时间的变化。这是在第 <a href="chap4.html#chap4">4</a> 章将要介绍的纵向数据与事件时间数据联合建模框架中使用这些模型的主要原因之一。此外，混合模型可以容纳数据中<strong>任何程度</strong>的不均衡，也就是说，我们不需要每个受试者都有相同数量的测量值，也不需要这些测量值在相同的时间点进行。而且，随机效应以相对简洁的方式解释了每个受试者重复测量之间的相关性。特别是，第 <span class="math inline">\(i\)</span> 个受试者的结果将是边际相关的 (marginally correlated)，因为它们共享相同的随机效应 <span class="math inline">\(b_i\)</span>。换句话说，我们假定受试者的纵向响应条件独立于她的随机效应，即</p>
+<p><span class="math display">\[\begin{aligned}p(y_i\mid  b_i;\theta)=\prod_{j=1}^{n_i}p(y_{ij}\mid  b_i;\theta)\end{aligned}\]</span></p>
+<p>当所选的随机效应结构不足以捕捉数据中的相关性时（尤其是对于只有较少随机效应的模型），我们可以扩展上面定义的线性混合模型，并为特定对象的误差分量，即 <span class="math inline">\(\varepsilon_i\sim \mathcal N( 0,\Sigma_i)\)</span>，提供一个适当的、更通用的协方差阵，其中 <span class="math inline">\(\Sigma_i\)</span> 仅通过其维数 <span class="math inline">\(n_i\)</span> 取决于 <span class="math inline">\(i\)</span>。在相关文献中，已经提出了多种不同的模型来表示 <span class="math inline">\(\Sigma_i\)</span>，这些模型对应着不同类型的序列相关函数。其中最常用的几种包括一阶自回归模型、指数以及高斯相关结构，但用于拟合线性混合模型的标准统计软件提供了更多的选择 (Verbeke and Molenberghs, 2000; Pinheiro and Bates, 2000).</p>
+<div id="sec2-2-1" class="section level3" number="2.2.1">
+<h3>
+<span class="header-section-number">2.2.1</span> 估计<a class="anchor" aria-label="anchor" href="#sec2-2-1"><i class="fas fa-link"></i></a>
+</h3>
+<p>线性混合效应模型的参数估计通常基于最大似然 (maximum likelihood, ML) 原理。具体地，第 <span class="math inline">\(i\)</span> 个受试者的观测响应数据的边际密度由以下表达式给出</p>
+<p><span class="math display">\[p(y_i)=\int p(y_i\mid b_i)p(b_i)db_i\]</span></p>
+<p>利用以下事实：随机效应在条件均值 <span class="math inline">\(E(yi | bi)\)</span> 的指定中线性进入，并且给定随机效应 <span class="math inline">\(b_i\)</span> 时，纵向响应的条件分布 <span class="math inline">\(\{y_i|b_i\}\)</span> 以及随机效应 <span class="math inline">\(b_i\)</span> 的分布都是正态的，因此，上述积分具有封闭形式的解，它得到了一个 <span class="math inline">\(n_i\)</span> 维正态分布，其均值为 <span class="math inline">\(X_i\beta\)</span>，方差-协方差阵为 <span class="math inline">\(V_i = Z_iDZ^T_i + \sigma^2I_{n_i}\)</span>。因此，假定受试者之间独立，线性混合模型的对数似然函数形式为</p>
+<p><span class="math display" id="eq:2-2">\[\begin{align}
+\begin{array}{rcl}\ell(\theta)&amp;=&amp;\displaystyle\sum_{i=1}^n\log p(y_i;\theta)\\[1ex]&amp;=&amp;\displaystyle\sum_{i=1}^n\log\int p(y_i\mid b_i;\beta,\sigma^2)p(b_i;\theta_b)db_i\end{array}
+\tag{2.2}
+\end{align}\]</span></p>
+<p>其中，<span class="math inline">\(\theta\)</span> 表示完整的参数向量，分解为子向量 <span class="math inline">\(\theta^T = (\beta^T, \sigma^2, \theta^T_b)\)</span>，其中<a class="footnote-ref" tabindex="0" data-toggle="popover" data-content='&lt;p&gt;译者注：&lt;span class="math inline"&gt;\(\text{vech}(D)\)&lt;/span&gt; 表示组成矩阵 &lt;span class="math inline"&gt;\(D\)&lt;/span&gt; 的元素形成的向量。而由于矩阵 &lt;span class="math inline"&gt;\(D\)&lt;/span&gt; 为方差-协方差阵，为对称阵，因此 &lt;span class="math inline"&gt;\(\text{vech}(D)\)&lt;/span&gt; 表示矩阵 &lt;span class="math inline"&gt;\(D\)&lt;/span&gt; 对角线及上方的所有元素组成的向量。&lt;/p&gt;'><sup>2</sup></a> <span class="math inline">\(\theta_b = \text{vech}(D)\)</span>，且</p>
+<p><span class="math display">\[p(y_i;\theta)=(2\pi)^{-n_i/2}|V_i|^{-1/2}\exp\Bigl\{-\frac{1}{2}(y_i-X_i\beta)^\top V_i^{-1}(y_i-X_i\beta)\Bigr\}\]</span></p>
+<p>其中 <span class="math inline">\(|A|\)</span> 表示方阵 <span class="math inline">\(A\)</span> 的行列式。</p>
+<p>如果我们假定 <span class="math inline">\(V_i\)</span> 是已知的，那么通过以 <span class="math inline">\(V_i\)</span> 中的参数为条件最大化式 <a href="chap2.html#eq:2-2">(2.2)</a> 而获得的固定效应向量 <span class="math inline">\(\beta\)</span> 的最大似然估计具有闭合形式，并且对应于广义最小二乘估计：</p>
+<p><span class="math display" id="eq:2-3">\[\begin{align}
+\hat{\beta}=\left(\sum_{i=1}^nX_i^\top V_i^{-1}X_i\right)^{-1}\sum_{i=1}^nX_i^\top V_i^{-1}y_i
+\tag{2.3}
+\end{align}\]</span></p>
+<p>当 <span class="math inline">\(V_i\)</span> 未知，但可获得该矩阵的估计 <span class="math inline">\(\widehat{V}_i\)</span> 时，我们可以使用式 <a href="chap2.html#eq:2-3">(2.3)</a> 来估计 <span class="math inline">\(\beta\)</span>，其中 <span class="math inline">\(V_i\)</span> 替换为 <span class="math inline">\(\widehat{V}_i\)</span>。为了获得 <span class="math inline">\(\widehat{V}_i\)</span>，我们可以再次使用最大似然法，对于给定的 <span class="math inline">\(\beta\)</span> 最大化对数似然 <span class="math inline">\(\ell(\theta_b,\sigma^2)\)</span>。根据标准渐近最大似然理论，在满足一定正则条件的情况下，<span class="math inline">\(V_i\)</span> 的最大似然估计将是渐近无偏的。然而，在小样本情况下，<span class="math inline">\(V_i\)</span> 的最大似然估计将是有偏的。实际上，这与简单线性回归的现象是一样的，其中误差项方差的最大似然估计定义为</p>
+<p><span class="math display">\[\hat{\sigma}^2=\frac{\sum_i(y_i-x_i^\top\hat{\beta})^2}n\]</span></p>
+<p>是有偏的。产生这种偏差是因为 <span class="math inline">\(\sigma^2\)</span> 的 ML 估计没有考虑到 <span class="math inline">\(\beta\)</span> 也是根据数据来估计的这一事实。无偏估计则是通过将残差平方和除以 <span class="math inline">\(n−p\)</span>（残差自由度）来获得的，即</p>
+<p><span class="math display">\[\hat{\sigma}^2=\frac{\sum_i(y_i-x_i^\top\hat{\beta})^2}{n-p}\]</span></p>
+<p>其中 <span class="math inline">\(p\)</span> 表示协变量向量 <span class="math inline">\(x_i\)</span> 的维度。为了在更一般的多元回归情况下解决矩阵 <span class="math inline">\(V_i\)</span> 的最大似然估计的相同问题，已经发展了<strong>限制性最大似然</strong> (restricted
+maximum likelihood, REML) 估计理论 (Harville, 1974). REML 估计背后的主要思想是将用于估计 <span class="math inline">\(V_i\)</span> 的数据部分与用于估计 <span class="math inline">\(\beta\)</span> 的数据部分进行分离。换句话说，<span class="math inline">\(V_i\)</span> 的 REML 估计的基本思想是从似然中消除 <span class="math inline">\(\beta\)</span>，使其仅根据 <span class="math inline">\(V_i\)</span> 来定义。REML 估计通过最大化稍作修改的对数似然函数来进行</p>
+<p><span class="math display">\[\begin{aligned}
+\ell(\theta_b,\sigma^2)=&amp;-\dfrac{n-p}{2}\log(2\pi)+\dfrac{1}{2}\log\left|\sum_{i=1}^nX_i^\top X_i\right|-\dfrac{1}{2}\log\left|\sum_{i=1}^nX_i^\top V_i^{-1}X_i\right|  \\
+&amp;-\frac12\sum_{i=1}^n\Big\{\log|V_i|+(y_i-X_i\hat{\beta})^\top V_i^{-1}(y_i-X_i\hat{\beta})\Big\} \\
+\propto&amp;-\frac{1}{2}\sum_{i=1}^n\log|V_i|-\frac{1}{2}\sum_{i=1}^n(y_i-X_i\hat{\beta})^\top V_i^{-1}(y_i-X_i\hat{\beta}) \\
+&amp;-\frac12\log\left|\sum_{i=1}^nX_i^\top V_i^{-1}X_i\right|,
+\end{aligned}\]</span></p>
+<p>其中 <span class="math inline">\(\hat\beta\)</span> 由式 <a href="chap2.html#eq:2-3">(2.3)</a> 给出。通过最大化该修改的对数似然获得的估计 <span class="math inline">\(\widehat{V}_i\)</span> 校正了 <span class="math inline">\(\beta\)</span> 也已被估计的事实。与 <span class="math inline">\(\beta\)</span> 的估计相反，<span class="math inline">\(V_i\)</span> 中唯一参数的最大似然估计和限制性最大似然估计一般都不能写出封闭形式。因此，为了获得 <span class="math inline">\(\widehat{V}_i\)</span>，需要数值优化程序。两种常用的算法是<strong>期望最大化</strong> (Expectation-Maximization, <strong>EM</strong>) (Dempster et al., 1977) 和 Newton-Raphson 算法 (Lange, 2004)，其在线性混合效应模型中的实现可以在 Laird and Ware (1982) 以及 Lindstrom and Bates (1988) 中找到。</p>
+<p>固定效应回归系数的标准误可以通过计算广义最小二乘估计（式 <a href="chap2.html#eq:2-3">(2.3)</a>）的方差直接获得，即</p>
+<p><span class="math display" id="eq:2-5">\[\begin{align}
+\text{v}\hat{\mathrm{a}}\text{r}(\hat{\beta})
+&amp;=\left(\sum_{i=1}^nX_i^\top\widehat{Q}_iX_i\right)^{-1}\left(\sum_{i=1}^nX_i^\top\widehat{Q}_i\text{v}\hat{\mathrm{a}}\text{r}(y_i)Q_iX_i\right)\left(\sum_{i=1}^nX_i^\top\widehat{Q}_iX_i\right)^{-1} \tag{2.4}\\
+&amp;=\left(\sum_{i=1}^nX_i^\top\widehat{Q}_iX_i\right)^{-1}
+\tag{2.5}
+\end{align}\]</span></p>
+<p>其中 <span class="math inline">\(\widehat Q_i=\widehat{V}_i^{-1}\)</span>，<span class="math inline">\(\widehat{V}_i^{-1}\)</span> 表示协方差阵 <span class="math inline">\(V_i\)</span> 的 REML 或 ML 估计。从第一行简化为第二行要求模型是正确指定的，并且 <span class="math inline">\(\operatorname{var}(y_i)=\widehat{V}_i\)</span>。如果我们想保护 <span class="math inline">\(\beta\)</span> 的推断免受模型协方差结构潜在错误指定的影响，我们可以使用 <span class="math inline">\(\text{v}\hat{\mathrm{a}}\text{r}(\hat{\beta})\)</span> 的所谓三明治或稳健估计 (sandwich or robust estimate) (White, 1982). 这可以通过在式 <a href="chap2.html#eq:2-4">(2.4)</a> 中代入 <span class="math inline">\(y_i\)</span> 的方差的如下经验估计得到。</p>
+<p><span class="math display">\[\operatorname{var}(y_i)=\begin{pmatrix}y_i-X_i\hat{\beta}\end{pmatrix}\begin{pmatrix}y_i-X_i\hat{\beta}\end{pmatrix}^\top \]</span></p>
+<p>只要正确指定模型的平均结构 <span class="math inline">\(X_i\beta\)</span>，基于三明治估计的标准误将是一致的，但当正确指定 <span class="math inline">\(V_i\)</span> 时，它们的效率将低于基于式 <a href="chap2.html#eq:2-5">(2.5)</a> 的标准误。<span class="math inline">\(V_i\)</span> 中唯一参数估计的标准误是根据 <strong>Fisher 信息矩阵</strong>的相应块的逆获得的，即</p>
+<p><span class="math display">\[\operatorname{var}(\hat{\theta}_{b,\sigma})=\left\{E\bigg(-\sum_{i=1}^n\frac{\partial^2\ell_i(\theta)}{\partial\theta_{b,\sigma}^\top\partial\theta_{b,\sigma}}\bigg|_{\theta_{b,\sigma}=\hat{\theta}_{b,\sigma}}\bigg)\right\}^{-1}\]</span></p>
+</div>
+<div id="sec2-2-2" class="section level3" number="2.2.2">
+<h3>
+<span class="header-section-number">2.2.2</span> 在 R 中的实现<a class="anchor" aria-label="anchor" href="#sec2-2-2"><i class="fas fa-link"></i></a>
+</h3>
+<p><code>R</code> 语言在混合建模方面功能强大，有多个包可以拟合不同类型的混合效应模型。对于线性混合效应模型，两个主要的包是 <code>nlme</code> (Pinheiro et al., 2012; Pinheiro and Bates, 2000) 和 <code>lme4</code> (Bates et al., 2011). 前者仅适用于连续数据，但可以拟合具有更复杂误差结构（即相关和/或异方差误差项）的模型，而后者则可以拟合连续和分类响应的混合模型<a class="footnote-ref" tabindex="0" data-toggle="popover" data-content='&lt;p&gt;有关分类响应混合模型的更多信息，请读者参阅 &lt;a href="chap5.html#sec5-7-1"&gt;5.7.1&lt;/a&gt; 节。&lt;/p&gt;'><sup>3</sup></a>，但仅通过随机效应来考虑受试者重复测量之间的相关性。在这本书中，我们将使用包 <code>nlme</code> 中的函数 <code><a href="https://rdrr.io/r/stats/lm.html">lm()</a></code> 拟合线性混合效应模型，因为稍后将用于拟合联合模型的包 <code>JM</code> 基于该函数的输出。为了说明 <code>lme()</code> 的用法，我们执行混合模型分析来描述 AIDS 数据集中患者的 CD4 细胞计数平方根随时间的演变。该数据集为 <code>R</code> 的 <code>JM</code> 包 (Rizopoulos, 2012b) 的数据框 <code>aids</code>，可以使用以下命令加载</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="chap2.html#cb5-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">data</span>(aids, <span class="at">package =</span> <span class="st">"JM"</span>)</span></code></pre></div>
+<p>我们应注意，为了使用函数 <code><a href="https://rdrr.io/r/stats/lm.html">lm()</a></code> 拟合混合模型，数据需要以所谓的长格式排列，其中每个患者的测量值存储在多行中<a class="footnote-ref" tabindex="0" data-toggle="popover" data-content="&lt;p&gt;如果数据集是宽格式的，即，每个患者的测量值存储在多列中，则可以使用 &lt;code&gt;stats&lt;/code&gt; 包中的函数 &lt;code&gt;reshape()&lt;/code&gt; 或 &lt;code&gt;reshape&lt;/code&gt; 包 (Wickham, 2007) 中的函数将其转换为长格式。&lt;/p&gt;"><sup>4</sup></a>。艾滋病数据集已经以这种格式组织；例如，前两名患者的纵向响应位于前七行</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="chap2.html#cb6-1" tabindex="-1"></a><span class="sc">&gt;</span> aids[aids<span class="sc">$</span>patient <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">2</span>), <span class="fu">c</span>(<span class="st">"patient"</span>, <span class="st">"CD4"</span>, <span class="st">"obstime"</span>)]</span>
+<span id="cb6-2"><a href="chap2.html#cb6-2" tabindex="-1"></a>  patient       CD4 obstime</span>
+<span id="cb6-3"><a href="chap2.html#cb6-3" tabindex="-1"></a><span class="dv">1</span>       <span class="dv">1</span> <span class="fl">10.677078</span>       <span class="dv">0</span></span>
+<span id="cb6-4"><a href="chap2.html#cb6-4" tabindex="-1"></a><span class="dv">2</span>       <span class="dv">1</span>  <span class="fl">8.426150</span>       <span class="dv">6</span></span>
+<span id="cb6-5"><a href="chap2.html#cb6-5" tabindex="-1"></a><span class="dv">3</span>       <span class="dv">1</span>  <span class="fl">9.433981</span>      <span class="dv">12</span></span>
+<span id="cb6-6"><a href="chap2.html#cb6-6" tabindex="-1"></a><span class="dv">4</span>       <span class="dv">2</span>  <span class="fl">6.324555</span>       <span class="dv">0</span></span>
+<span id="cb6-7"><a href="chap2.html#cb6-7" tabindex="-1"></a><span class="dv">5</span>       <span class="dv">2</span>  <span class="fl">8.124038</span>       <span class="dv">6</span></span>
+<span id="cb6-8"><a href="chap2.html#cb6-8" tabindex="-1"></a><span class="dv">6</span>       <span class="dv">2</span>  <span class="fl">4.582576</span>      <span class="dv">12</span></span>
+<span id="cb6-9"><a href="chap2.html#cb6-9" tabindex="-1"></a><span class="dv">7</span>       <span class="dv">2</span>  <span class="fl">5.000000</span>      <span class="dv">18</span></span></code></pre></div>
+<p><code>CD4</code> 列包含 CD4 细胞计数测量值的平方根，<code>obstime</code> 列包含记录相应纵向响应的时间点。我们从一个简单的线性混合模型开始分析，该模型假定了一个随时间的线性平均演变，并包括每个患者的单个随机效应项</p>
+<p><span class="math display">\[\left\{\begin{array}{l}y_{ij}=\beta_0+\beta_1t_{ij}+b_{i0}+\varepsilon_{ij},\\b_{i0}\thicksim\mathcal{N}(0,\sigma_b^2),\quad\varepsilon_{ij}\thicksim\mathcal{N}(0,\sigma^2)\end{array}\right.\]</span></p>
+<p>该模型假定所有患者的 CD4 细胞计数平方根在时间上具有完全相同的演变，但患者在基线时不同，即每个患者都有自己的截距，有些患者以较高的 CD4 计数开始，有些患者则以较低的 CD4 计数开始。这种特殊类型的线性混合模型称为<strong>随机截距模型</strong> (random-intercepts model)，其图形展示在图 2.2 的左侧面板。<code>lme()</code> 的基本语法基于两个参数，分别命名为 <code>fixed</code> 和 <code>random</code> ，这两个参数是 <code>R</code> 公式，用于指定模型的固定效应和随机效应部分（有关 <code>R</code> 公式的基础的更多信息，请参阅附录 <a href="A.html#A">A</a>）。</p>
+<details><summary><font color="#B95953">图 2.2</font>
+</summary><img src="figure/figure%202.2.png#center" style="width:80.0%"></details><p><br>
+对于 <code>random</code> 参数中的公式，用户还应指定分组变量的名称，以识别哪些重复测量属于同一组（在我们的示例中，组是患者）。<code>data</code> 参数用于指定存储了所有变量的数据框。拟合随机截距模型的相应调用是</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="chap2.html#cb7-1" tabindex="-1"></a><span class="sc">&gt;</span> lmeFit.int <span class="ot">&lt;-</span> <span class="fu">lme</span>(CD4 <span class="sc">~</span> obstime, <span class="at">random =</span> <span class="sc">~</span> <span class="dv">1</span> <span class="sc">|</span> patient,</span>
+<span id="cb7-2"><a href="chap2.html#cb7-2" tabindex="-1"></a><span class="at">data =</span> aids)</span>
+<span id="cb7-3"><a href="chap2.html#cb7-3" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">summary</span>(lmeFit.int)</span>
+<span id="cb7-4"><a href="chap2.html#cb7-4" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="chap2.html#cb7-5" tabindex="-1"></a>Linear mixed<span class="sc">-</span>effects model fit by REML</span>
+<span id="cb7-6"><a href="chap2.html#cb7-6" tabindex="-1"></a>  Data<span class="sc">:</span> aids </span>
+<span id="cb7-7"><a href="chap2.html#cb7-7" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="chap2.html#cb7-8" tabindex="-1"></a>Random effects<span class="sc">:</span></span>
+<span id="cb7-9"><a href="chap2.html#cb7-9" tabindex="-1"></a> Formula<span class="sc">:</span> <span class="er">~</span><span class="dv">1</span> <span class="sc">|</span> patient</span>
+<span id="cb7-10"><a href="chap2.html#cb7-10" tabindex="-1"></a>        (Intercept) Residual</span>
+<span id="cb7-11"><a href="chap2.html#cb7-11" tabindex="-1"></a>StdDev<span class="sc">:</span>    <span class="fl">4.506494</span> <span class="fl">1.961662</span></span>
+<span id="cb7-12"><a href="chap2.html#cb7-12" tabindex="-1"></a></span>
+<span id="cb7-13"><a href="chap2.html#cb7-13" tabindex="-1"></a>Fixed effects<span class="sc">:</span>  CD4 <span class="sc">~</span> obstime </span>
+<span id="cb7-14"><a href="chap2.html#cb7-14" tabindex="-1"></a> Correlation<span class="sc">:</span> </span>
+<span id="cb7-15"><a href="chap2.html#cb7-15" tabindex="-1"></a>        (Intr)</span>
+<span id="cb7-16"><a href="chap2.html#cb7-16" tabindex="-1"></a>obstime <span class="sc">-</span><span class="fl">0.194</span></span>
+<span id="cb7-17"><a href="chap2.html#cb7-17" tabindex="-1"></a></span>
+<span id="cb7-18"><a href="chap2.html#cb7-18" tabindex="-1"></a>Standardized Within<span class="sc">-</span>Group Residuals<span class="sc">:</span></span>
+<span id="cb7-19"><a href="chap2.html#cb7-19" tabindex="-1"></a>        Min          Q1         Med          Q3 </span>
+<span id="cb7-20"><a href="chap2.html#cb7-20" tabindex="-1"></a><span class="sc">-</span><span class="fl">3.84004681</span> <span class="sc">-</span><span class="fl">0.44310988</span> <span class="sc">-</span><span class="fl">0.05388055</span>  <span class="fl">0.43593364</span> </span>
+<span id="cb7-21"><a href="chap2.html#cb7-21" tabindex="-1"></a>        Max </span>
+<span id="cb7-22"><a href="chap2.html#cb7-22" tabindex="-1"></a> <span class="fl">6.09265321</span> </span>
+<span id="cb7-23"><a href="chap2.html#cb7-23" tabindex="-1"></a></span>
+<span id="cb7-24"><a href="chap2.html#cb7-24" tabindex="-1"></a>Number of Observations<span class="sc">:</span> <span class="dv">1405</span></span>
+<span id="cb7-25"><a href="chap2.html#cb7-25" tabindex="-1"></a>Number of Groups<span class="sc">:</span> <span class="dv">467</span> </span></code></pre></div>
+<p>默认情况下，<code>lme()</code> 执行 REML 估计。<code><a href="https://rdrr.io/r/base/summary.html">summary()</a></code> 函数返回拟合模型的详细输出，包括模型中所有参数的估计值、标准化残差的位置测量值以及用于拟合模型的数据的信息。方差分量（即参数 <span class="math inline">\(\sigma_b\)</span> 和 <span class="math inline">\(\sigma\)</span>）的估计在 <code>Random effects</code> 标题下给出，而回归系数 <span class="math inline">\(\beta\)</span> 估计以及相应的标准误、<span class="math inline">\(t\)</span> 值和 <span class="math inline">\(p\)</span> 值在 <code>Fixed effects</code> 标题下提供。正如预期的那样，时间效应系数具有负号，表明平均而言，CD4 细胞计数平方根随时间减小。随机截距模型下纵向响应的隐含边际协方差结构，具有以下形式</p>
+<p><span class="math display">\[V_i=\sigma_b^21_{n_i}1_{n_i}^\top+\sigma^2\text{I}_{n_i}\]</span></p>
+<p>其中 <span class="math inline">\(\text{1}_{n_i}\)</span> 表示 <span class="math inline">\(n_i\)</span> 维单位向量，假定方差 <span class="math inline">\(\sigma^2_b+\sigma^2\)</span> 随时间恒定，并且任意两个时间点的测量值之间存在相等的正相关性 <span class="math inline">\(\rho=\sigma_b^2/(\sigma_b^2+\sigma^2)\)</span>。该协方差阵称为<strong>复合对称的</strong> (compound symmetric)，公共相关性 <span class="math inline">\(\rho\)</span> 通常称为<strong>类内相关系数</strong> (intraclass correlation coefficient) (Hand and Crowder, 1996). 可以使用函数 <code>getVarCov()</code> 从拟合的线性混合模型中提取特定患者的估计边际协方差阵 <span class="math inline">\(\widehat{V}_i\)</span>。对于我们的示例，我们提取患者 12 的协方差阵，他是数据集中第一个拥有所有五个计划测量值的患者</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="chap2.html#cb8-1" tabindex="-1"></a><span class="sc">&gt;</span> margCov.int <span class="ot">&lt;-</span> <span class="fu">getVarCov</span>(lmeFit.int, <span class="at">individuals =</span> <span class="dv">12</span>,</span>
+<span id="cb8-2"><a href="chap2.html#cb8-2" tabindex="-1"></a>                           <span class="at">type =</span> <span class="st">"marginal"</span>)</span>
+<span id="cb8-3"><a href="chap2.html#cb8-3" tabindex="-1"></a><span class="sc">&gt;</span> margCov.int</span>
+<span id="cb8-4"><a href="chap2.html#cb8-4" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="chap2.html#cb8-5" tabindex="-1"></a>patient <span class="dv">12</span> </span>
+<span id="cb8-6"><a href="chap2.html#cb8-6" tabindex="-1"></a>Marginal variance covariance matrix</span>
+<span id="cb8-7"><a href="chap2.html#cb8-7" tabindex="-1"></a>       <span class="dv">1</span>      <span class="dv">2</span>      <span class="dv">3</span>      <span class="dv">4</span>      <span class="dv">5</span></span>
+<span id="cb8-8"><a href="chap2.html#cb8-8" tabindex="-1"></a><span class="dv">1</span> <span class="fl">24.157</span> <span class="fl">20.308</span> <span class="fl">20.308</span> <span class="fl">20.308</span> <span class="fl">20.308</span></span>
+<span id="cb8-9"><a href="chap2.html#cb8-9" tabindex="-1"></a><span class="dv">2</span> <span class="fl">20.308</span> <span class="fl">24.157</span> <span class="fl">20.308</span> <span class="fl">20.308</span> <span class="fl">20.308</span></span>
+<span id="cb8-10"><a href="chap2.html#cb8-10" tabindex="-1"></a><span class="dv">3</span> <span class="fl">20.308</span> <span class="fl">20.308</span> <span class="fl">24.157</span> <span class="fl">20.308</span> <span class="fl">20.308</span></span>
+<span id="cb8-11"><a href="chap2.html#cb8-11" tabindex="-1"></a><span class="dv">4</span> <span class="fl">20.308</span> <span class="fl">20.308</span> <span class="fl">20.308</span> <span class="fl">24.157</span> <span class="fl">20.308</span></span>
+<span id="cb8-12"><a href="chap2.html#cb8-12" tabindex="-1"></a><span class="dv">5</span> <span class="fl">20.308</span> <span class="fl">20.308</span> <span class="fl">20.308</span> <span class="fl">20.308</span> <span class="fl">24.157</span></span>
+<span id="cb8-13"><a href="chap2.html#cb8-13" tabindex="-1"></a>  Standard Deviations<span class="sc">:</span> <span class="fl">4.9149</span> <span class="fl">4.9149</span> <span class="fl">4.9149</span> <span class="fl">4.9149</span> <span class="fl">4.9149</span> </span></code></pre></div>
+<p>因此，根据随机截距模型，每个时间点的测量误差方差估计等于 24.2，并且任何一对时间之间的协方差估计为 20.3. 使用函数 <code><a href="https://rdrr.io/r/stats/cor.html">cov2cor()</a></code> 可计算由该协方差矩阵导出的相关矩阵</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="chap2.html#cb9-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">cov2cor</span>(margCov.int[[<span class="dv">1</span>]])</span>
+<span id="cb9-2"><a href="chap2.html#cb9-2" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="chap2.html#cb9-3" tabindex="-1"></a>          <span class="dv">1</span>         <span class="dv">2</span>         <span class="dv">3</span>         <span class="dv">4</span>         <span class="dv">5</span></span>
+<span id="cb9-4"><a href="chap2.html#cb9-4" tabindex="-1"></a><span class="dv">1</span> <span class="fl">1.0000000</span> <span class="fl">0.8407012</span> <span class="fl">0.8407012</span> <span class="fl">0.8407012</span> <span class="fl">0.8407012</span></span>
+<span id="cb9-5"><a href="chap2.html#cb9-5" tabindex="-1"></a><span class="dv">2</span> <span class="fl">0.8407012</span> <span class="fl">1.0000000</span> <span class="fl">0.8407012</span> <span class="fl">0.8407012</span> <span class="fl">0.8407012</span></span>
+<span id="cb9-6"><a href="chap2.html#cb9-6" tabindex="-1"></a><span class="dv">3</span> <span class="fl">0.8407012</span> <span class="fl">0.8407012</span> <span class="fl">1.0000000</span> <span class="fl">0.8407012</span> <span class="fl">0.8407012</span></span>
+<span id="cb9-7"><a href="chap2.html#cb9-7" tabindex="-1"></a><span class="dv">4</span> <span class="fl">0.8407012</span> <span class="fl">0.8407012</span> <span class="fl">0.8407012</span> <span class="fl">1.0000000</span> <span class="fl">0.8407012</span></span>
+<span id="cb9-8"><a href="chap2.html#cb9-8" tabindex="-1"></a><span class="dv">5</span> <span class="fl">0.8407012</span> <span class="fl">0.8407012</span> <span class="fl">0.8407012</span> <span class="fl">0.8407012</span> <span class="fl">1.0000000</span></span></code></pre></div>
+<p>尽管随机截距模型的简单性很有吸引力，但它提出了一个不切实际的限制，即重复测量之间的相关性随时间保持不变。直观地说，我们预期在时间上相距更远的测量值之间的相关性更小。允许更灵活地指定协方差结构的一个扩展是随机截距和随机斜率模型：</p>
+<p><span class="math display">\[\left\{\begin{array}{ll}y_{ij}=\beta_0+\beta_1t_{ij}+b_{i0}+b_{i1}t_{ij}+\varepsilon_{ij}\\b_i\thicksim\mathcal{N}(0,D),\quad\varepsilon_{ij}\thicksim\mathcal{N}(0,\sigma^2)\end{array}\right.\]</span></p>
+<p>该模型引入了一个额外的随机效应项，并假定 CD4 细胞计数的变化率因患者而异。其图形表示如图 2.2 的右侧面板所示。为了用 <code>lme()</code> 拟合该模型，我们在 <code>random</code> 参数中指定一个包含时间变量的公式（默认包含截距）</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="chap2.html#cb10-1" tabindex="-1"></a><span class="sc">&gt;</span> lmeFit.slp <span class="ot">&lt;-</span> <span class="fu">lme</span>(CD4 <span class="sc">~</span> obstime, <span class="at">random =</span> <span class="sc">~</span> obstime <span class="sc">|</span> patient,</span>
+<span id="cb10-2"><a href="chap2.html#cb10-2" tabindex="-1"></a>                    <span class="at">data =</span> aids)</span>
+<span id="cb10-3"><a href="chap2.html#cb10-3" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">summary</span>(lmeFit.slp)</span>
+<span id="cb10-4"><a href="chap2.html#cb10-4" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="chap2.html#cb10-5" tabindex="-1"></a>inear mixed<span class="sc">-</span>effects model fit by REML</span>
+<span id="cb10-6"><a href="chap2.html#cb10-6" tabindex="-1"></a>  Data<span class="sc">:</span> aids </span>
+<span id="cb10-7"><a href="chap2.html#cb10-7" tabindex="-1"></a></span>
+<span id="cb10-8"><a href="chap2.html#cb10-8" tabindex="-1"></a>Random effects<span class="sc">:</span></span>
+<span id="cb10-9"><a href="chap2.html#cb10-9" tabindex="-1"></a> Formula<span class="sc">:</span> <span class="er">~</span>obstime <span class="sc">|</span> patient</span>
+<span id="cb10-10"><a href="chap2.html#cb10-10" tabindex="-1"></a> Structure<span class="sc">:</span> General positive<span class="sc">-</span>definite, Log<span class="sc">-</span>Cholesky parametrization</span>
+<span id="cb10-11"><a href="chap2.html#cb10-11" tabindex="-1"></a>            StdDev    Corr  </span>
+<span id="cb10-12"><a href="chap2.html#cb10-12" tabindex="-1"></a>(Intercept) <span class="fl">4.5898579</span> (Intr)</span>
+<span id="cb10-13"><a href="chap2.html#cb10-13" tabindex="-1"></a>obstime     <span class="fl">0.1728716</span> <span class="sc">-</span><span class="fl">0.152</span></span>
+<span id="cb10-14"><a href="chap2.html#cb10-14" tabindex="-1"></a>Residual    <span class="fl">1.7507927</span>       </span>
+<span id="cb10-15"><a href="chap2.html#cb10-15" tabindex="-1"></a></span>
+<span id="cb10-16"><a href="chap2.html#cb10-16" tabindex="-1"></a>Fixed effects<span class="sc">:</span>  CD4 <span class="sc">~</span> obstime </span>
+<span id="cb10-17"><a href="chap2.html#cb10-17" tabindex="-1"></a> Correlation<span class="sc">:</span> </span>
+<span id="cb10-18"><a href="chap2.html#cb10-18" tabindex="-1"></a>        (Intr)</span>
+<span id="cb10-19"><a href="chap2.html#cb10-19" tabindex="-1"></a>obstime <span class="sc">-</span><span class="fl">0.218</span></span>
+<span id="cb10-20"><a href="chap2.html#cb10-20" tabindex="-1"></a></span>
+<span id="cb10-21"><a href="chap2.html#cb10-21" tabindex="-1"></a>Standardized Within<span class="sc">-</span>Group Residuals<span class="sc">:</span></span>
+<span id="cb10-22"><a href="chap2.html#cb10-22" tabindex="-1"></a>        Min          Q1         Med          Q3         Max </span>
+<span id="cb10-23"><a href="chap2.html#cb10-23" tabindex="-1"></a><span class="sc">-</span><span class="fl">4.31678464</span> <span class="sc">-</span><span class="fl">0.41425064</span> <span class="sc">-</span><span class="fl">0.05227637</span>  <span class="fl">0.41094162</span>  <span class="fl">4.37414162</span> </span>
+<span id="cb10-24"><a href="chap2.html#cb10-24" tabindex="-1"></a></span>
+<span id="cb10-25"><a href="chap2.html#cb10-25" tabindex="-1"></a>Number of Observations<span class="sc">:</span> <span class="dv">1405</span></span>
+<span id="cb10-26"><a href="chap2.html#cb10-26" tabindex="-1"></a>Number of Groups<span class="sc">:</span> <span class="dv">467</span> </span></code></pre></div>
+<p>与随机截距模型相比，我们固定效应参数估计的差异非常小。对于随机效应，我们可以观测到患者之间 CD4 基线水平的变异性大于标志物随时间演变的变异性。在随机截距和随机斜率模型下，同一个体的任何一对响应的隐含边际协方差函数形如</p>
+<p><span class="math display" id="eq:2-6">\[\begin{align}
+\begin{array}{rcl}\text{cov}(y_{ij},y_{ij'})&amp;=&amp;\begin{bmatrix}1&amp;t_{ij}\end{bmatrix}\,D\,\begin{bmatrix}1\\t_{ij'}\end{bmatrix}+\sigma^2\\&amp;=&amp;d_{22}t_{ij}t_{ij'}+d_{12}(t_{ij}+t_{ij'})+d_{11}+\sigma^2\end{array}
+\tag{2.6}
+\end{align}\]</span></p>
+<p>其中 <span class="math inline">\(d_{kl}\)</span> 表示协方差阵 <span class="math inline">\(D\)</span> 的第 <span class="math inline">\(kl\)</span> 个元素。对于同一时间点 <span class="math inline">\(t_{ij} = t_{ij'} = t\)</span>，方差函数为 <span class="math inline">\(d_{22}t^2 + 2d_{12}t + d_{11} + \sigma^ 2\)</span> ，其随时间呈二次函数，曲率为正数 <span class="math inline">\(d_{22}\)</span>。因此，隐含边际模型</p>
+<p><span class="math display">\[\begin{aligned}y_i=X_i\beta+\varepsilon_i^*,\quad\varepsilon_i^*\sim\mathcal{N}(0,Z_iDZ_i^\top+\sigma^2\text{I}_{n_i})\end{aligned}\]</span></p>
+<p>具有异方差误差项。在艾滋病数据集中，边际协方差阵估计为</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="chap2.html#cb11-1" tabindex="-1"></a><span class="sc">&gt;</span> margCov.slp <span class="ot">&lt;-</span> <span class="fu">getVarCov</span>(lmeFit.slp, <span class="at">individuals =</span> <span class="dv">12</span>,</span>
+<span id="cb11-2"><a href="chap2.html#cb11-2" tabindex="-1"></a>                           <span class="at">type =</span> <span class="st">"marginal"</span>)</span>
+<span id="cb11-3"><a href="chap2.html#cb11-3" tabindex="-1"></a><span class="sc">&gt;</span> margCov.slp</span>
+<span id="cb11-4"><a href="chap2.html#cb11-4" tabindex="-1"></a></span>
+<span id="cb11-5"><a href="chap2.html#cb11-5" tabindex="-1"></a>patient <span class="dv">12</span> </span>
+<span id="cb11-6"><a href="chap2.html#cb11-6" tabindex="-1"></a>Marginal variance covariance matrix</span>
+<span id="cb11-7"><a href="chap2.html#cb11-7" tabindex="-1"></a>       <span class="dv">1</span>      <span class="dv">2</span>      <span class="dv">3</span>      <span class="dv">4</span>      <span class="dv">5</span></span>
+<span id="cb11-8"><a href="chap2.html#cb11-8" tabindex="-1"></a><span class="dv">1</span> <span class="fl">24.132</span> <span class="fl">20.826</span> <span class="fl">20.345</span> <span class="fl">19.624</span> <span class="fl">18.902</span></span>
+<span id="cb11-9"><a href="chap2.html#cb11-9" tabindex="-1"></a><span class="dv">2</span> <span class="fl">20.826</span> <span class="fl">23.771</span> <span class="fl">20.463</span> <span class="fl">20.101</span> <span class="fl">19.738</span></span>
+<span id="cb11-10"><a href="chap2.html#cb11-10" tabindex="-1"></a><span class="dv">3</span> <span class="fl">20.345</span> <span class="fl">20.463</span> <span class="fl">23.765</span> <span class="fl">21.054</span> <span class="fl">21.409</span></span>
+<span id="cb11-11"><a href="chap2.html#cb11-11" tabindex="-1"></a><span class="dv">4</span> <span class="fl">19.624</span> <span class="fl">20.101</span> <span class="fl">21.054</span> <span class="fl">25.550</span> <span class="fl">23.915</span></span>
+<span id="cb11-12"><a href="chap2.html#cb11-12" tabindex="-1"></a><span class="dv">5</span> <span class="fl">18.902</span> <span class="fl">19.738</span> <span class="fl">21.409</span> <span class="fl">23.915</span> <span class="fl">29.486</span></span>
+<span id="cb11-13"><a href="chap2.html#cb11-13" tabindex="-1"></a>  Standard Deviations<span class="sc">:</span> <span class="fl">4.9124</span> <span class="fl">4.8755</span> <span class="fl">4.8749</span> <span class="fl">5.0547</span> <span class="fl">5.4301</span> </span></code></pre></div>
+<p>相应的相关矩阵为</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="chap2.html#cb12-1" tabindex="-1"></a><span class="sc">&gt;</span> <span class="fu">cov2cor</span>(margCov.slp[[<span class="dv">1</span>]])</span>
+<span id="cb12-2"><a href="chap2.html#cb12-2" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="chap2.html#cb12-3" tabindex="-1"></a>          <span class="dv">1</span>         <span class="dv">2</span>         <span class="dv">3</span>         <span class="dv">4</span>         <span class="dv">5</span></span>
+<span id="cb12-4"><a href="chap2.html#cb12-4" tabindex="-1"></a><span class="dv">1</span> <span class="fl">1.0000000</span> <span class="fl">0.8695501</span> <span class="fl">0.8495691</span> <span class="fl">0.7903063</span> <span class="fl">0.7086194</span></span>
+<span id="cb12-5"><a href="chap2.html#cb12-5" tabindex="-1"></a><span class="dv">2</span> <span class="fl">0.8695501</span> <span class="fl">1.0000000</span> <span class="fl">0.8609738</span> <span class="fl">0.8156372</span> <span class="fl">0.7455397</span></span>
+<span id="cb12-6"><a href="chap2.html#cb12-6" tabindex="-1"></a><span class="dv">3</span> <span class="fl">0.8495691</span> <span class="fl">0.8609738</span> <span class="fl">1.0000000</span> <span class="fl">0.8544289</span> <span class="fl">0.8087422</span></span>
+<span id="cb12-7"><a href="chap2.html#cb12-7" tabindex="-1"></a><span class="dv">4</span> <span class="fl">0.7903063</span> <span class="fl">0.8156372</span> <span class="fl">0.8544289</span> <span class="fl">1.0000000</span> <span class="fl">0.8712910</span></span>
+<span id="cb12-8"><a href="chap2.html#cb12-8" tabindex="-1"></a><span class="dv">5</span> <span class="fl">0.7086194</span> <span class="fl">0.7455397</span> <span class="fl">0.8087422</span> <span class="fl">0.8712910</span> <span class="fl">1.0000000</span></span></code></pre></div>
+<p>正如预期的那样，我们观察到方差随着时间的推移而增加，而相关性降低。很明显，随机截距和随机斜率模型在为边际协方差阵建模时提供了更大的灵活性，但它再次施加了特定的关系（式 <a href="chap2.html#eq:2-6">(2.6)</a>），而这种关系可能并不总是适用于手头上的数据。例如，方差函数在时间上可能不是二次函数。为了实现更大的灵活性，并遵循与以前相同的方法，我们可以包含额外的随机效应项，从而更好地捕捉特定于受试者纵向轨迹的形状。这可以通过在随机效应设计矩阵 <span class="math inline">\(Z_i\)</span> 的指定中使用多项式或回归样条等方法来实现。然而，我们需要注意，由于 <span class="math inline">\(D\)</span> 需要是一个有效的、正定的协方差阵，因此任何随机效应结构都将意味着正的边际相关性。</p>
+</div>
+</div>
+<div id="sec2-3" class="section level2" number="2.3">
+<h2>
+<span class="header-section-number">2.3</span> 纵向研究中的缺失数据<a class="anchor" aria-label="anchor" href="#sec2-3"><i class="fas fa-link"></i></a>
+</h2>
+<p>纵向数据分析的一个主要挑战是缺失数据问题。尽管纵向研究的目的是在一组预先指定的随访时间收集样本中每个受试者的数据，但经常出现一些受试者由于各种原因错过一些计划的测量的情况。根据缺失数据模式的特征，我们可以区分两种类型的缺失，即单调缺失和非单调缺失 (monotone and non-monotone missingness). 单调缺失模式涵盖了受试者因各种原因在研究预期完成前退出的情况，即流失 (attrition) 或脱落 (drop-out)，以及受试者未提供部分初始响应测量数据但随后加入并坚持完成研究的情况，即延迟入组 (late entry). 另一方面，非单调缺失，也称为间歇性缺失 (intermittent missingness)，是一种更普遍的类型，它涵盖了多种情况，例如，某个受试者在某次随访时缺失响应数据，在下一次随访时返回，但随后又可能在后续时间点再次缺失数据。表 2.1 给出了不同缺失数据模式的示例，其中受试者 1 完成了所有测量，受试者 2 在第四次就诊时退出，受试者 3 未提供第一次测量数据，而受试者 4 仅参加了第二次和第四次就诊。</p>
+<details><summary><font color="#B95953">表 2.1</font>
+</summary><img src="figure/table%202.1.png#center" style="width:80.0%"></details><p><br>
+数据缺失的可能性给纵向研究的设计和这些研究的数据分析带来了一些挑战。第一个也是最明显的影响是效率的损失 (loss of efficiency)，从这个意义上说，平均纵向演化变化的估计不如所有数据可用时那么精确。这对纵向研究的设计具有重要影响，因为我们需要招募更多的个体才能在检测重要效应方面达到相同水平的功效 (power). 精度的降低与缺失数据的数量直接相关，也受到所选分析方法的影响。此外，随着时间的推移，缺失会导致数据集不均衡，因为并非所有受试者在一组共同情况下都有相同数量的测量。这使得需要均衡数据的分析方法变得复杂，但这不会对线性混合效应模型带来任何影响。最后，在某些情况下，如果处理不当，缺失数据可能会带来偏差，从而得出误导性的推断。在不完全纵向响应的分析中，正是这最后一个因素引起了最大的关注。在更详细地讨论偏差问题是如何产生的之前，我们首先需要引入额外的术语，使我们能够对缺失值的机制设置正式条件，并确定该机制如何影响随后的推断。通常，我们假定研究中的每个受试者 <span class="math inline">\(i\)</span> 在时间点 <span class="math inline">\(j=1,\ldots,n_i\)</span> 进行测量，这意味着，对于该受试者，我们期望收集测量向量 <span class="math inline">\(y_i=(y_{i1},\ldots,y_{in_i})^\top\)</span>。为了区分我们实际收集的响应测量值和计划收集的响应测量值，我们引入了缺失数据指示符，定义为</p>
+<p><span class="math display">\[r_{ij}=\left\{\begin{array}{ll}1&amp;\text{如果观测到 }y_{ij}\\0&amp;\text{其它}\end{array}\right.\]</span></p>
+<p>因此，我们将完整响应向量 <span class="math inline">\(y_i\)</span> 划分为两个子向量，观测数据子向量 <span class="math inline">\(y^o_i\)</span> 包含那些 <span class="math inline">\(r_{ij} = 1\)</span> 的 <span class="math inline">\(y_{ij}\)</span>，而缺失数据子向量 <span class="math inline">\(y^m_i\)</span> 包含其余分量。向量 <span class="math inline">\(r_i = (r_{i1}, ..., r_{in_i} ) ^\top\)</span> 以及生成 <span class="math inline">\(r_i\)</span> 的过程称为缺失数据过程 (missing data process).</p>
+<p>当缺失仅限于流失或脱落时，缺失数据指示符 <span class="math inline">\(r_i\)</span> 的形式始终为 <span class="math inline">\((1, ..., 1, 0, ..., 0)\)</span>，因此可以用标量变量 <span class="math inline">\(r^d_i\)</span> 替换，定义为</p>
+<p><span class="math display">\[r_i^d=1+\sum_{j=1}^{n_i}r_{ij}\]</span></p>
+<p>对于不完全序列，<span class="math inline">\(r^d_i\)</span> 表示发生脱落的时刻，而对于完全序列，<span class="math inline">\(r^d_i = n_i+1\)</span>。在这两种情况下，<span class="math inline">\(r^d_i\)</span> 等于一加上观测测量序列的长度，无论它是完全的还是不完全的。</p>
+<div id="sec2-3-1" class="section level3" number="2.3.1">
+<h3>
+<span class="header-section-number">2.3.1</span> 缺失数据机制<a class="anchor" aria-label="anchor" href="#sec2-3-1"><i class="fas fa-link"></i></a>
+</h3>
+<p>不完全纵向数据分析的不同方法的适用性取决于<strong>缺失数据机制</strong> (missing data mechanism). 缺失数据机制可认为是描述缺失数据 <span class="math inline">\(r_i\)</span> 和响应数据 <span class="math inline">\(y_i\)</span> 过程之间关系的概率模型。缺失数据机制的分类法首先由 Rubin (1976) 提出，并在 Little and Rubin (2002) 中进一步发展，它基于缺失过程 <span class="math inline">\(r_i\)</span> 的条件密度，给定完整响应向量 <span class="math inline">\(y_i = (y^o_i , y^m_i)\)</span>:</p>
+<p><span class="math display">\[p(r_i\mid y_i^o,y_i^m;\theta_r)\]</span></p>
+<p>其中 <span class="math inline">\(\theta_r\)</span> 表示相应的参数向量。这三种机制是 (Fitzmaurice et al., 2004; Molenberghs and Kenward, 2007)：</p>
+<div class="rmdnote">
+<ul>
+<li>
+<strong>完全随机缺失</strong> (Missing Completely at Random, <strong>MCAR</strong>), 它假定响应缺失的概率与它们本应有的值以及观测响应集均无关。也就是说，当 <span class="math inline">\(r_i\)</span> 与 <span class="math inline">\(y^o_i\)</span> 和 <span class="math inline">\(y^m_i\)</span> 均独立时，纵向数据是 MCAR，满足</li>
+</ul>
+<p><span class="math display" id="eq:2-7">\[\begin{align}
+p(r_i\mid y_i^o,y_i^m;\theta_r)=p(r_i;\theta_r)
+\tag{2.7}
+\end{align}\]</span></p>
+<p>MCAR 纵向数据的一个例子出现在健康调查中，调查对象进入研究，提供预定数量的重复测量后退出研究 (Fitzmaurice et al., 2004). 由于测量的次数和时间是由设计决定的，因此获得响应的概率与实际测量值无关。MCAR 的重要特征是，观测数据 <span class="math inline">\(y^o_i\)</span> 可视为完全数据的随机样本。这反过来意味着观测数据的分布与完全数据的分布没有差异。因此，在 MCAR 下，我们可以使用任何有效的统计程序对手头的数据进行有效推断，同时可以忽略产生缺失值的过程。</p>
+<ul>
+<li>
+<strong>随机缺失</strong> (Missing at Random, <strong>MAR</strong>), 假定缺失的概率取决于观测响应集，但与本应有的值无关。也就是说，给定 <span class="math inline">\(y_i^0\)</span>， <span class="math inline">\(r_i\)</span> 条件独立于 <span class="math inline">\(y^m_i\)</span> 时，纵向数据为 MAR，满足</li>
+</ul>
+<p><span class="math display" id="eq:2-8">\[\begin{align}
+p(r_i\mid y_i^o,y_i^m;\theta_r)=p(r_i\mid y_i^o;\theta_r)
+\tag{2.8}
+\end{align}\]</span></p>
+<p>MAR 的等价表述是基于给定观测数据 <span class="math inline">\(y^o_i\)</span> 和 <span class="math inline">\(r_i\)</span> 的情况下，缺失纵向响应 <span class="math inline">\(y^m_i\)</span> 的预测分布。具体来说，在 MAR 下，该分布具有以下形式。</p>
+<p><span class="math display">\[\begin{aligned}
+p(y_i^m\mid y_i^o,r_i;\theta)&amp; =\quad\frac{p(y_i^m,y_i^o,r_i;\theta)}{p(y_i^o,r_i;\theta)}  \\
+&amp;=\quad\frac{p(r_i\mid y_i^o,y_i^m;\theta_r)p(y_i^o,y_i^m;\theta_y)}{p(r_i\mid y_i^o;\theta_r)p(y_i^o;\theta_y)} \\
+&amp;=\quad\frac{p(r_i\mid y_i^o;\theta_r)p(y_i^o,y_i^m;\theta_y)}{p(r_i\mid y_i^o;\theta_r)p(y_i^o;\theta_y)} \\
+&amp;=\quad\frac{p(y_i^o,y_i^m;\theta_y)}{p(y_i^o;\theta_y)} \\
+&amp;=\quad p(y_i^m\mid y_i^o;\theta_y),
+\end{aligned}\]</span></p>
+<p>其中 <span class="math inline">\(\theta\)</span> 表示测量和缺失过程的联合分布的参数向量，<span class="math inline">\(\theta_y\)</span> 表示测量模型的参数向量。MAR 缺失也经常称为随机缺失 (random missingness)，在缺失为脱落的情况下，称为随机脱落 (random drop-out). 一个标准的 MAR 纵向数据例子出现在研究方案要求当患者的响应值超过特定医学相关阈值时，将该患者从研究中移除的情况。此时，缺失性是由研究者控制的，并且仅与观测到的 <span class="math inline">\(y_i\)</span> 的分量相关。由于缺失数据机制依赖于 <span class="math inline">\(y^o_i\)</span>（未观测到的 <span class="math inline">\(y_i\)</span>），因此 <span class="math inline">\(y^o_i\)</span> 的分布并不与 <span class="math inline">\(y_i\)</span> 的分布完全吻合，因此我们不能认为观测数据是从目标总体中随机抽取的一个样本。只有每个受试者的缺失值 <span class="math inline">\(y^m_i\)</span> 的分布，以她的观测值 <span class="math inline">\(y^o_i\)</span> 为条件，与目标总体中相应观测值的分布相同。因此，在联合分布 <span class="math inline">\(\{y_i^o,y_i^m\}\)</span> 的模型下，可以使用观测数据有效地预测缺失值。MAR 的这一特征的重要含义是，样本矩不是目标人群中相应矩的无偏估计。因此，基于这些矩而不考虑 MAR 的统计量，例如样本平均纵向演变的散点图，可能是误导性的。另一方面，在 MAR 下，即使我们忽略了 <span class="math inline">\(r_i\)</span> 的贡献，基于观测数据的基于似然的分析可以提供有效的推断，前提是正确指定了测量过程 <span class="math inline">\(y_i\)</span> 的模型。这可以从以下事实看出：第 <span class="math inline">\(i\)</span> 个受试者的完全数据 <span class="math inline">\((y^o_i , y^m_i , r_i)\)</span> 的似然贡献被分解如下</p>
+<p><span class="math display">\[\begin{aligned}
+L_i(\theta)&amp; =\quad\int p(y_i,r_i;\theta)dy_i^m  \\
+&amp;=\quad\int p(y_i^o,y_i^m;\theta_y)p(r_i\mid y_i^o,y_i^m;\theta_r)dy_i^m \\
+&amp;=\quad\int p(y_i^o,y_i^m;\theta_y)p(r_i\mid y_i^o;\theta_r)dy_i^m \\
+&amp;=\quad p(y_i^o;\theta_y)p(r_i\mid y_i^o;\theta_r) \\
+&amp;=\quad L_i(\theta_y)\times L_i(\theta_r)
+\end{aligned}\]</span></p>
+<p>因此，如果 <span class="math inline">\(\theta_y\)</span> 和 <span class="math inline">\(\theta_r\)</span> 是不相交的，即全向量 <span class="math inline">\(\theta=(\theta^\top y,\theta_r^\top)\)</span> 的参数空间等于 <span class="math inline">\(\theta_y\)</span> 和 <span class="math inline">\(\theta_r\)</span> 各自参数空间的乘积，则可以基于边际观测数据密度 <span class="math inline">\(p(y_i^o;\theta_y)\)</span> 来推断 <span class="math inline">\(\theta_y\)</span>，并且忽略缺失过程的可能性。MAR 下基于似然的推断的这种性质称为<strong>可忽略性</strong> (ignorability).</p>
+<ul>
+<li>
+<strong>非随机缺失</strong> (Missing Not at Random, <strong>MNAR</strong>) 假定纵向响应缺失的概率取决于我们观测到的响应的子集。具体来说，<span class="math inline">\(r_i\)</span> 的分布仍至少取决于子向量 <span class="math inline">\(y^m_i\)</span> 中的某些元素，即使在给定 <span class="math inline">\(y^o_i\)</span> 的条件下，即</li>
+</ul>
+<p><span class="math display" id="eq:2-9">\[\begin{align}
+p(r_i\mid y_i^m;\theta_r)\quad\mathrm{或}\quad p(r_i\mid y_i^o,y_i^m;\theta_r)
+\tag{2.9}
+\end{align}\]</span></p>
+<p>与 MAR 类似，MNAR 缺失也常称为非随机缺失，在脱落的情况下称为非随机脱落。MNAR 纵向数据的一个例子出现在疼痛研究中，当患者的疼痛水平超过其可以忍受的阈值时，他们可能会要求使用急救药物。当患者退出研究并要求使用急救药物时，我们通常没有他们的结果记录。与 MAR 的情况一样，在 MNAR 下，观测数据并不构成目标总体的随机样本。然而，与 MAR 相反，<span class="math inline">\(y^m_i\)</span> 在给定 <span class="math inline">\(y^o_i\)</span> 的条件下的预测分布与目标总体中的分布不同，而是取决于 <span class="math inline">\(y^o_i\)</span> 和 <span class="math inline">\(p(r_i\mid y_i)\)</span>。因此，为缺失过程假定的模型至关重要，必须纳入分析。</p>
+</div>
+<p>为了说明不同的缺失机制如何影响仅基于观测数据的推断，我们在图 2.3 中展示了 loess 散点平滑器对一个模拟数据集的拟合情况。该数据集来自一个线性混合效应模型，其中数据在 MAR 和 MNAR 机制下删除。我们可以清楚地观察到 loess 平滑器拟合（实线）与真实平均变化（虚线）之间的差异，尤其是在 MNAR 情况下。</p>
+<details><summary><font color="#B95953">图 2.3</font>
+</summary><img src="figure/figure%202.3.png#center" style="width:80.0%"></details><p><br>
+关于上述缺失数据机制定义，最后要说明的一点是，我们隐含地假定了缺失的概率可能取决于协变量。这引出了一个微妙但重要的问题。例如，如果缺失与某个协变量有关但与 <span class="math inline">\(y_i\)</span> 无关（即 MCAR），并且在我们对测量过程的分析中，我们不以该协变量为条件，则 MCAR 不再有效。</p>
+</div>
+<div id="sec2-3-2" class="section level3" number="2.3.2">
+<h3>
+<span class="header-section-number">2.3.2</span> 非随机缺失模型族<a class="anchor" aria-label="anchor" href="#sec2-3-2"><i class="fas fa-link"></i></a>
+</h3>
+<p>根据上一节中的描述，很明显，最难处理的缺失数据机制类型是 MNAR 机制。当纵向数据是 MNAR 时，我们只能从基于测量和缺失过程的联合分布的分析中获得有效的推断。相关文献已经为这种联合分布提出了三个主要的模型族：<strong>选择模型</strong> (selection models)、<strong>模式混合模型</strong> (pattern mixture models) 和<strong>共享参数模型</strong> (shared-parameter models) (Little, 1995; Molenberghs and Kenward, 2007).</p>
+<p>选择模型的因子分解基于</p>
+<p><span class="math display">\[p(y_i^o,y_i^m,r_i;\theta)=p(y_i^o,y_i^m;\theta_y)p(r_i\mid y_i^o,y_i^m;\theta_r)\]</span></p>
+<p>其中右边第一项是测量过程的边际密度，第二项是以纵向结果为条件的缺失过程的密度。该建模框架的名称来自计量经济学文献 (Heckman, 1976)，基于以下事实：项 <span class="math inline">\(p(r_i\mid y_i^o,y_i^m;\theta_r)\)</span> 可视为描述每个受试者选择继续参与研究或退出研究的概率机制。对于非随机脱落（即 MNAR）的纵向数据的分析，选择模型主要是在 Diggle and Kenward (1994) 开创性工作之后受到关注的。</p>
+<p>模式混合模型 (Little, 1993, 1994) 基于与之相反的联合分布的因子分解，即</p>
+<p><span class="math display">\[p(y_i^o,y_i^m,r_i;\theta)=p(y_i^o,y_i^m\mid r_i;\theta_y)p(r_i;\theta_r)\]</span></p>
+<p>现在，我们有了给定缺失过程的测量过程的条件模型，以及缺失过程的边际模型。顾名思义，模式混合模型允许为每种缺失值模式采用不同的测量模型。因此，测量过程的边际分布是一个混合分布，其权重是每种缺失模式的概率。</p>
+<p><strong>共享参数模型</strong> (Wu and Carroll, 1988; Wu and Bailey, 1988, 1989; Follmann and Wu, 1995; Hogan and Laird, 1997, 1998) 引入随机效应来捕捉测量和缺失过程之间的关联，即</p>
+<p><span class="math display">\[\begin{aligned}p(y_i^o,y_i^m,r_i;\theta)=\int p(y_i^o,y_i^m\mid b_i;\theta_y)p(r_i\mid b_i;\theta_r)p(b_i;\theta_b)db_i\end{aligned}\]</span></p>
+<p>因此，给定随机效应，假定这两个过程是独立的。该建模框架背后的想法是，有一个由随机效应刻画的潜在的潜过程，它驱动着两个直接观察到的过程。</p>
+<p>Verbeke and Molenberghs (2000), Molenbergh and Verbeke (2005) 以及 Molenbergs and Kenward (2007) 全面介绍了用于分析不完全纵向数据的选择和模式混合建模框架的特征和特性。共享参数模型是本专著的重点，将在后续章节详细介绍。</p>
+</div>
+</div>
+<div id="sec2-4" class="section level2" number="2.4">
+<h2>
+<span class="header-section-number">2.4</span> 延伸阅读<a class="anchor" aria-label="anchor" href="#sec2-4"><i class="fas fa-link"></i></a>
+</h2>
+<p>在本章中，我们介绍了线性混合效应模型的基本知识，该模型稍后将用作纵向与生存数据的联合模型的组成部分。对于混合模型和一般的纵向数据分析的全面概括，感兴趣的读者可以参考文献中的优秀文本。特别是，Verbeke and Molenberghs (2000) 以及 Pinheiro and Bates (2000) 中涵盖了连续数据的混合效应模型。第一本书对线性混合模型进行了全面论述，其中很大一部分内容集中在纵向研究中缺失数据的处理上；而第二本书则介绍了使用 <code>nlme</code> 包在 <code>S</code> 和 <code>R</code> 中实现线性和非线性混合模型的软件方法。Gelman and Hill (2007) 以及 Snijders and Bosker (1999) 涵盖了相关的分层模型 (hierarchical models) 和多水平模型 (multilevel models)，Searle et al. (1992) 和 Rao (1997) 详细阐述了方差分量估计的相关理论。Demidenko (2004), McCulloch et al. (2008) 以及 Jiang (2010) 这三本书则对连续数据和分类数据的混合模型进行了论述。Molenberghs and Verbeke (2005) 重点关注离散纵向数据分析的模型，包括混合效应模型和边际模型。Diggle et al. (2002), Fitzmaurice et al. (2004) 以及 Hedeker and Gibbons (2006) 则提供了对连续和分类纵向数据分析的不同建模框架的更一般概述。Skrondal and Rabe-Hesketh (2004) 讨论了更一般的潜变量模型，其中混合效应模型是其特例。</p>
+
+</div>
+</div>
+
+  <div class="chapter-nav">
+<div class="prev"><a href="chap1.html"><span class="header-section-number">1</span> 介绍</a></div>
+<div class="next"><a href="chap3.html"><span class="header-section-number">3</span> 事件时间数据分析</a></div>
+</div></main><div class="col-md-3 col-lg-2 d-none d-md-block sidebar sidebar-chapter">
+    <nav id="toc" data-toggle="toc" aria-label="On this page"><h2>On this page</h2>
+      <ul class="nav navbar-nav">
+<li><a class="nav-link" href="#chap2"><span class="header-section-number">2</span> 纵向数据分析</a></li>
+<li><a class="nav-link" href="#sec2-1"><span class="header-section-number">2.1</span> 纵向数据的特征</a></li>
+<li>
+<a class="nav-link" href="#sec2-2"><span class="header-section-number">2.2</span> 线性混合效应模型</a><ul class="nav navbar-nav">
+<li><a class="nav-link" href="#sec2-2-1"><span class="header-section-number">2.2.1</span> 估计</a></li>
+<li><a class="nav-link" href="#sec2-2-2"><span class="header-section-number">2.2.2</span> 在 R 中的实现</a></li>
+</ul>
+</li>
+<li>
+<a class="nav-link" href="#sec2-3"><span class="header-section-number">2.3</span> 纵向研究中的缺失数据</a><ul class="nav navbar-nav">
+<li><a class="nav-link" href="#sec2-3-1"><span class="header-section-number">2.3.1</span> 缺失数据机制</a></li>
+<li><a class="nav-link" href="#sec2-3-2"><span class="header-section-number">2.3.2</span> 非随机缺失模型族</a></li>
+</ul>
+</li>
+<li><a class="nav-link" href="#sec2-4"><span class="header-section-number">2.4</span> 延伸阅读</a></li>
+</ul>
+
+      <div class="book-extra">
+        <ul class="list-unstyled">
+          
+        </ul>
+</div>
+    </nav>
+</div>
+
+</div>
+</div> <!-- .container -->
+
+<footer class="bg-primary text-light mt-5"><div class="container"><div class="row">
+
+  <div class="col-12 col-md-6 mt-3">
+    <p>"<strong>纵向与事件时间数据的联合模型及其在 R 中的应用</strong>" was written by Wang Zhen. It was last built on 2024-04-19.</p>
+  </div>
+
+  <div class="col-12 col-md-6 mt-3">
+    <p>This book was built by the <a class="text-light" href="https://bookdown.org">bookdown</a> R package.</p>
+  </div>
+
+</div></div>
+</footer><!-- dynamically load mathjax for compatibility with self-contained --><script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    var src = "true";
+    if (src === "" || src === "true") src = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/latest.js?config=TeX-MML-AM_CHTML";
+    if (location.protocol !== "file:")
+      if (/^https?:/.test(src))
+        src = src.replace(/^https?:/, '');
+    script.src = src;
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script><script type="text/x-mathjax-config">const popovers = document.querySelectorAll('a.footnote-ref[data-toggle="popover"]');
+for (let popover of popovers) {
+  const div = document.createElement('div');
+  div.setAttribute('style', 'position: absolute; top: 0, left:0; width:0, height:0, overflow: hidden; visibility: hidden;');
+  div.innerHTML = popover.getAttribute('data-content');
+
+  var has_math = div.querySelector("span.math");
+  if (has_math) {
+    document.body.appendChild(div);
+    MathJax.Hub.Queue(["Typeset", MathJax.Hub, div]);
+    MathJax.Hub.Queue(function() {
+      popover.setAttribute('data-content', div.innerHTML);
+      document.body.removeChild(div);
+    })
+  }
+}
+</script>
+</body>
+</html>
