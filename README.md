@@ -1,6 +1,6 @@
 本书的发布页面为[这里](https://zhuanlan.zhihu.com/p/692203472)
 
-本书为 Joint Models for Longitudinal and Time-to-Event Data with Applications in R (by Dimitris Rizopoulos) 的翻译
+本书为 [Joint Models for Longitudinal and Time-to-Event Data with Applications in R (by Dimitris Rizopoulos)](https://jmr.r-forge.r-project.org/) 的翻译
 + 链接 1：https://bookdown.org/wangzhen/JMR/
 + 链接 2：https://github.com/wangzhen89/JMR 右侧的 release
 
